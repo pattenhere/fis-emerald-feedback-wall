@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Emerald · Feedback Wall</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f9fafb;height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:13px}
+
+  /* TOP BAR */
+  #topbar{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:40px;background:#fff;border-bottom:1px solid #f0f0f0}
+  #topbar .logo{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#374151}
+  #topbar .logo span{color:#d1d5db;font-weight:300}
+  #topbar .meta{display:flex;align-items:center;gap:20px}
+  #topbar .meta .live{display:flex;align-items:center;gap:6px;font-size:11px;color:#6b7280}
+  .dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  #topbar .meta .timer{font-size:11px;color:#9ca3af}
+  #topbar .meta .count{font-size:11px;font-weight:700;color:#111827}
+
+  /* BODY */
+  #body{flex:1;display:flex;overflow:hidden}
+
+  /* DRAWER */
+  #drawer{flex-shrink:0;display:flex;flex-direction:column;background:#fff;border-right:1px solid #f0f0f0;transition:width .25s ease;width:300px;overflow:hidden}
+  #drawer.collapsed{width:36px}
+  #drawer-toggle{flex-shrink:0;display:flex;align-items:center;justify-content:center;height:32px;border-bottom:1px solid #f0f0f0;cursor:pointer;color:#9ca3af;font-size:11px;background:none;border-top:none;border-left:none;border-right:none;width:100%}
+  #drawer-toggle:hover{color:#374151}
+  #drawer-inner{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:300px}
+
+  /* TABS */
+  .tabs{display:flex;border-bottom:1px solid #f0f0f0;flex-shrink:0}
+  .tab-btn{flex:1;padding:10px 4px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:#9ca3af;border-bottom:2px solid transparent;transition:all .15s}
+  .tab-btn.active{color:#111827;border-bottom-color:#111827}
+  .tab-btn.active.synth{color:#4f46e5;border-bottom-color:#4f46e5}
+
+  /* DRAWER CONTENT */
+  .tab-pane{display:none;flex:1;overflow-y:auto;padding:12px;gap:8px;flex-direction:column}
+  .tab-pane.active{display:flex}
+
+  .add-btn{border:2px dashed #e5e7eb;border-radius:8px;padding:10px;font-size:11px;color:#9ca3af;background:none;cursor:pointer;text-align:left;width:100%;transition:all .15s}
+  .add-btn:hover{border-color:#9ca3af;color:#374151}
+
+  .add-form{border:1px solid #e5e7eb;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px}
+  .add-form textarea{width:100%;border:1px solid #e5e7eb;border-radius:6px;padding:8px;font-size:11px;color:#374151;resize:none;font-family:inherit;outline:none}
+  .add-form textarea:focus{border-color:#9ca3af}
+  .form-row{display:flex;gap:6px}
+  .btn-submit{flex:1;padding:6px;background:#111827;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer}
+  .btn-submit:hover{background:#374151}
+  .btn-cancel{flex:1;padding:6px;border:1px solid #e5e7eb;border-radius:6px;font-size:11px;color:#6b7280;background:none;cursor:pointer}
+
+  .feature-card{border:1px solid #f0f0f0;border-radius:8px;padding:10px;background:#f9fafb;display:flex;gap:8px;align-items:flex-start}
+  .vote-col{display:flex;flex-direction:column;align-items:center;flex-shrink:0;cursor:pointer;gap:1px}
+  .vote-arrow{color:#d1d5db;font-size:10px;line-height:1;transition:color .15s}
+  .vote-col:hover .vote-arrow{color:#374151}
+  .vote-count{font-size:11px;font-weight:700;color:#4b5563}
+  .feature-text{font-size:11px;color:#374151;line-height:1.5}
+  .feature-context{font-size:10px;color:#9ca3af;margin-top:3px;font-style:italic;line-height:1.4}
+
+  .kudos-card{border:1px solid #f0f0f0;border-radius:8px;padding:10px;background:#f9fafb}
+  .kudos-text{font-size:11px;color:#374151;font-style:italic;line-height:1.5}
+  .kudos-meta{display:flex;align-items:center;gap:8px;margin-top:4px}
+  .kudos-role{font-size:10px;color:#9ca3af}
+  .consent-badge{font-size:10px;background:#f0fdf4;color:#16a34a;padding:2px 6px;border-radius:10px}
+
+  .role-chips{display:flex;flex-wrap:wrap;gap:4px}
+  .chip{padding:4px 10px;border:1px solid #e5e7eb;border-radius:20px;font-size:10px;color:#6b7280;cursor:pointer;background:none;transition:all .15s}
+  .chip.active{background:#111827;color:#fff;border-color:#111827}
+
+  .consent-row{display:flex;align-items:flex-start;gap:8px;cursor:pointer}
+  .checkbox{width:14px;height:14px;border:2px solid #d1d5db;border-radius:3px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+  .checkbox.checked{background:#111827;border-color:#111827}
+  .checkbox svg{display:none}
+  .checkbox.checked svg{display:block}
+  .consent-label{font-size:10px;color:#6b7280;line-height:1.4}
+
+  /* SYNTHESIS */
+  .synth-controls{padding:12px;border-bottom:1px solid #f0f0f0;display:flex;flex-direction:column;gap:10px;flex-shrink:0}
+  .mode-toggle{display:flex;background:#f3f4f6;border-radius:8px;padding:3px;gap:2px}
+  .mode-btn{flex:1;padding:6px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;color:#6b7280;background:none;transition:all .15s}
+  .mode-btn.active{background:#fff;color:#111827;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+  .signal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+  .signal-card{border-radius:8px;padding:8px;text-align:center}
+  .signal-card.blue{background:#eff6ff;color:#1d4ed8}
+  .signal-card.amber{background:#fffbeb;color:#b45309}
+  .signal-card.green{background:#f0fdf4;color:#15803d}
+  .signal-num{font-size:18px;font-weight:700}
+  .signal-lbl{font-size:9px;line-height:1.3;margin-top:1px}
+  .gen-btn{width:100%;padding:10px;border:none;border-radius:8px;background:#4f46e5;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .15s}
+  .gen-btn:hover{background:#4338ca}
+  .gen-btn:disabled{background:#a5b4fc;cursor:not-allowed}
+  .synth-done{font-size:10px;text-align:center;color:#16a34a;font-weight:600}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spinning{display:inline-block;animation:spin .8s linear infinite}
+
+  .synth-output{flex:1;overflow-y:auto;padding:12px}
+  .synth-empty{text-align:center;margin-top:40px;color:#9ca3af;font-size:11px;line-height:2}
+  .synth-empty .icon{font-size:24px;margin-bottom:8px}
+  .md-h2{font-size:12px;font-weight:700;color:#111827;margin-top:16px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #f0f0f0}
+  .md-h3{font-size:10px;font-weight:700;color:#111827;text-transform:uppercase;letter-spacing:.06em;margin-top:12px;margin-bottom:4px}
+  .md-p{font-size:11px;color:#374151;line-height:1.6;margin-bottom:3px}
+  .md-li{font-size:11px;color:#374151;line-height:1.6;margin-left:14px;margin-bottom:2px}
+  .copy-btn{width:100%;margin-top:12px;padding:8px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;font-size:11px;color:#374151;cursor:pointer;font-weight:600}
+  .copy-btn:hover{background:#f9fafb}
+
+  /* HERO */
+  #hero{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .breadcrumb{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:8px 24px;border-bottom:1px solid #f0f0f0;background:#fff}
+  .bc-item{font-size:11px;color:#9ca3af;cursor:pointer;background:none;border:none;padding:0}
+  .bc-item:hover{color:#374151}
+  .bc-item.active{color:#374151;font-weight:600;cursor:default}
+  .bc-sep{color:#e5e7eb;font-size:11px}
+  .bc-back{margin-left:auto;font-size:11px;color:#9ca3af;cursor:pointer;background:none;border:none}
+  .bc-back:hover{color:#374151}
+
+  /* LEVEL 1 */
+  #level1{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px}
+  #level1 .eyebrow{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px}
+  #level1 h2{font-size:24px;font-weight:700;color:#111827;margin-bottom:4px}
+  #level1 p{font-size:11px;color:#9ca3af;margin-bottom:32px}
+  .app-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%;max-width:560px}
+  .app-card{text-align:left;border:2px solid #e5e7eb;border-radius:14px;padding:20px;cursor:pointer;background:#fff;transition:all .15s}
+  .app-card:hover{border-color:#6b7280}
+  .app-card.dark{border-color:#374151;background:#111827;color:#fff}
+  .app-card.dark:hover{border-color:#6b7280}
+  .app-icon{font-size:22px;margin-bottom:12px}
+  .app-card .app-name{font-size:13px;font-weight:700;color:#111827;margin-bottom:2px}
+  .app-card.dark .app-name{color:#fff}
+  .app-card .app-count{font-size:11px;color:#9ca3af}
+
+  /* LEVEL 2 */
+  #level2{flex:1;overflow:auto;padding:24px}
+  .screen-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:700px;margin:0 auto}
+  .screen-card{border:2px solid #e5e7eb;border-radius:12px;overflow:hidden;cursor:pointer;background:#fff;transition:all .15s;text-align:left}
+  .screen-card:hover{border-color:#6b7280}
+  .screen-card.dark-border{border-color:#374151}
+  .screen-mock{height:110px;padding:12px;background:#f3f4f6}
+  .screen-mock.dark-mock{background:linear-gradient(135deg,#111827,#374151)}
+  .mock-inner{display:flex;flex-direction:column;gap:6px;height:100%}
+  .mock-bar{height:10px;border-radius:4px;background:#d1d5db}
+  .mock-bar.sm{width:40%;background:#e5e7eb}
+  .mock-bar.md{width:60%;background:#e5e7eb}
+  .mock-row{display:flex;gap:6px;flex:1}
+  .mock-block{border-radius:4px;flex:1;background:#e5e7eb}
+  .mock-block.dk{background:#374151}
+  .mock-block.dk2{background:#4b5563}
+  .mock-bar.dk{background:#4b5563;width:70%}
+  .mock-bar.dk2{background:#374151;width:50%}
+  .pulse-dot{width:8px;height:8px;border-radius:50%;background:#60a5fa;animation:pulse 2s infinite;margin-top:auto}
+  .screen-info{padding:10px 12px}
+  .screen-name{font-size:12px;font-weight:700;color:#111827}
+  .screen-desc{font-size:10px;color:#9ca3af;margin-top:2px}
+
+  /* LEVEL 3 */
+  #level3{flex:1;display:flex;gap:20px;padding:24px;overflow:auto}
+  .screen-preview{flex:1;max-width:500px}
+  .browser-frame{border:2px solid #e5e7eb;border-radius:12px;overflow:hidden}
+  .browser-frame.dark{border-color:#374151}
+  .browser-bar{display:flex;align-items:center;gap:6px;padding:8px 12px;background:#f9fafb;border-bottom:1px solid #f0f0f0}
+  .browser-bar.dark{background:#111827;border-bottom-color:#374151}
+  .browser-dot{width:8px;height:8px;border-radius:50%;background:#d1d5db}
+  .browser-title{font-size:10px;color:#9ca3af;margin-left:6px}
+  .browser-body{height:220px;padding:16px}
+  .browser-body.dark{background:#1f2937}
+  .wireframe-label{font-size:10px;color:#9ca3af;text-align:center;margin-top:8px}
+
+  .feedback-panel{width:260px;flex-shrink:0;display:flex;flex-direction:column;gap:12px}
+  .panel-label{font-size:10px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+  .type-chips{display:flex;flex-wrap:wrap;gap:6px}
+  .type-chip{padding:5px 10px;border:1px solid #e5e7eb;border-radius:20px;font-size:10px;color:#6b7280;cursor:pointer;background:none;transition:all .15s}
+  .type-chip.active{background:#111827;color:#fff;border-color:#111827}
+  .feedback-textarea{width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:10px;font-size:11px;color:#374151;resize:none;font-family:inherit;outline:none;height:100px}
+  .feedback-textarea:focus{border-color:#9ca3af}
+  .submit-btn{width:100%;padding:10px;background:#111827;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s}
+  .submit-btn:hover{background:#374151}
+  .submit-btn.success{background:#16a34a}
+  .another-btn{width:100%;font-size:11px;color:#9ca3af;background:none;border:none;cursor:pointer;text-align:center;padding:4px}
+  .another-btn:hover{color:#374151}
+
+  /* hidden helper */
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">Emerald <span>/ Feedback Wall</span></div>
+  <div class="meta">
+    <div class="live"><span class="dot"></span> Live · Day 1</div>
+    <div class="timer">⏱ Synthesis starts 9pm</div>
+    <div class="count" id="total-count">62 signals captured</div>
+  </div>
+</div>
+
+<!-- BODY -->
+<div id="body">
+
+  <!-- DRAWER -->
+  <div id="drawer">
+    <button id="drawer-toggle">‹ Hide</button>
+    <div id="drawer-inner">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="features">✦ Features</button>
+        <button class="tab-btn" data-tab="kudos">❝ Kudos</button>
+        <button class="tab-btn" data-tab="synthesis">⟳ Synthesis</button>
+      </div>
+
+      <!-- FEATURES -->
+      <div class="tab-pane active" id="pane-features">
+        <button class="add-btn" id="add-feature-btn">+ Add a feature request…</button>
+        <div class="add-form hidden" id="feature-form">
+          <textarea id="feature-input" rows="2" placeholder="Describe the feature…"></textarea>
+          <textarea id="feature-workflow" rows="2" placeholder="What workflow does this unblock?"></textarea>
+          <div class="form-row">
+            <button class="btn-submit" id="submit-feature">Submit</button>
+            <button class="btn-cancel" id="cancel-feature">Cancel</button>
+          </div>
+        </div>
+        <div id="feature-list"></div>
+      </div>
+
+      <!-- KUDOS -->
+      <div class="tab-pane" id="pane-kudos">
+        <button class="add-btn" id="add-kudos-btn">+ Share a quote or kudos…</button>
+        <div class="add-form hidden" id="kudos-form">
+          <textarea id="kudos-input" rows="3" placeholder="What's working well?"></textarea>
+          <div class="role-chips" id="role-chips">
+            <button class="chip" data-role="Ops">Ops</button>
+            <button class="chip" data-role="Eng">Eng</button>
+            <button class="chip" data-role="Product">Product</button>
+            <button class="chip" data-role="Finance">Finance</button>
+            <button class="chip" data-role="Exec">Exec</button>
+          </div>
+          <div class="consent-row" id="consent-row">
+            <div class="checkbox" id="consent-box"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <span class="consent-label">OK to feature publicly (role only, no name)</span>
+          </div>
+          <div class="form-row">
+            <button class="btn-submit" id="submit-kudos">Submit</button>
+            <button class="btn-cancel" id="cancel-kudos">Cancel</button>
+          </div>
+        </div>
+        <div id="kudos-list"></div>
+      </div>
+
+      <!-- SYNTHESIS -->
+      <div class="tab-pane" id="pane-synthesis">
+        <div class="synth-controls">
+          <div class="mode-toggle">
+            <button class="mode-btn active" data-mode="roadmap">🗺 Roadmap</button>
+            <button class="mode-btn" data-mode="prd">📋 PRD</button>
+          </div>
+          <div class="signal-grid">
+            <div class="signal-card blue"><div class="signal-num" id="sig-votes">0</div><div class="signal-lbl">Feature votes</div></div>
+            <div class="signal-card amber"><div class="signal-num" id="sig-screens">0</div><div class="signal-lbl">Screen notes</div></div>
+            <div class="signal-card green"><div class="signal-num" id="sig-kudos">0</div><div class="signal-lbl">Kudos</div></div>
+          </div>
+          <button class="gen-btn" id="gen-btn">Generate Prioritised Roadmap</button>
+          <div class="synth-done hidden" id="synth-done">✓ Synthesis complete · Ready for overnight build</div>
+        </div>
+        <div class="synth-output" id="synth-output">
+          <div class="synth-empty" id="synth-empty">
+            <div class="icon">⟳</div>
+            <div>All captured feedback will be synthesised<br>into a prioritised output for the overnight team.</div>
+            <div style="color:#d1d5db;margin-top:8px">Hit Generate when ready.</div>
+          </div>
+        </div>
+        <button class="copy-btn hidden" id="copy-btn">⎘ Copy to clipboard</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div id="hero">
+
+    <!-- BREADCRUMB (hidden on level 1) -->
+    <div class="breadcrumb hidden" id="breadcrumb">
+      <button class="bc-item" id="bc-root">Screen Feedback</button>
+      <span class="bc-sep">›</span>
+      <span class="bc-item active" id="bc-app"></span>
+      <span class="bc-sep hidden" id="bc-sep2">›</span>
+      <span class="bc-item active hidden" id="bc-screen"></span>
+      <button class="bc-back hidden" id="bc-back">← All screens</button>
+    </div>
+
+    <div id="level1">
+      <div class="eyebrow">Screen Feedback</div>
+      <h2>Which area would you like to react to?</h2>
+      <p>Select a product area to see its screens</p>
+      <div class="app-grid" id="app-grid"></div>
+    </div>
+
+    <div id="level2" class="hidden">
+      <div class="screen-grid" id="screen-grid"></div>
+    </div>
+
+    <div id="level3" class="hidden">
+      <div class="screen-preview">
+        <div class="browser-frame" id="preview-frame">
+          <div class="browser-bar" id="preview-bar">
+            <div class="browser-dot"></div><div class="browser-dot"></div><div class="browser-dot"></div>
+            <span class="browser-title" id="preview-title"></span>
+          </div>
+          <div class="browser-body" id="preview-body">
+            <div class="mock-inner" id="preview-mock"></div>
+          </div>
+        </div>
+        <div class="wireframe-label">Representative wireframe · not final UI</div>
+      </div>
+      <div class="feedback-panel">
+        <div>
+          <div class="panel-label">Type of feedback</div>
+          <div class="type-chips" id="type-chips">
+            <button class="type-chip" data-type="Pain point">Pain point</button>
+            <button class="type-chip" data-type="Confusing">Confusing</button>
+            <button class="type-chip" data-type="Missing element">Missing element</button>
+            <button class="type-chip" data-type="Works well">Works well</button>
+            <button class="type-chip" data-type="Suggestion">Suggestion</button>
+          </div>
+        </div>
+        <div>
+          <div class="panel-label">Tell us more</div>
+          <textarea class="feedback-textarea" id="feedback-text" placeholder="What specifically on this screen?"></textarea>
+        </div>
+        <button class="submit-btn" id="submit-feedback">Submit Feedback</button>
+        <button class="another-btn" id="another-btn">Feedback another screen →</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const APPS = [
+  { id:"platform", label:"Core Platform", icon:"⬡", dark:false, screens:[
+    {id:"dash",label:"Dashboard",desc:"Main overview & KPIs"},
+    {id:"nav",label:"Navigation",desc:"Global nav & wayfinding"},
+    {id:"search",label:"Global Search",desc:"Cross-product search"},
+    {id:"settings",label:"Settings",desc:"User & org preferences"},
+  ]},
+  { id:"agents", label:"Agentic Workflows", icon:"◈", dark:false, screens:[
+    {id:"builder",label:"Workflow Builder",desc:"Visual agent builder"},
+    {id:"agentconfig",label:"Agent Config",desc:"Parameters & permissions"},
+    {id:"runhistory",label:"Run History",desc:"Logs & audit trail"},
+    {id:"triggers",label:"Triggers",desc:"Event-based automation"},
+  ]},
+  { id:"analytics", label:"Analytics", icon:"◲", dark:false, screens:[
+    {id:"reports",label:"Reports",desc:"Scheduled & ad hoc"},
+    {id:"explorer",label:"Data Explorer",desc:"Query & visualise"},
+    {id:"export",label:"Export Centre",desc:"Formats & destinations"},
+  ]},
+  { id:"innovation", label:"AI Concepts ✦", icon:"✦", dark:true, screens:[
+    {id:"orchestration",label:"Agent Orchestration",desc:"Multi-agent coordination"},
+    {id:"nlq",label:"Natural Language Query",desc:"Ask data anything"},
+    {id:"predictive",label:"Predictive Actions",desc:"AI-suggested next steps"},
+    {id:"copilot",label:"In-app Copilot",desc:"Contextual AI assistant"},
+  ]},
+];
+
+const state = {
+  drawerOpen: true,
+  activeTab: "features",
+  synthMode: "roadmap",
+  selectedApp: null,
+  selectedScreen: null,
+  features: [
+    {id:1,text:"Bulk assign tasks across workflows",votes:8,workflow:"Ops team runs 30+ agents daily — switching context costs 2hrs"},
+    {id:2,text:"Slack notifications for agent failures",votes:6,workflow:"On-call engineers miss failures until morning standups"},
+    {id:3,text:"Role-based dashboard templates",votes:5,workflow:"Every new hire needs custom setup — no standard starting point"},
+    {id:4,text:"Natural language query for reports",votes:4,workflow:"Finance team can't self-serve data without eng support"},
+  ],
+  kudos: [
+    {id:1,text:"The workflow builder finally matches how we actually think about automation.",role:"Operations",consent:true},
+    {id:2,text:"First tool our whole team actually uses without training.",role:"Product",consent:true},
+    {id:3,text:"Agent run history has saved us countless debugging hours.",role:"Engineering",consent:false},
+  ],
+  screenFeedback: [
+    {id:1,screen:"Workflow Builder",app:"Agentic Workflows",type:"Pain point",text:"No way to bulk-edit trigger conditions across multiple agents"},
+    {id:2,screen:"Dashboard",app:"Core Platform",type:"Confusing",text:"KPI cards don't explain what time period they cover"},
+    {id:3,screen:"Agent Config",app:"Agentic Workflows",type:"Missing element",text:"No permissions preview before deploying — risky for prod"},
+    {id:4,screen:"Data Explorer",app:"Analytics",type:"Works well",text:"Query builder is genuinely intuitive — best part of the product"},
+  ],
+  activeRole: null,
+  consentChecked: false,
+  activeFeedbackType: null,
+  synthText: "",
+};
+
+// ---- UTILS ----
+const $ = id => document.getElementById(id);
+const mockLight = () => `<div class="mock-inner"><div class="mock-bar sm"></div><div class="mock-bar md"></div><div class="mock-row"><div class="mock-block"></div><div class="mock-block"></div></div><div class="mock-bar sm"></div><div class="mock-bar md"></div></div>`;
+const mockDark  = () => `<div class="mock-inner"><div class="mock-bar dk sm"></div><div class="mock-bar dk2 md"></div><div class="mock-row"><div class="mock-block dk"></div><div class="mock-block dk2"></div></div><div class="mock-bar dk"></div><div class="pulse-dot"></div></div>`;
+
+function updateCount() {
+  const total = state.features.reduce((a,f)=>a+f.votes,0) + state.kudos.length + state.screenFeedback.length;
+  $("total-count").textContent = total + " signals captured";
+  $("sig-votes").textContent = state.features.reduce((a,f)=>a+f.votes,0);
+  $("sig-screens").textContent = state.screenFeedback.length;
+  $("sig-kudos").textContent = state.kudos.length;
+}
+
+// ---- DRAWER ----
+$("drawer-toggle").onclick = () => {
+  state.drawerOpen = !state.drawerOpen;
+  $("drawer").classList.toggle("collapsed", !state.drawerOpen);
+  $("drawer-toggle").textContent = state.drawerOpen ? "‹ Hide" : "›";
+};
+
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.onclick = () => {
+    state.activeTab = btn.dataset.tab;
+    document.querySelectorAll(".tab-btn").forEach(b => { b.classList.remove("active","synth"); });
+    btn.classList.add("active");
+    if (btn.dataset.tab === "synthesis") btn.classList.add("synth");
+    document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+    $("pane-" + btn.dataset.tab).classList.add("active");
+    updateCount();
+  };
+});
+
+// ---- FEATURES ----
+function renderFeatures() {
+  const sorted = [...state.features].sort((a,b)=>b.votes-a.votes);
+  $("feature-list").innerHTML = sorted.map(f => `
+    <div class="feature-card" style="margin-bottom:8px">
+      <div class="vote-col" data-id="${f.id}">
+        <div class="vote-arrow">▲</div>
+        <div class="vote-count">${f.votes}</div>
+      </div>
+      <div>
+        <div class="feature-text">${f.text}</div>
+        ${f.workflow ? `<div class="feature-context">${f.workflow}</div>` : ""}
+      </div>
+    </div>
+  `).join("");
+  $("feature-list").querySelectorAll(".vote-col").forEach(el => {
+    el.onclick = () => {
+      const id = +el.dataset.id;
+      state.features = state.features.map(f => f.id===id ? {...f,votes:f.votes+1} : f);
+      renderFeatures(); updateCount();
+    };
+  });
+}
+
+$("add-feature-btn").onclick = () => { $("add-feature-btn").classList.add("hidden"); $("feature-form").classList.remove("hidden"); $("feature-input").focus(); };
+$("cancel-feature").onclick = () => { $("add-feature-btn").classList.remove("hidden"); $("feature-form").classList.add("hidden"); $("feature-input").value=""; $("feature-workflow").value=""; };
+$("submit-feature").onclick = () => {
+  const txt = $("feature-input").value.trim();
+  if (!txt) return;
+  state.features.unshift({id:Date.now(),text:txt,votes:1,workflow:$("feature-workflow").value.trim()});
+  $("cancel-feature").click();
+  renderFeatures(); updateCount();
+};
+
+// ---- KUDOS ----
+function renderKudos() {
+  $("kudos-list").innerHTML = state.kudos.map(k => `
+    <div class="kudos-card" style="margin-bottom:8px">
+      <div class="kudos-text">"${k.text}"</div>
+      <div class="kudos-meta">
+        <span class="kudos-role">${k.role}</span>
+        ${k.consent ? '<span class="consent-badge">✓ Public OK</span>' : ""}
+      </div>
+    </div>
+  `).join("");
+}
+
+$("add-kudos-btn").onclick = () => { $("add-kudos-btn").classList.add("hidden"); $("kudos-form").classList.remove("hidden"); $("kudos-input").focus(); };
+$("cancel-kudos").onclick = () => {
+  $("add-kudos-btn").classList.remove("hidden"); $("kudos-form").classList.add("hidden");
+  $("kudos-input").value=""; state.activeRole=null; state.consentChecked=false;
+  document.querySelectorAll("#role-chips .chip").forEach(c=>c.classList.remove("active"));
+  $("consent-box").classList.remove("checked");
+};
+$("submit-kudos").onclick = () => {
+  const txt = $("kudos-input").value.trim();
+  if (!txt) return;
+  state.kudos.unshift({id:Date.now(),text:txt,role:state.activeRole||"Attendee",consent:state.consentChecked});
+  $("cancel-kudos").click();
+  renderKudos(); updateCount();
+};
+document.querySelectorAll("#role-chips .chip").forEach(chip => {
+  chip.onclick = () => {
+    state.activeRole = chip.dataset.role;
+    document.querySelectorAll("#role-chips .chip").forEach(c=>c.classList.remove("active"));
+    chip.classList.add("active");
+  };
+});
+$("consent-row").onclick = () => {
+  state.consentChecked = !state.consentChecked;
+  $("consent-box").classList.toggle("checked", state.consentChecked);
+};
+
+// ---- SYNTHESIS ----
+document.querySelectorAll(".mode-btn").forEach(btn => {
+  btn.onclick = () => {
+    state.synthMode = btn.dataset.mode;
+    document.querySelectorAll(".mode-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    $("gen-btn").textContent = "Generate " + (state.synthMode==="roadmap" ? "Prioritised Roadmap" : "Overnight PRD");
+    $("synth-done").classList.add("hidden");
+    $("copy-btn").classList.add("hidden");
+    $("synth-output").innerHTML = `<div class="synth-empty"><div class="icon">⟳</div><div>All captured feedback will be synthesised<br>into a ${state.synthMode==="roadmap"?"prioritised roadmap":"buildable PRD"} for the overnight team.</div><div style="color:#d1d5db;margin-top:8px">Hit Generate when ready.</div></div>`;
+    state.synthText = "";
+  };
+});
+
+function buildPrompt(mode) {
+  const feats = state.features.sort((a,b)=>b.votes-a.votes).map(f=>`- [${f.votes} votes] "${f.text}"${f.workflow?` (Context: ${f.workflow})`:""}`).join("\n");
+  const kds = state.kudos.map(k=>`- [${k.role}] "${k.text}"`).join("\n");
+  const sf = state.screenFeedback.map(f=>`- [${f.app} › ${f.screen}] (${f.type}): "${f.text}"`).join("\n");
+  if (mode==="roadmap") return `You are a senior product strategist synthesising live B2B client feedback from a conference feedback wall for a product called Emerald — an enterprise workflow automation and AI platform.\n\nFEATURE REQUESTS (with upvotes):\n${feats}\n\nSCREEN FEEDBACK:\n${sf}\n\nCLIENT KUDOS:\n${kds}\n\nProduce a concise Prioritised Roadmap:\n\n## P0 — Build Tonight (overnight prototype sprint)\nList 1-2 items max that are high-signal, high-vote, and prototypable in under 8 hours. For each: what to build, why it matters, which feedback supports it.\n\n## P1 — Next Sprint\n3-4 items with strong signal. Brief rationale each.\n\n## P2 — Backlog\nRemaining themes worth capturing.\n\n## Patterns & Insights\n2-3 cross-cutting observations from the feedback.\n\n## Marketing Moments\n2-3 verbatim quotes from kudos usable in Day 2 storytelling. Note the role.\n\nBe direct, opinionated, specific. This team has 8 hours to build.`;
+  return `You are a senior product manager writing an overnight development brief for a B2B enterprise platform called Emerald. Your team has 8 hours to prototype.\n\nFEATURE REQUESTS:\n${feats}\n\nSCREEN FEEDBACK:\n${sf}\n\nCLIENT VOICE:\n${kds}\n\nWrite a Product Requirements Document for tonight's sprint:\n\n## Overview\nOne paragraph: what we're building tonight and why.\n\n## Problem Statement\nWhat specific client pain is this solving? Use the feedback as evidence.\n\n## Scope — Tonight's Build\nDefine exactly what's in scope for an 8-hour prototype. Be ruthless.\n\n## Out of Scope\nWhat we're explicitly NOT building tonight.\n\n## User Stories\n5-7 stories: As a [role], I want to [action], so that [outcome].\n\n## Acceptance Criteria\nFor each P0 feature: what does "done" look like for the demo?\n\n## Design Guidance\nKey UX principles based on feedback themes.\n\n## Success Metrics\nHow will we know if the Day 2 prototype lands?\n\nBe concrete and buildable. No fluff.`;
+}
+
+function renderMD(text) {
+  return text.split("\n").map(l => {
+    if (l.startsWith("## ")) return `<div class="md-h2">${l.slice(3)}</div>`;
+    if (l.startsWith("### ")) return `<div class="md-h3">${l.slice(4)}</div>`;
+    if (l.startsWith("- ")) return `<li class="md-li">${l.slice(2)}</li>`;
+    if (/^\d+\./.test(l)) return `<li class="md-li" style="list-style:decimal">${l.replace(/^\d+\.\s*/,"")}</li>`;
+    if (l.trim()==="") return `<div style="height:4px"></div>`;
+    return `<p class="md-p">${l}</p>`;
+  }).join("");
+}
+
+$("gen-btn").onclick = async () => {
+  $("gen-btn").disabled = true;
+  $("gen-btn").innerHTML = '<span class="spinning">⟳</span> Synthesising…';
+  $("synth-done").classList.add("hidden");
+  $("copy-btn").classList.add("hidden");
+  $("synth-output").innerHTML = "";
+  state.synthText = "";
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,stream:true,messages:[{role:"user",content:buildPrompt(state.synthMode)}]})
+    });
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const {done,value} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value,{stream:true});
+      const parts = buf.split("\n\n"); buf = parts.pop();
+      for (const part of parts) {
+        if (!part.startsWith("data: ")) continue;
+        const raw = part.slice(6).trim();
+        if (raw==="[DONE]") continue;
+        try {
+          const json = JSON.parse(raw);
+          if (json.type==="content_block_delta" && json.delta?.type==="text_delta") {
+            state.synthText += json.delta.text;
+            $("synth-output").innerHTML = renderMD(state.synthText);
+            $("synth-output").scrollTop = $("synth-output").scrollHeight;
+          }
+        } catch {}
+      }
+    }
+    $("synth-done").classList.remove("hidden");
+    $("copy-btn").classList.remove("hidden");
+  } catch(e) {
+    $("synth-output").innerHTML = `<p class="md-p" style="color:#dc2626">⚠ Could not reach synthesis API. Check connection.</p>`;
+  }
+  $("gen-btn").disabled = false;
+  $("gen-btn").textContent = "Regenerate " + (state.synthMode==="roadmap"?"Roadmap":"PRD");
+};
+
+$("copy-btn").onclick = () => {
+  navigator.clipboard.writeText(state.synthText).then(()=>{ $("copy-btn").textContent="✓ Copied!"; setTimeout(()=>$("copy-btn").textContent="⎘ Copy to clipboard",2000); });
+};
+
+// ---- HERO NAVIGATION ----
+function showLevel(n) {
+  ["level1","level2","level3"].forEach((id,i) => $( id).classList.toggle("hidden", i+1!==n));
+  $("breadcrumb").classList.toggle("hidden", n===1);
+}
+
+function renderAppGrid() {
+  $("app-grid").innerHTML = APPS.map(app => `
+    <button class="app-card ${app.dark?"dark":""}" data-app="${app.id}">
+      <div class="app-icon" style="${app.dark?"color:#60a5fa":"color:#9ca3af"}">${app.icon}</div>
+      <div class="app-name">${app.label}</div>
+      <div class="app-count">${app.screens.length} screens</div>
+    </button>
+  `).join("");
+  $("app-grid").querySelectorAll(".app-card").forEach(btn => {
+    btn.onclick = () => selectApp(btn.dataset.app);
+  });
+}
+
+function selectApp(appId) {
+  state.selectedApp = appId;
+  const app = APPS.find(a=>a.id===appId);
+  $("bc-app").textContent = app.label;
+  $("bc-sep2").classList.add("hidden");
+  $("bc-screen").classList.add("hidden");
+  $("bc-back").classList.add("hidden");
+  renderScreenGrid(app);
+  showLevel(2);
+}
+
+function renderScreenGrid(app) {
+  $("screen-grid").innerHTML = app.screens.map(s => `
+    <button class="screen-card ${app.dark?"dark-border":""}" data-screen="${s.id}">
+      <div class="screen-mock ${app.dark?"dark-mock":""}">
+        ${app.dark ? mockDark() : mockLight()}
+      </div>
+      <div class="screen-info">
+        <div class="screen-name">${s.label}</div>
+        <div class="screen-desc">${s.desc}</div>
+      </div>
+    </button>
+  `).join("");
+  $("screen-grid").querySelectorAll(".screen-card").forEach(btn => {
+    btn.onclick = () => selectScreen(btn.dataset.screen);
+  });
+}
+
+function selectScreen(screenId) {
+  state.selectedScreen = screenId;
+  state.activeFeedbackType = null;
+  const app = APPS.find(a=>a.id===state.selectedApp);
+  const screen = app.screens.find(s=>s.id===screenId);
+  $("bc-sep2").classList.remove("hidden");
+  $("bc-screen").classList.remove("hidden");
+  $("bc-screen").textContent = screen.label;
+  $("bc-back").classList.remove("hidden");
+
+  // preview
+  $("preview-frame").className = "browser-frame" + (app.dark?" dark":"");
+  $("preview-bar").className = "browser-bar" + (app.dark?" dark":"");
+  $("preview-title").textContent = screen.label;
+  $("preview-body").className = "browser-body" + (app.dark?" dark":"");
+  $("preview-body").innerHTML = app.dark ? mockDark() : mockLight();
+
+  document.querySelectorAll(".type-chip").forEach(c=>c.classList.remove("active"));
+  $("feedback-text").value = "";
+  $("submit-feedback").textContent = "Submit Feedback";
+  $("submit-feedback").classList.remove("success");
+  showLevel(3);
+}
+
+document.querySelectorAll(".type-chip").forEach(chip => {
+  chip.onclick = () => {
+    state.activeFeedbackType = chip.dataset.type;
+    document.querySelectorAll(".type-chip").forEach(c=>c.classList.remove("active"));
+    chip.classList.add("active");
+  };
+});
+
+$("submit-feedback").onclick = () => {
+  const app = APPS.find(a=>a.id===state.selectedApp);
+  const screen = app?.screens.find(s=>s.id===state.selectedScreen);
+  state.screenFeedback.push({id:Date.now(),screen:screen?.label||"",app:app?.label||"",type:state.activeFeedbackType||"General",text:$("feedback-text").value.trim()});
+  $("submit-feedback").textContent = "✓ Feedback submitted!";
+  $("submit-feedback").classList.add("success");
+  updateCount();
+  setTimeout(()=>{ $("submit-feedback").textContent="Submit Feedback"; $("submit-feedback").classList.remove("success"); },2000);
+};
+
+$("another-btn").onclick = () => {
+  state.selectedScreen = null;
+  $("bc-sep2").classList.add("hidden");
+  $("bc-screen").classList.add("hidden");
+  $("bc-back").classList.add("hidden");
+  const app = APPS.find(a=>a.id===state.selectedApp);
+  renderScreenGrid(app);
+  showLevel(2);
+};
+
+$("bc-root").onclick = () => { state.selectedApp=null; state.selectedScreen=null; showLevel(1); };
+$("bc-back").onclick = () => { state.selectedScreen=null; $("bc-sep2").classList.add("hidden"); $("bc-screen").classList.add("hidden"); $("bc-back").classList.add("hidden"); const app=APPS.find(a=>a.id===state.selectedApp); renderScreenGrid(app); showLevel(2); };
+
+// ---- INIT ----
+renderAppGrid();
+renderFeatures();
+renderKudos();
+updateCount();
+showLevel(1);
+</script>
+</body>
+</html>

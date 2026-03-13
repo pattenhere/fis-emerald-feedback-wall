@@ -1,0 +1,85 @@
+import type { DrawerTab } from "../types/domain";
+
+interface DrawerProps {
+  open: boolean;
+  activeTab: DrawerTab;
+  onTabChange: (tab: DrawerTab) => void;
+  onToggle: () => void;
+  children: JSX.Element;
+}
+
+const iconForTab = (tab: DrawerTab): JSX.Element => {
+  if (tab === "features") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="4" y="4" width="7" height="7" rx="1.5" />
+        <rect x="13" y="4" width="7" height="7" rx="1.5" />
+        <rect x="4" y="13" width="7" height="7" rx="1.5" />
+        <rect x="13" y="13" width="7" height="7" rx="1.5" />
+      </svg>
+    );
+  }
+  if (tab === "kudos") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 3.5 14.6 9l6 .5-4.5 3.8 1.4 5.8-5.5-3.2-5.5 3.2 1.4-5.8L3.4 9.5l6-.5L12 3.5Z" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M20 12a8 8 0 1 1-2.3-5.7" />
+      <path d="M20 5v5h-5" />
+    </svg>
+  );
+};
+
+const TABS: Array<{ id: DrawerTab; label: string }> = [
+  { id: "features", label: "Features" },
+  { id: "kudos", label: "Kudos" },
+  { id: "synthesis", label: "Synthesis" },
+];
+
+export const Drawer = ({
+  open,
+  activeTab,
+  onTabChange,
+  onToggle,
+  children,
+}: DrawerProps): JSX.Element => {
+  return (
+    <aside className={`drawer ${open ? "is-open" : "is-collapsed"}`}>
+      <button
+        className="drawer-toggle"
+        type="button"
+        onClick={onToggle}
+        aria-label={open ? "Collapse menu" : "Open menu"}
+      >
+        <span className="drawer-toggle-desktop" aria-hidden="true">
+          {open ? "<" : ">"}
+        </span>
+        <span className="drawer-toggle-mobile" aria-hidden="true">
+          ☰
+        </span>
+      </button>
+      <nav className="drawer-tabs" aria-label="Feedback panel tabs">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            className={`drawer-tab ${activeTab === tab.id ? "is-active" : ""}`}
+            type="button"
+            onClick={() => onTabChange(tab.id)}
+            aria-label={tab.label}
+            title={tab.label}
+          >
+            <span className="drawer-tab-icon" aria-hidden="true">
+              {iconForTab(tab.id)}
+            </span>
+            <span className="drawer-tab-label">{tab.label}</span>
+          </button>
+        ))}
+      </nav>
+      {open && <section className="drawer-content">{children}</section>}
+    </aside>
+  );
+};
