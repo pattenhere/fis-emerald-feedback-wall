@@ -1,15 +1,7 @@
-:root {
-  --bg: #e9eee7;
-  --surface: #f5f8f3;
-  --surface-strong: #ffffff;
-  --line: #c8d6cb;
-  --ink: #18322b;
-  --muted: #537063;
-  --accent: #1d6b50;
-  --accent-soft: #d6e9de;
-  --danger: #9f2e2e;
-  --hero-grad: linear-gradient(130deg, #f7faf5 0%, #e4efe7 48%, #dce8ee 100%);
-  --ai-grad: linear-gradient(135deg, #142a2c 0%, #203643 100%);
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Avenir Next", "Segoe UI", Arial, sans-serif;
 }
 
 .app-shell {
@@ -27,9 +19,39 @@
   background: var(--surface-strong);
 }
 
+.top-bar-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .top-bar h1 {
   margin: 0;
   font-size: 1.2rem;
+}
+
+.universe-launch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0.35rem 0.6rem;
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.universe-launch svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .eyebrow {
@@ -65,7 +87,10 @@
 .content-shell {
   display: grid;
   grid-template-columns: minmax(280px, 380px) 1fr;
+  gap: 1rem;
+  padding: 1rem;
   min-height: 0;
+  align-items: stretch;
 }
 
 .content-shell.is-drawer-collapsed {
@@ -74,12 +99,14 @@
 
 .drawer {
   position: relative;
-  border-right: 1px solid var(--line);
+  border: 1px solid var(--line);
+  border-radius: 12px;
   background: var(--surface-strong);
   display: grid;
   grid-template-rows: auto auto 1fr;
   min-height: 0;
   padding-bottom: 52px;
+  overflow: hidden;
 }
 
 .drawer.is-collapsed {
@@ -114,7 +141,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 0.4rem;
-  padding: 0 0.9rem 0.9rem;
+  padding: 0.85rem 0.9rem 0.9rem;
 }
 
 .drawer-tab {
@@ -314,8 +341,11 @@ select {
 .hero {
   display: grid;
   grid-template-rows: auto 1fr;
+  border: 1px solid var(--line);
+  border-radius: 12px;
   background: var(--hero-grad);
   min-height: 0;
+  overflow: hidden;
 }
 
 .app-selector {
@@ -511,6 +541,8 @@ select {
   .content-shell {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
+    gap: 0.85rem;
+    padding: 0.85rem;
   }
 
   .content-shell.is-drawer-collapsed {

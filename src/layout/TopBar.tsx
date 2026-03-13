@@ -20,8 +20,24 @@ export const TopBar = ({ summary, countdownTarget }: TopBarProps): JSX.Element =
 
   return (
     <header className="top-bar">
-      <div>
+      <div className="top-bar-title">
         <h1>Emerald Feedback Wall</h1>
+        <button
+          type="button"
+          className="universe-launch"
+          onClick={() => {
+            window.open("/universe.html", "_blank", "noopener,noreferrer");
+          }}
+          aria-label="Open FIS lending universe"
+          title="Open FIS Lending Universe"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.2" />
+            <path d="M4.5 12c1.8-2.8 4.7-4.2 7.5-4.2s5.7 1.4 7.5 4.2" />
+            <path d="M4.5 12c1.8 2.8 4.7 4.2 7.5 4.2s5.7-1.4 7.5-4.2" />
+          </svg>
+          <span>Universe</span>
+        </button>
       </div>
       <div className="top-bar-metrics">
         <div className="metric-card">

@@ -27,6 +27,13 @@ Implemented local prototype flows:
 
 Anthropic API integration is still pending; synthesis currently uses local deterministic generation.
 
+## Styleguide
+
+Design tokens and visual system guidance live in:
+
+- `docs/styleguide.md`
+- `src/styles/styleguide.css`
+
 ## Run
 
 ```bash

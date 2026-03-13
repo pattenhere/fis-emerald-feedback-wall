@@ -1,0 +1,47 @@
+:root {
+  /* Brand */
+  --fis-green-700: #2f9e44;
+  --fis-green-600: #3dbb52;
+  --fis-green-500: #57cd5d;
+  --fis-blue-900: #061a24;
+  --fis-blue-800: #0c2a3c;
+  --fis-cyan-500: #4fd9ff;
+
+  /* Light app theme */
+  --bg: #eef2f5;
+  --surface: #f8fafc;
+  --surface-strong: #ffffff;
+  --line: #cfd8e2;
+  --ink: #1f2a37;
+  --muted: #5d6c80;
+  --accent: var(--fis-green-700);
+  --accent-soft: #e7f6ea;
+  --danger: #b4232f;
+  --hero-grad: linear-gradient(130deg, #f7fafc 0%, #ecf2f7 48%, #e7eef5 100%);
+  --ai-grad: linear-gradient(135deg, #203343 0%, #2a4558 100%);
+
+  /* Universe theme defaults (overridden on `.theme-universe`) */
+  --space-bg: #003947;
+  --space-bg-soft: #055166;
+  --space-panel: rgba(0, 42, 55, 0.75);
+  --space-line: rgba(90, 188, 232, 0.22);
+  --space-cyan: #4fd9ff;
+  --space-green: #4df46e;
+  --space-blue: #2f6eff;
+  --space-gold: #f4c84d;
+  --space-orange: #ff8d52;
+  --space-ink: #c6f5ff;
+}
+
+.theme-universe {
+  --space-bg: #003947;
+  --space-bg-soft: #055166;
+  --space-panel: rgba(1, 39, 52, 0.82);
+  --space-line: rgba(79, 190, 235, 0.24);
+  --space-cyan: #59ddff;
+  --space-green: #5cff7a;
+  --space-blue: #4c7bff;
+  --space-gold: #f9cf62;
+  --space-orange: #ff8d52;
+  --space-ink: #ccf6ff;
+}
