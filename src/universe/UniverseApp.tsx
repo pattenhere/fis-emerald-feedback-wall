@@ -1,4 +1,6 @@
 import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { createOpenAIText, isOpenAIConfigured } from "../core/ai/openaiClient";
+import { createAnthropicText, isAnthropicConfigured } from "../core/ai/anthropicClient";
 
 type UniverseViewMode = "universe" | "cls";
 type JourneyId =
@@ -23,6 +25,7 @@ type SearchResult = {
   insight: string;
   matchedIds: number[];
   scores: Record<string, number>;
+  threshold: number;
 };
 
 interface Galaxy {
@@ -88,6 +91,17 @@ const FIS = {
   orange: "#FD8D62",
   purple: "#7B5EA7",
 } as const;
+
+type InstitutionAIProvider = "openai" | "anthropic";
+const INSTITUTION_AI_PROVIDER: InstitutionAIProvider =
+  String(import.meta.env.VITE_INSTITUTION_AI_PROVIDER ?? "openai").toLowerCase() === "anthropic"
+    ? "anthropic"
+    : "openai";
+const INSTITUTION_MATCH_THRESHOLD = (() => {
+  const parsed = Number(import.meta.env.VITE_INSTITUTION_MATCH_THRESHOLD ?? 0.6);
+  if (!Number.isFinite(parsed)) return 0.6;
+  return Math.max(0, Math.min(0.99, parsed));
+})();
 
 const STARS = Array.from({ length: 120 }, (_, i) => ({
   id: i,
@@ -283,14 +297,100 @@ const CLS_STRATEGIC_OUTCOMES: OutcomeDef[] = [
   { id: "compliance", label: "Audit & Compliance", x: 165, y: 645, color: FIS.amber },
 ];
 
+const COMPANY_HINTS = ["bank", "lender", "finance", "credit", "institution", "wells fargo", "chase", "citi", "farmer mac"];
+const CAPABILITY_HINTS = [
+  "workflow",
+  "tracking",
+  "automation",
+  "audit",
+  "reporting",
+  "collateral",
+  "payoff",
+  "billing",
+  "amortization",
+  "history",
+  "controls",
+  "servicing",
+  "syndication",
+  "compliance",
+  "integration",
+  "fees",
+  "risk",
+];
+const STOP_WORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "as",
+  "at",
+  "be",
+  "by",
+  "for",
+  "from",
+  "in",
+  "is",
+  "it",
+  "of",
+  "on",
+  "or",
+  "that",
+  "the",
+  "to",
+  "with",
+]);
+
+const normalize = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const tokenize = (value: string): string[] => normalize(value).split(" ").filter(Boolean);
+const importantTokens = (value: string): string[] => tokenize(value).filter((t) => t.length > 1 && !STOP_WORDS.has(t));
+const toSet = (items: string[]): Set<string> => new Set(items);
+const overlapCount = (a: Set<string>, b: Set<string>): number => {
+  let count = 0;
+  for (const value of a) {
+    if (b.has(value)) count += 1;
+  }
+  return count;
+};
+const makeBigrams = (tokens: string[]): string[] => {
+  const grams: string[] = [];
+  for (let i = 0; i < tokens.length - 1; i += 1) grams.push(`${tokens[i]} ${tokens[i + 1]}`);
+  return grams;
+};
+const parseSearchQueryInput = (
+  raw: string,
+): { query: string; forcedQueryType: "company" | "capability" | null } => {
+  const trimmed = raw.trim();
+  const companyPrefix = /^(company|institution)\s*:\s*/i;
+  const capabilityPrefix = /^capability\s*:\s*/i;
+
+  if (companyPrefix.test(trimmed)) {
+    return { query: trimmed.replace(companyPrefix, "").trim(), forcedQueryType: "company" };
+  }
+  if (capabilityPrefix.test(trimmed)) {
+    return { query: trimmed.replace(capabilityPrefix, "").trim(), forcedQueryType: "capability" };
+  }
+  return { query: trimmed, forcedQueryType: null };
+};
+const getConfiguredInstitutionProvider = (): InstitutionAIProvider | null => {
+  if (INSTITUTION_AI_PROVIDER === "anthropic") {
+    return isAnthropicConfigured() ? "anthropic" : null;
+  }
+  return isOpenAIConfigured() ? "openai" : null;
+};
+
 const FEATURES: Feature[] = [
-  { id: 1, clsv: "CLSV-706", name: "Facility History", journey: "inquiry", status: "design-complete", progress: 90, orbit: 1, angle: 0, size: 18, effort: "M", rank: "1.5", impact: "high", eta: "Q2 2026", outcomes: ["farmerMac", "efficiency", "compliance"], desc: "Deep-nav facility history ecosystem. Drill through Limit, Fee, Transaction, and Fee Accruals layers from a single view. Transforms static audit log into verifiable evidence for audits and client inquiries.", votes: 112 },
-  { id: 2, clsv: "CLSV-751+714", name: "Payoff Event", journey: "payoff", status: "design-complete", progress: 88, orbit: 1, angle: 60, size: 19, effort: "L", rank: "1.5", impact: "high", eta: "Q2 2026", outcomes: ["farmerMac", "migration", "efficiency"], desc: "Unified Payoff Quote + Process in a single screen. Tree-view record selection at sub-record granularity — select individual fees, sections, sublimits. Multi-currency totaling and manager submit.", votes: 98 },
+  { id: 1, clsv: "CLSV-706", name: "Facility History", journey: "inquiry", status: "design-complete", progress: 90, orbit: 1, angle: 0, size: 18, effort: "M", rank: "1.5", impact: "high", eta: "Q2 2026", outcomes: ["efficiency", "compliance"], desc: "Deep-nav facility history ecosystem. Drill through Limit, Fee, Transaction, and Fee Accruals layers from a single view. Transforms static audit log into verifiable evidence for audits and client inquiries.", votes: 112 },
+  { id: 2, clsv: "CLSV-751+714", name: "Payoff Event", journey: "payoff", status: "design-complete", progress: 88, orbit: 1, angle: 60, size: 19, effort: "L", rank: "1.5", impact: "high", eta: "Q2 2026", outcomes: ["migration", "efficiency"], desc: "Unified Payoff Quote + Process in a single screen. Tree-view record selection at sub-record granularity — select individual fees, sections, sublimits. Multi-currency totaling and manager submit.", votes: 98 },
   { id: 3, clsv: "CLSV-724", name: "Loan: Collateral", journey: "collateral", status: "design-complete", progress: 95, orbit: 1, angle: 120, size: 16, effort: "L", rank: "1", impact: "high", eta: "Q1 2026", outcomes: ["migration", "compliance"], desc: "Loan-level collateral management. Design complete — ready for engineering handoff. Covers full lifecycle of collateral records linked to loans, document attachments, and status tracking.", votes: 76 },
   { id: 4, clsv: "CLSV-693", name: "Facility: Collateral", journey: "collateral", status: "design-complete", progress: 85, orbit: 1, angle: 180, size: 16, effort: "L", rank: "1.5", impact: "high", eta: "Q2 2026", outcomes: ["migration", "compliance"], desc: "Facility-level collateral management. Covers ECC collateral records, cross-facility tracking, document attachment workflows at the facility tier.", votes: 61 },
-  { id: 5, clsv: "CLSV-707", name: "Facility Invoices", journey: "booking", status: "design-complete", progress: 80, orbit: 1, angle: 240, size: 15, effort: "M", rank: "1", impact: "high", eta: "Q2 2026", outcomes: ["farmerMac", "migration"], desc: "Facility-level invoice view and management. Includes accruing fee invoices, billing schedules, and re-bill/reverse capabilities.", votes: 54 },
-  { id: 6, clsv: "CLSV-673", name: "Reference Repayment Schedules", journey: "booking", status: "design-complete", progress: 78, orbit: 1, angle: 300, size: 17, effort: "XL", rank: "2", impact: "high", eta: "Q2 2026", outcomes: ["farmerMac", "migration", "efficiency"], desc: "Customer-level repayment schedule templates. CSV import, amortization calculator, manual grid entry. Satisfaction improved 5.4→9.3 after final redesign. Templates reusable across loans.", votes: 91 },
-  { id: 7, clsv: "CLSV-876", name: "EIR Fees", journey: "booking", status: "planned", progress: 0, orbit: 2, angle: 20, size: 16, effort: "L", rank: "1", impact: "high", eta: "Q3 2026", outcomes: ["farmerMac", "migration"], desc: "Configure EIR recalculation triggers. Fixed fees, income class mapping, GL daily amortization. Supports IFRS and US GAAP. Backdated recalculation with quarter/year-end effects.", votes: 74 },
+  { id: 5, clsv: "CLSV-707", name: "Facility Invoices", journey: "booking", status: "design-complete", progress: 80, orbit: 1, angle: 240, size: 15, effort: "M", rank: "1", impact: "high", eta: "Q2 2026", outcomes: ["migration"], desc: "Facility-level invoice view and management. Includes accruing fee invoices, billing schedules, and re-bill/reverse capabilities.", votes: 54 },
+  { id: 6, clsv: "CLSV-673", name: "Reference Repayment Schedules", journey: "booking", status: "design-complete", progress: 78, orbit: 1, angle: 300, size: 17, effort: "XL", rank: "2", impact: "high", eta: "Q2 2026", outcomes: ["migration", "efficiency"], desc: "Customer-level repayment schedule templates. CSV import, amortization calculator, manual grid entry. Satisfaction improved 5.4→9.3 after final redesign. Templates reusable across loans.", votes: 91 },
+  { id: 7, clsv: "CLSV-876", name: "EIR Fees", journey: "booking", status: "planned", progress: 0, orbit: 2, angle: 20, size: 16, effort: "L", rank: "1", impact: "high", eta: "Q3 2026", outcomes: ["migration"], desc: "Configure EIR recalculation triggers. Fixed fees, income class mapping, GL daily amortization. Supports IFRS and US GAAP. Backdated recalculation with quarter/year-end effects.", votes: 74 },
   { id: 8, clsv: "CLSV-698", name: "ECC Collateral Controls", journey: "collateral", status: "planned", progress: 0, orbit: 2, angle: 80, size: 18, effort: "XL", rank: "1", impact: "high", eta: "Q3 2026", outcomes: ["migration", "compliance"], desc: "Three XL epics: ECC integration, collateral valuation controls, margin call workflows. Central control point for all external collateral system interactions.", votes: 88 },
   { id: 9, clsv: "CLSV-863", name: "Loan History Views", journey: "inquiry", status: "planned", progress: 0, orbit: 2, angle: 140, size: 14, effort: "M", rank: "1", impact: "high", eta: "Q3 2026", outcomes: ["efficiency", "compliance"], desc: "Deep loan-level history matching Facility History depth. Loan-specific Transaction and Accrual tabs with date-range filtering and export.", votes: 53 },
   { id: 10, clsv: "CLSV-738", name: "Trouble Asset Manager", journey: "maintenance", status: "planned", progress: 0, orbit: 2, angle: 200, size: 17, effort: "XL", rank: "1", impact: "high", eta: "Q3 2026", outcomes: ["migration", "efficiency"], desc: "Manage non-performing and watch-list loans. Workflow routing and status tracking for troubled assets. Configurable escalation paths and override controls.", votes: 67 },
@@ -306,6 +406,39 @@ const FEATURES: Feature[] = [
   { id: 20, clsv: "CLSV-E-114", name: "Renewal / Mod / Amendments", journey: "renewal", status: "future", progress: 0, orbit: 3, angle: 295, size: 17, effort: "XL", rank: "2", impact: "high", eta: "Q3 2027", outcomes: ["migration", "efficiency"], desc: "Full hero journey: loan renewals, modifications, and amendment workflows end-to-end. Largest unscoped journey after Syndication.", votes: 62 },
   { id: 21, clsv: "CLSV-E-119", name: "Syndication", journey: "syndication", status: "future", progress: 0, orbit: 3, angle: 335, size: 14, effort: "XL", rank: null, impact: "high", eta: "TBD", outcomes: ["migration"], desc: "Full syndication hero journey. Scope TBD — 0 epics currently defined. Placeholder for strategic roadmap alignment.", votes: 48 },
 ];
+
+const FEATURE_SEARCH_DOCS = FEATURES.map((feature) => {
+  const nameTokens = importantTokens(feature.name);
+  const descTokens = importantTokens(feature.desc);
+  const journeyTokens = importantTokens(feature.journey);
+  const outcomeTokens = feature.outcomes.map((x) => x.toLowerCase());
+  const allTokens = [...nameTokens, ...descTokens, ...journeyTokens, ...outcomeTokens];
+  return {
+    id: feature.id,
+    nameText: normalize(feature.name),
+    descText: normalize(feature.desc),
+    nameSet: toSet(nameTokens),
+    descSet: toSet(descTokens),
+    journeySet: toSet(journeyTokens),
+    outcomeSet: toSet(outcomeTokens),
+    allSet: toSet(allTokens),
+  };
+});
+
+const FEATURE_TOKEN_IDF = (() => {
+  const docFreq = new Map<string, number>();
+  FEATURE_SEARCH_DOCS.forEach((doc) => {
+    doc.allSet.forEach((token) => {
+      docFreq.set(token, (docFreq.get(token) ?? 0) + 1);
+    });
+  });
+  const total = FEATURE_SEARCH_DOCS.length;
+  const idf = new Map<string, number>();
+  docFreq.forEach((df, token) => {
+    idf.set(token, Math.log((total + 1) / (df + 1)) + 1);
+  });
+  return idf;
+})();
 
 function ProgressArc({ cx, cy, r, pct, color }: { cx: number; cy: number; r: number; pct: number; color: string }) {
   if (pct <= 0) return null;
@@ -340,6 +473,242 @@ function galaxyStars(g: Galaxy, cx: number, cy: number) {
   return pts;
 }
 
+const inferLocalQueryType = (q: string): "company" | "capability" => {
+  const normalized = normalize(q);
+  const tokens = tokenize(q);
+  const capabilityHit = CAPABILITY_HINTS.some((hint) => normalized.includes(hint));
+  const companyHit = COMPANY_HINTS.some((hint) => normalized.includes(hint));
+
+  if (capabilityHit && tokens.length >= 2) return "capability";
+  if (companyHit && tokens.length <= 3 && !capabilityHit) return "company";
+  if (tokens.length >= 4) return "capability";
+  return companyHit ? "company" : "capability";
+};
+
+const buildCapabilityScores = (q: string): Record<string, number> => {
+  const normalizedQuery = normalize(q);
+  const qTokens = importantTokens(q);
+  const qSet = toSet(qTokens);
+  const qBigrams = toSet(makeBigrams(qTokens));
+  const singleToken = qTokens.length === 1 ? qTokens[0] : null;
+  const scores: Record<string, number> = {};
+
+  FEATURE_SEARCH_DOCS.forEach((doc) => {
+    let raw = 0;
+
+    const nameOverlap = overlapCount(qSet, doc.nameSet);
+    const descOverlap = overlapCount(qSet, doc.descSet);
+    const journeyOverlap = overlapCount(qSet, doc.journeySet);
+    const outcomeOverlap = overlapCount(qSet, doc.outcomeSet);
+
+    raw += nameOverlap * 0.38;
+    raw += descOverlap * 0.2;
+    raw += journeyOverlap * 0.18;
+    raw += outcomeOverlap * 0.16;
+
+    let idfScore = 0;
+    qSet.forEach((token) => {
+      if (doc.allSet.has(token)) idfScore += FEATURE_TOKEN_IDF.get(token) ?? 0;
+    });
+    raw += Math.min(0.9, idfScore * 0.07);
+
+    const docBigrams = toSet(makeBigrams(importantTokens(`${doc.nameText} ${doc.descText}`)));
+    const bigramOverlap = overlapCount(qBigrams, docBigrams);
+    raw += bigramOverlap * 0.32;
+
+    // Short, exact capability terms (e.g. "escrow") should strongly match feature titles.
+    if (singleToken) {
+      if (doc.nameSet.has(singleToken)) raw += 0.95;
+      if (doc.descSet.has(singleToken)) raw += 0.28;
+      if (doc.journeySet.has(singleToken)) raw += 0.22;
+    }
+
+    if (normalizedQuery.length >= 8 && doc.nameText.includes(normalizedQuery)) raw += 0.45;
+    if (normalizedQuery.length >= 10 && doc.descText.includes(normalizedQuery)) raw += 0.3;
+
+    const relevance = Math.max(0, Math.min(0.99, 1 - Math.exp(-raw * 0.42)));
+    scores[String(doc.id)] = relevance;
+  });
+
+  return scores;
+};
+
+const buildCompanyScores = (q: string): Record<string, number> => {
+  const normalized = normalize(q);
+  const tokens = importantTokens(q);
+  const scores: Record<string, number> = {};
+
+  FEATURES.forEach((f) => {
+    const hay = `${f.name} ${f.desc} ${f.journey}`.toLowerCase();
+    let score = 0;
+    if (hay.includes(normalized)) score += 0.54;
+    tokens.forEach((t) => {
+      if (f.name.toLowerCase().includes(t)) score += 0.16;
+      if (f.desc.toLowerCase().includes(t)) score += 0.08;
+    });
+    if (normalized.includes("farmer mac") && f.outcomes.includes("farmerMac")) score += 0.24;
+    if (normalized.includes("collateral") && f.journey === "collateral") score += 0.2;
+    if (normalized.includes("payoff") && f.journey === "payoff") score += 0.2;
+    if (normalized.includes("report") && f.journey === "reporting") score += 0.2;
+    scores[String(f.id)] = Math.min(0.99, score);
+  });
+
+  return scores;
+};
+
+const buildLocalSearchResult = (
+  q: string,
+  forcedQueryType?: "company" | "capability",
+): SearchResult => {
+  const queryType = forcedQueryType ?? inferLocalQueryType(q);
+  const scores = queryType === "capability" ? buildCapabilityScores(q) : buildCompanyScores(q);
+  const threshold = queryType === "capability" ? 0.38 : 0.4;
+
+  const matchedIds = FEATURES.map((f) => ({ id: f.id, s: scores[String(f.id)] || 0 }))
+    .filter((x) => x.s >= threshold)
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 10)
+    .map((x) => x.id);
+
+  const localResult: SearchResult = {
+    query: q,
+    queryType,
+    interpretation:
+      queryType === "company"
+        ? `Mapped company intent to ${matchedIds.length} roadmap features.`
+        : `Matched capability intent against ${FEATURES.length} roadmap features; returning top ${matchedIds.length}.`,
+    insight:
+      matchedIds.length > 0
+        ? "Top matches are ranked by weighted semantic relevance across feature names, journeys, and descriptions."
+        : "No features exceeded the relevance threshold for this capability query.",
+    matchedIds,
+    scores,
+    threshold,
+  };
+
+  console.debug("[buildLocalSearchResult] return", localResult);
+  return localResult;
+};
+
+const parseJsonPayload = (raw: string): unknown => {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const jsonOnly = trimmed.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/, "");
+  return JSON.parse(jsonOnly);
+};
+
+const buildInstitutionAISearchResult = async (
+  q: string,
+  provider: InstitutionAIProvider,
+): Promise<SearchResult> => {
+  const featureDigest = FEATURES.map((f) => ({
+    id: f.id,
+    name: f.name,
+    journey: f.journey,
+    outcomes: f.outcomes,
+    desc: f.desc,
+    votes: f.votes,
+  }));
+
+  const messages = [
+    {
+      role: "system" as const,
+      content: [
+        "You map institution capabilities to CLS roadmap features.",
+        "Return strict JSON only. No markdown. No prose outside JSON.",
+        "For institution queries, infer likely lending/servicing products, capabilities, workflows, and operational priorities for that institution.",
+        "Then compare that inferred capability set to the provided CLS feature list and rank relevance.",
+      ].join("\n"),
+    },
+    {
+      role: "user" as const,
+      content: [
+        "Task: determine whether query intent is 'company' or 'capability'.",
+        "If query is a company/institution, infer products and capabilities first, then map to features.",
+        "If query is capability keywords, map those directly.",
+        "",
+        `Query: ${q}`,
+        "",
+        "Return JSON with this exact shape:",
+        "{",
+        '  "query_type": "company" | "capability",',
+        '  "interpretation": "string",',
+        '  "insight": "string",',
+        '  "matches": [',
+        '    { "id": number, "relevance": number }',
+        "  ]",
+        "}",
+        "",
+        "Rules:",
+        "- relevance is 0.0 to 0.99",
+        "- include up to 10 matches",
+        "- id must come from provided features only",
+        "- for institution queries, prioritize realistic operational fit over keyword overlap",
+        "- do not invent features",
+        "- penalize weak/broad associations",
+        "",
+        "Confidence guidance:",
+        "- 0.80-0.99: direct day-to-day workflow fit",
+        "- 0.60-0.79: strong adjacent fit",
+        "- 0.40-0.59: partial relevance",
+        "- below 0.40: weak",
+        "",
+        `Features: ${JSON.stringify(featureDigest)}`,
+      ].join("\n"),
+    },
+  ];
+
+  const response =
+    provider === "anthropic"
+      ? await createAnthropicText({ messages, maxOutputTokens: 700, temperature: 0.1 })
+      : await createOpenAIText({ messages, maxOutputTokens: 700, temperature: 0.1 });
+
+  const payload = parseJsonPayload(response.text) as {
+    query_type?: "company" | "capability";
+    interpretation?: string;
+    insight?: string;
+    matches?: Array<{ id?: number; relevance?: number }>;
+  } | null;
+
+  if (!payload || !Array.isArray(payload.matches)) {
+    throw new Error("Invalid institution AI search response.");
+  }
+
+  const scores: Record<string, number> = {};
+  const validIds = new Set(FEATURES.map((f) => f.id));
+  const matches = payload.matches
+    .filter((item) => typeof item.id === "number" && validIds.has(item.id))
+    .map((item) => {
+      const relevance = typeof item.relevance === "number" ? Math.max(0, Math.min(0.99, item.relevance)) : 0;
+      return { id: item.id as number, relevance };
+    })
+    .sort((a, b) => b.relevance - a.relevance);
+
+  for (const match of matches) {
+    scores[String(match.id)] = match.relevance;
+  }
+
+  const filteredMatches = matches.filter((item) => item.relevance >= INSTITUTION_MATCH_THRESHOLD).slice(0, 10);
+
+  return {
+    query: q,
+    queryType: payload.query_type === "company" ? "company" : "capability",
+    interpretation:
+      payload.interpretation?.trim() ||
+      `Mapped ${payload.query_type === "company" ? "company" : "capability"} intent to ${filteredMatches.length} roadmap features.`,
+    insight:
+      payload.insight?.trim() ||
+      (filteredMatches.length > 0
+        ? "Top matches align with CLS roadmap areas most relevant to the request."
+        : "No strong semantic match found; broaden your search terms."),
+    matchedIds: filteredMatches.map((item) => item.id),
+    scores,
+    threshold: INSTITUTION_MATCH_THRESHOLD,
+  };
+};
+
 function SearchOverlay({
   onClose,
   onResults,
@@ -351,66 +720,38 @@ function SearchOverlay({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const runLocalSearch = (): void => {
-    const q = query.trim();
+  const runSearch = async (): Promise<void> => {
+    const { query: parsedQuery, forcedQueryType } = parseSearchQueryInput(query);
+    const q = parsedQuery.trim();
     if (!q) return;
     setLoading(true);
     setError(null);
 
-    window.setTimeout(() => {
-      try {
-        const lower = q.toLowerCase();
-        const tokens = lower.split(/\s+/).filter(Boolean);
-        const companyHints = ["bank", "lender", "finance", "credit", "farmer", "institution", "servicing"];
-        const queryType: "company" | "capability" = companyHints.some((hint) => lower.includes(hint))
-          ? "company"
-          : "capability";
-
-        const scores: Record<string, number> = {};
-
-        FEATURES.forEach((f) => {
-          const hay = `${f.name} ${f.desc} ${f.journey}`.toLowerCase();
-          let score = 0;
-          if (hay.includes(lower)) score += 0.6;
-          tokens.forEach((t) => {
-            if (t.length < 2) return;
-            if (f.name.toLowerCase().includes(t)) score += 0.14;
-            if (f.desc.toLowerCase().includes(t)) score += 0.07;
-          });
-          if (lower.includes("farmer mac") && f.outcomes.includes("farmerMac")) score += 0.2;
-          if (lower.includes("collateral") && f.journey === "collateral") score += 0.2;
-          if (lower.includes("payoff") && f.journey === "payoff") score += 0.2;
-          if (lower.includes("report") && f.journey === "reporting") score += 0.2;
-          scores[String(f.id)] = Math.min(0.99, score);
-        });
-
-        const matchedIds = FEATURES.map((f) => ({ id: f.id, s: scores[String(f.id)] || 0 }))
-          .filter((x) => x.s >= 0.4)
-          .sort((a, b) => b.s - a.s)
-          .slice(0, 10)
-          .map((x) => x.id);
-
-        onResults({
-          query: q,
-          queryType,
-          interpretation:
-            queryType === "company"
-              ? `Mapped company intent to ${matchedIds.length} roadmap features.`
-              : `Mapped capability intent to ${matchedIds.length} roadmap features.`,
-          insight:
-            matchedIds.length > 0
-              ? "Highest relevance appears in current roadmap orbit and high-vote epics."
-              : "No strong semantic match found; broaden your search terms.",
-          matchedIds,
-          scores,
-        });
-        onClose();
-      } catch {
-        setError("Search unavailable. Please try again.");
-      } finally {
-        setLoading(false);
+    try {
+      let result: SearchResult;
+      const queryType = forcedQueryType ?? inferLocalQueryType(q);
+      if (queryType === "capability") {
+        result = buildLocalSearchResult(q, "capability");
+      } else {
+        const provider = getConfiguredInstitutionProvider();
+        if (provider) {
+          try {
+            result = await buildInstitutionAISearchResult(q, provider);
+          } catch {
+            result = buildLocalSearchResult(q, "company");
+          }
+        } else {
+          result = buildLocalSearchResult(q, "company");
+        }
       }
-    }, 360);
+
+      onResults(result);
+      onClose();
+    } catch {
+      setError("Search unavailable. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -484,10 +825,11 @@ function SearchOverlay({
         </div>
         <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
           <input
+            autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") runLocalSearch();
+              if (e.key === "Enter") void runSearch();
               if (e.key === "Escape") onClose();
             }}
             placeholder="Company name or capability description…"
@@ -504,7 +846,7 @@ function SearchOverlay({
             }}
           />
           <button
-            onClick={runLocalSearch}
+            onClick={() => void runSearch()}
             disabled={loading || !query.trim()}
             style={{
               padding: "11px 24px",
@@ -755,7 +1097,7 @@ function CLSGalaxyView({ onBack }: { onBack: () => void }) {
   const [orbitFilter, setOrbit] = useState<0 | 1 | 2 | 3>(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
-  const [animating, setAnimating] = useState(true);
+  const [animating, setAnimating] = useState(false);
   const [showOutcomes, setOutcomes] = useState(true);
   const [showVision, setVision] = useState(false);
   const [showSearch, setSearch] = useState(false);
@@ -801,8 +1143,8 @@ function CLSGalaxyView({ onBack }: { onBack: () => void }) {
     return { x: 485 + CLS_ORBIT_R[f.orbit] * Math.cos(rad), y: 390 + CLS_ORBIT_R[f.orbit] * Math.sin(rad) };
   };
 
-  const isSearchActive = Boolean(searchResult);
-  const THRESHOLD = 0.4;
+  const isSearchActive = Boolean(searchResult && searchResult.matchedIds.length > 0);
+  const activeThreshold = searchResult?.threshold ?? 0.4;
   const isVisible = (f: Feature): boolean => {
     if (isSearchActive) return true;
     return (journeyFilter === "all" || f.journey === journeyFilter) && (orbitFilter === 0 || f.orbit === orbitFilter);
@@ -849,47 +1191,76 @@ function CLSGalaxyView({ onBack }: { onBack: () => void }) {
           <div style={{ fontSize: 11.5, color: `${FIS.offWhite}55`, marginTop: 3, fontFamily: "'Source Sans 3',sans-serif", fontWeight: 300, letterSpacing: 0.5 }}>12 Hero Journeys · 202 Epics · 72 Released · 21 Features Charted</div>
         </div>
         <div style={{ flex: "1 1 auto", maxWidth: 380, display: "flex", alignItems: "flex-end", paddingBottom: 2 }}>
-          <div style={{ width: "100%", display: "flex", gap: 0 }}>
-            <input
-              readOnly
-              onClick={() => setSearch(true)}
-              placeholder="Search by company or capability…"
-              value={searchResult ? `"${searchResult.query}"` : ""}
-              style={{
-                flex: 1,
-                background: `${FIS.midNav}55`,
-                border: `1px solid ${searchResult ? `${FIS.green}66` : `${FIS.green}22`}`,
-                borderRight: "none",
-                borderRadius: "3px 0 0 3px",
-                padding: "9px 14px",
-                fontSize: 13,
-                color: searchResult ? FIS.green : `${FIS.offWhite}44`,
-                fontFamily: "'Source Sans 3',sans-serif",
-                cursor: "pointer",
-                outline: "none",
-              }}
-            />
-            <button
-              onClick={() => {
-                if (searchResult) setResult(null);
-                else setSearch(true);
-              }}
-              style={{
-                padding: "9px 16px",
-                background: searchResult ? `${FIS.amber}22` : `${FIS.green}18`,
-                border: `1px solid ${searchResult ? `${FIS.amber}44` : `${FIS.green}33`}`,
-                borderRadius: "0 3px 3px 0",
-                color: searchResult ? FIS.amber : FIS.green,
-                fontSize: 12,
-                fontWeight: 700,
-                fontFamily: "'Source Sans 3',sans-serif",
-                cursor: "pointer",
-                letterSpacing: 1,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {searchResult ? "✕ Clear" : "Search"}
-            </button>
+          <div style={{ width: "100%" }}>
+            <div style={{ width: "100%", display: "flex", gap: 0 }}>
+              <input
+                readOnly
+                onClick={() => setSearch(true)}
+                placeholder="Search by company or capability…"
+                value={searchResult ? `"${searchResult.query}"` : ""}
+                style={{
+                  flex: 1,
+                  background: `${FIS.midNav}55`,
+                  borderStyle: "solid",
+                  borderWidth: 1,
+                  borderColor: searchResult ? `${FIS.green}66` : `${FIS.green}22`,
+                  borderRightWidth: 0,
+                  borderRadius: "3px 0 0 3px",
+                  padding: "9px 14px",
+                  fontSize: 13,
+                  color: searchResult ? FIS.green : `${FIS.offWhite}44`,
+                  fontFamily: "'Source Sans 3',sans-serif",
+                  cursor: "pointer",
+                  outline: "none",
+                }}
+              />
+              <button
+                onClick={() => {
+                  if (searchResult) setResult(null);
+                  else setSearch(true);
+                }}
+                style={{
+                  padding: "9px 16px",
+                  background: searchResult ? `${FIS.amber}22` : `${FIS.green}18`,
+                  border: `1px solid ${searchResult ? `${FIS.amber}44` : `${FIS.green}33`}`,
+                  borderRadius: "0 3px 3px 0",
+                  color: searchResult ? FIS.amber : FIS.green,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  fontFamily: "'Source Sans 3',sans-serif",
+                  cursor: "pointer",
+                  letterSpacing: 1,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {searchResult ? "✕ Clear" : "Search"}
+              </button>
+            </div>
+            {searchResult && (
+              <div
+                style={{
+                  marginTop: 5,
+                  fontSize: 10,
+                  letterSpacing: 1.2,
+                  textTransform: "uppercase",
+                  color: searchResult.queryType === "company" ? `${FIS.cyan}cc` : `${FIS.green}cc`,
+                  fontFamily: "'Source Sans 3',sans-serif",
+                }}
+              >
+                Search mode: {searchResult.queryType === "company" ? "Institution" : "Capability"}
+                <div
+                  style={{
+                    marginTop: 4,
+                    fontSize: 10,
+                    letterSpacing: 1,
+                    textTransform: "uppercase",
+                    color: `${FIS.amber}cc`,
+                  }}
+                >
+                  {searchResult.matchedIds.length} results returned
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div style={{ flex: "0 0 auto", display: "flex", gap: 8, alignItems: "flex-end", paddingBottom: 2 }}>
@@ -951,14 +1322,14 @@ function CLSGalaxyView({ onBack }: { onBack: () => void }) {
             <circle key={i} cx={485} cy={390} r={CLS_ORBIT_R[i as 1 | 2 | 3]} fill="none" stroke={CLS_ORBIT_COLOR[i as 1 | 2 | 3]} strokeWidth={1} strokeDasharray="4 10" className="ring" style={{ animationDelay: `${i * 1.6}s` }} />
           ))}
 
-          {selectedFeature && showOutcomes && selectedFeature.outcomes.map((oid) => {
+          {selectedFeature && showOutcomes && !isSearchActive && selectedFeature.outcomes.map((oid) => {
             const o = CLS_STRATEGIC_OUTCOMES.find((x) => x.id === oid);
             if (!o) return null;
             const p = pos(selectedFeature);
             return <line key={oid} x1={o.x} y1={o.y} x2={p.x} y2={p.y} stroke={o.color} strokeWidth={0.8} opacity={0.25} strokeDasharray="4 8" />;
           })}
 
-          {showOutcomes && CLS_STRATEGIC_OUTCOMES.map((o) => (
+          {showOutcomes && !isSearchActive && CLS_STRATEGIC_OUTCOMES.map((o) => (
             <g key={o.id}>
               <circle cx={o.x} cy={o.y} r={13} fill={`${o.color}14`} stroke={o.color} strokeWidth={1} filter="url(#c-gsm)" opacity={0.7} />
               <text x={o.x} y={o.y + 3} textAnchor="middle" fontSize={7} fill={o.color} fontFamily="'Source Sans 3',sans-serif" fontWeight={600} style={{ pointerEvents: "none" }}>◈</text>
@@ -976,9 +1347,10 @@ function CLSGalaxyView({ onBack }: { onBack: () => void }) {
             const p = pos(f);
             const c = CLS_JCOLOR[f.journey] ?? FIS.offWhite;
             const relevance = getRelevance(f.id);
-            const isMatched = isSearchActive && relevance !== null && relevance >= THRESHOLD;
+            const isMatched = isSearchActive && relevance !== null && relevance >= activeThreshold;
             const vis = isVisible(f);
             const opacity = isSearchActive ? (isMatched ? 1 : 0.07) : vis ? 1 : 0.06;
+            const isClickable = !isSearchActive || isMatched;
             const isH = hovered === f.id;
             const isS = selected === f.id;
             const bright = isH || isS;
@@ -987,7 +1359,19 @@ function CLSGalaxyView({ onBack }: { onBack: () => void }) {
             const relevancePct = relevance ? Math.round(relevance * 100) : null;
 
             return (
-              <g key={f.id} className="planet" style={{ opacity }} onClick={() => setSelected(isS ? null : f.id)} onMouseEnter={() => setHovered(f.id)} onMouseLeave={() => setHovered(null)}>
+              <g
+                key={f.id}
+                className="planet"
+                style={{ opacity, pointerEvents: isClickable ? "auto" : "none", cursor: isClickable ? "pointer" : "default" }}
+                onClick={() => {
+                  if (!isClickable) return;
+                  setSelected(isS ? null : f.id);
+                }}
+                onMouseEnter={() => {
+                  if (isClickable) setHovered(f.id);
+                }}
+                onMouseLeave={() => setHovered(null)}
+              >
                 {isMatched && <circle cx={p.x} cy={p.y} r={sz + 14} fill="none" stroke={c} strokeWidth={1.2} opacity={0.4} style={{ animation: "resultPulse 2s ease-in-out infinite" }} />}
                 {bright && <circle cx={p.x} cy={p.y} r={sz + 10} fill="none" stroke={c} strokeWidth={0.8} opacity={0.25} />}
                 <ProgressArc cx={p.x} cy={p.y} r={arcR} pct={f.progress / 100} color={c} />
@@ -1058,7 +1442,7 @@ function UniverseView({ onZoomCLS }: { onZoomCLS: () => void }) {
   const lastRef = useRef<number | null>(null);
 
   const CX = 500;
-  const CY = 420;
+  const CY = 390;
 
   useEffect(() => {
     if (!animating) {
@@ -1115,24 +1499,23 @@ function UniverseView({ onZoomCLS }: { onZoomCLS: () => void }) {
         ))}
       </svg>
 
-      <div style={{ position: "relative", zIndex: 10, padding: "18px 28px 14px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", borderBottom: `1px solid ${FIS.green}18`, gap: 16 }}>
+      <div style={{ position: "relative", zIndex: 10, padding: "18px 28px 12px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", borderBottom: `1px solid ${FIS.green}18`, gap: 16 }}>
         <div style={{ flex: "0 0 auto" }}>
           <div style={{ fontSize: 10, letterSpacing: 4, color: FIS.green, marginBottom: 5, fontFamily: "'Source Sans 3',sans-serif", fontWeight: 600, textTransform: "uppercase" }}>FIS · Lending Division · Portfolio Overview</div>
           <h1 style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: 2, lineHeight: 1, textTransform: "uppercase", color: "#ffffff" }}>FIS Lending Universe</h1>
-          <div style={{ fontSize: 11.5, color: `${FIS.offWhite}55`, marginTop: 3, fontFamily: "'Source Sans 3',sans-serif", fontWeight: 300, letterSpacing: 0.5 }}>8 Solution Galaxies · Click to Explore · CLS Wired to Roadmap</div>
+          <div style={{ fontSize: 11.5, color: `${FIS.offWhite}55`, marginTop: 3, fontFamily: "'Source Sans 3',sans-serif", fontWeight: 300, letterSpacing: 0.5 }}>8 Solution Galaxies · Click to Explore</div>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "flex-end", paddingBottom: 2 }}>
+        <div style={{ display: "grid", gap: 8, justifyItems: "end", alignContent: "start", paddingTop: 2 }}>
           <button onClick={() => setAnimating((a) => !a)} style={{ background: animating ? `${FIS.cyan}14` : "transparent", border: `1px solid ${animating ? `${FIS.cyan}44` : `${FIS.cyan}18`}`, color: animating ? FIS.cyan : `${FIS.cyan}44`, padding: "9px 14px", borderRadius: 3, fontSize: 11, letterSpacing: 1.5, cursor: "pointer", fontFamily: "'Source Sans 3',sans-serif", fontWeight: 600 }}>{animating ? "⏸ PAUSE" : "▶ DRIFT"}</button>
+          <div style={{ display: "grid", gap: 4, justifyItems: "end" }}>
+            <div style={{ fontSize: 10, color: `${FIS.green}66`, fontFamily: "'Source Sans 3',sans-serif", letterSpacing: 1 }}>◉ Galaxy size = product scale &amp; breadth</div>
+            <div style={{ fontSize: 10, color: `${FIS.cyan}55`, fontFamily: "'Source Sans 3',sans-serif", letterSpacing: 1 }}>◈ Click any galaxy to explore</div>
+            <div style={{ fontSize: 10, color: `${FIS.cyan}88`, fontFamily: "'Source Sans 3',sans-serif", letterSpacing: 1, fontWeight: 600 }}>✦ CLS — click to zoom into product roadmap</div>
+          </div>
         </div>
       </div>
 
-      <div style={{ position: "relative", zIndex: 10, padding: "7px 28px", background: `${FIS.green}07`, borderBottom: `1px solid ${FIS.green}12`, display: "flex", gap: 24, alignItems: "center" }}>
-        <div style={{ fontSize: 10, color: `${FIS.green}66`, fontFamily: "'Source Sans 3',sans-serif", letterSpacing: 1 }}>◉ Galaxy size = product scale &amp; breadth</div>
-        <div style={{ fontSize: 10, color: `${FIS.cyan}55`, fontFamily: "'Source Sans 3',sans-serif", letterSpacing: 1 }}>◈ Click any galaxy to explore</div>
-        <div style={{ fontSize: 10, color: `${FIS.cyan}88`, fontFamily: "'Source Sans 3',sans-serif", letterSpacing: 1, fontWeight: 600 }}>✦ CLS — click to zoom into product roadmap</div>
-      </div>
-
-      <div style={{ position: "relative", zIndex: 5, display: "flex", justifyContent: "center", marginTop: -8 }}>
+      <div style={{ position: "relative", zIndex: 5, display: "flex", justifyContent: "center", marginTop: -18 }}>
         <svg viewBox="0 0 1000 840" style={{ width: "100%", maxWidth: 1040, height: "auto" }}>
           <defs>
             <radialGradient id="u-centerCore" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor={FIS.midNav} /><stop offset="60%" stopColor="#013040" /><stop offset="100%" stopColor={FIS.navy} /></radialGradient>

@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS INSTITUTION_PROFILES (
+  id TEXT PRIMARY KEY,
+  institution_name TEXT NOT NULL UNIQUE,
+  institution_type TEXT NOT NULL,
+  business_lines TEXT NOT NULL,
+  target_segments TEXT NOT NULL,
+  geography TEXT NOT NULL,
+  known_strengths TEXT NOT NULL,
+  signals TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

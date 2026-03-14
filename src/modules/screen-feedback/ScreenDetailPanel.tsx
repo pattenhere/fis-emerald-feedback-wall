@@ -106,92 +106,119 @@ export const ScreenDetailPanel = memo(({
 
   return (
     <section className="screen-detail">
-      <article className="wireframe-mock">
-        <p className="wireframe-tag">{screen.wireframeLabel}</p>
-        <h2>{screen.name}</h2>
-        <p>{screen.description}</p>
-      </article>
+      <div className="detail-shell">
+        <article className="wireframe-mock ai-treatment">
+          <div className="wireframe-window">
+            <div className="wireframe-window-bar">
+              <div className="wireframe-dots" aria-hidden="true">
+                <span className="wireframe-dot" />
+                <span className="wireframe-dot" />
+                <span className="wireframe-dot" />
+              </div>
+              <p className="wireframe-window-title">{screen.name}</p>
+            </div>
+            <div className="wireframe-window-body" aria-hidden="true">
+              <div className="wireframe-line wireframe-line-short" />
+              <div className="wireframe-line wireframe-line-mid" />
+              <div className="wireframe-blocks">
+                <div className="wireframe-block" />
+                <div className="wireframe-block" />
+              </div>
+              <div className="wireframe-line wireframe-line-long" />
+              <div className="wireframe-line wireframe-line-mid" />
+              <div className="wireframe-footer-line">
+                <span className="wireframe-footer-dot" />
+                <span className="wireframe-footer-stroke" />
+              </div>
+            </div>
+          </div>
+          <p className="wireframe-caption">Representative wireframe · not final UI</p>
+        </article>
 
-      <form className="feedback-panel" onSubmit={handleSubmit}>
-        <h3>Screen Feedback</h3>
-        <p className="helper-copy">{helperText}</p>
+        <form className="feedback-panel feature-feedback-panel" onSubmit={handleSubmit}>
+          <h3>Type of feedback</h3>
+          <p className="helper-copy">{helperText}</p>
 
-        {flowStage === "compose" && (
-          <>
-            <div className="feedback-types">
-              {FEEDBACK_TYPES.map((type) => (
-                <button
-                  key={type.id}
-                  type="button"
-                  className={`chip ${feedbackType === type.id ? "is-active" : ""}`}
-                  onClick={() => {
-                    setFeedbackType(type.id);
-                    setError("");
-                  }}
-                >
-                  {type.label}
+          {flowStage === "compose" && (
+            <div className="compose-feedback-shell">
+              <div className="feedback-types">
+                {FEEDBACK_TYPES.map((type) => (
+                  <button
+                    key={type.id}
+                    type="button"
+                    className={`chip ${feedbackType === type.id ? "is-active" : ""}`}
+                    onClick={() => {
+                      setFeedbackType(type.id);
+                      setError("");
+                    }}
+                  >
+                    {type.label}
+                  </button>
+                ))}
+              </div>
+
+              <h3>Tell us more</h3>
+              <textarea
+                className="feedback-detail-textarea"
+                placeholder="What specifically on this screen? Be as detailed as you like..."
+                rows={4}
+                value={feedbackText}
+                onChange={(event) => setFeedbackText(event.target.value)}
+                maxLength={900}
+              />
+              {error && <p className="error-text">{error}</p>}
+
+              <div className="feedback-actions feedback-actions--anchored">
+                <button type="submit" className="primary-btn feedback-submit-btn">
+                  Submit Feedback
                 </button>
-              ))}
+              </div>
             </div>
+          )}
 
-            <textarea
-              placeholder="Optional: what happened, where, and why it matters in your workflow"
-              rows={4}
-              value={feedbackText}
-              onChange={(event) => setFeedbackText(event.target.value)}
-              maxLength={900}
-            />
-            {error && <p className="error-text">{error}</p>}
-
-            <div className="feedback-actions">
-              <button type="submit" className="primary-btn">
-                Submit Feedback
-              </button>
+          {flowStage === "follow-up" && (
+            <div className="follow-up-shell">
+              <h3>Tell us more</h3>
+              <p className="follow-up-question">{followUpQuestion}</p>
+              <input
+                type="text"
+                value={followUpAnswer}
+                maxLength={240}
+                placeholder="Optional follow-up response"
+                onChange={(event) => setFollowUpAnswer(event.target.value)}
+              />
+              <div className="feedback-actions">
+                <button
+                  type="button"
+                  className="primary-btn feedback-submit-btn"
+                  onClick={() => handleFollowUp(followUpAnswer)}
+                >
+                  Save Follow-up
+                </button>
+                <button type="button" className="secondary-btn" onClick={() => handleFollowUp()}>
+                  Skip
+                </button>
+              </div>
             </div>
-          </>
-        )}
+          )}
 
-        {flowStage === "follow-up" && (
-          <div className="follow-up-shell">
-            <p className="follow-up-question">{followUpQuestion}</p>
-            <input
-              type="text"
-              value={followUpAnswer}
-              maxLength={240}
-              placeholder="Optional follow-up response"
-              onChange={(event) => setFollowUpAnswer(event.target.value)}
-            />
+          {flowStage === "done" && (
             <div className="feedback-actions">
               <button
                 type="button"
-                className="primary-btn"
-                onClick={() => handleFollowUp(followUpAnswer)}
+                className="secondary-btn"
+                disabled={!canPromptNextScreen}
+                onClick={() => {
+                  onPromptNextScreen();
+                  setFlowStage("compose");
+                }}
               >
-                Save Follow-up
-              </button>
-              <button type="button" className="secondary-btn" onClick={() => handleFollowUp()}>
-                Skip
+                Feedback another screen →
               </button>
             </div>
-          </div>
-        )}
-
-        {flowStage === "done" && (
-          <div className="feedback-actions">
-            <button
-              type="button"
-              className="secondary-btn"
-              disabled={!canPromptNextScreen}
-              onClick={() => {
-                onPromptNextScreen();
-                setFlowStage("compose");
-              }}
-            >
-              Feedback Another Screen
-            </button>
-          </div>
-        )}
-      </form>
+          )}
+        </form>
+      </div>
     </section>
   );
 });

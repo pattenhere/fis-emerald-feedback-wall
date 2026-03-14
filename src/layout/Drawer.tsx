@@ -46,7 +46,7 @@ const iconForTab = (tab: DrawerTab): JSX.Element => {
 };
 
 const TABS: Array<{ id: DrawerTab; label: string }> = [
-  { id: "features", label: "Features" },
+  { id: "features", label: "Feature Requests" },
   { id: "kudos", label: "Kudos" },
   { id: "card-sort", label: "Card Sort · 2 min" },
   { id: "synthesis", label: "Synthesis" },

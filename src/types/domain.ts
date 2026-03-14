@@ -39,6 +39,9 @@ export interface KudosQuote {
   text: string;
   role: KudosRole;
   consentPublic: boolean;
+  app?: AppArea;
+  screenId?: string;
+  screenName?: string;
   createdAt: string;
 }
 
@@ -89,6 +92,15 @@ export interface CardSortResponse {
   conceptId: string;
   tier: CardSortTier;
   updatedAt: string;
+}
+
+export interface ProductDefinition {
+  id: string;
+  category: string;
+  subcategory: string;
+  name: string;
+  app: AppArea;
+  icon: string;
 }
 
 export interface MacroState {

@@ -106,7 +106,13 @@ export const MobileApp = (): JSX.Element => {
             {features.map((feature) => (
               <li key={feature.id} className="feature-card">
                 <p className="card-title">{feature.title}</p>
-                <button type="button" className="vote-pill" onClick={() => handleVote(feature.id)}>Votes {feature.votes}</button>
+                <button
+                  type="button"
+                  className={`vote-pill ${feature.votes >= 0 ? "is-positive" : "is-negative"}`}
+                  onClick={() => handleVote(feature.id)}
+                >
+                  {feature.votes >= 0 ? "↑" : "↓"} {Math.abs(feature.votes)}
+                </button>
               </li>
             ))}
           </ul>

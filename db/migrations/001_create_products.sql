@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS PRODUCTS (
+  id TEXT PRIMARY KEY,
+  category TEXT NOT NULL,
+  subcategory TEXT NOT NULL,
+  name TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (category, subcategory, name)
+);

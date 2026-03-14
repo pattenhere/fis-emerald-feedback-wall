@@ -27,7 +27,6 @@ export const ScreenGrid = memo(({
             <span className="screen-count-badge">{submissionCounts[screen.id]}</span>
           )}
           <span className="screen-thumb-title">{screen.name}</span>
-          <span className="screen-thumb-caption">Wireframe preview</span>
         </button>
       ))}
     </section>

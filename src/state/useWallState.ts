@@ -65,7 +65,14 @@ export interface WallState {
   upvoteFeatureRequest: (featureId: string) => void;
   kudosQuotes: KudosQuote[];
   publicQuotes: KudosQuote[];
-  addKudosQuote: (quote: { text: string; role: KudosRole; consentPublic: boolean }) => void;
+  addKudosQuote: (quote: {
+    text: string;
+    role: KudosRole;
+    consentPublic: boolean;
+    app?: AppArea;
+    screenId?: string;
+    screenName?: string;
+  }) => void;
   screenFeedback: ScreenFeedback[];
   addScreenFeedback: (input: {
     app: AppArea;
@@ -275,6 +282,9 @@ export const useWallState = (): WallState => {
     text: string;
     role: KudosRole;
     consentPublic: boolean;
+    app?: AppArea;
+    screenId?: string;
+    screenName?: string;
   }): void => {
     const trimmed = quote.text.trim();
     if (!trimmed) {
@@ -287,6 +297,9 @@ export const useWallState = (): WallState => {
         text: trimmed,
         role: quote.role,
         consentPublic: quote.consentPublic,
+        app: quote.app,
+        screenId: quote.screenId,
+        screenName: quote.screenName,
         createdAt: nowIso(),
       },
       ...current,

@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { KudosQuote, SessionRole, SignalSummary } from "../types/domain";
 import { formatCountdown } from "../utils/time";
 
@@ -8,10 +8,15 @@ interface TopBarProps {
   sessionRole: SessionRole;
   onSessionRoleChange: (role: SessionRole) => void;
   publicQuotes: KudosQuote[];
+  adminMode: boolean;
+  onToggleAdminMode: () => void;
+  compactMode?: boolean;
+  selectedProductName?: string | null;
+  onOpenLiveResponses?: () => void;
 }
 
 const ROLE_OPTIONS: Array<{ id: SessionRole; label: string }> = [
-  { id: "unspecified", label: "I am..." },
+  { id: "unspecified", label: "I am a..." },
   { id: "ops", label: "Ops" },
   { id: "eng", label: "Eng" },
   { id: "product", label: "Product" },
@@ -25,10 +30,17 @@ export const TopBar = memo(({
   sessionRole,
   onSessionRoleChange,
   publicQuotes,
+  adminMode,
+  onToggleAdminMode,
+  compactMode = false,
+  selectedProductName = null,
+  onOpenLiveResponses,
 }: TopBarProps): JSX.Element => {
   const [countdown, setCountdown] = useState(formatCountdown(countdownTarget));
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [showQr, setShowQr] = useState(false);
+  const [titleWidthPx, setTitleWidthPx] = useState<number | null>(null);
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -55,63 +67,107 @@ export const TopBar = memo(({
     [mobileUrl],
   );
 
+  useEffect(() => {
+    if (!selectedProductName || !titleRef.current) {
+      setTitleWidthPx(null);
+      return;
+    }
+
+    const updateWidth = (): void => {
+      if (!titleRef.current) return;
+      setTitleWidthPx(Math.round(titleRef.current.getBoundingClientRect().width));
+    };
+
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(titleRef.current);
+    window.addEventListener("resize", updateWidth);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateWidth);
+    };
+  }, [selectedProductName]);
+
   return (
     <>
       <header className="top-bar">
         <div className="top-bar-title">
-          <h1>Emerald Feedback Wall</h1>
-          <button
-            type="button"
-            className="universe-launch"
-            onClick={() => {
-              window.open("/universe.html", "_blank", "noopener,noreferrer");
-            }}
-            aria-label="Open FIS lending universe"
-            title="Open FIS Lending Universe"
-          >
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="3.2" />
-              <path d="M4.5 12c1.8-2.8 4.7-4.2 7.5-4.2s5.7 1.4 7.5 4.2" />
-              <path d="M4.5 12c1.8 2.8 4.7 4.2 7.5 4.2s5.7-1.4 7.5-4.2" />
-            </svg>
-            <span>Universe</span>
+          <div className="top-bar-brand">
+            <h1 ref={titleRef}>Emerald Feedback Wall</h1>
+            {selectedProductName && !compactMode && (
+              <p
+                className="top-bar-product-name"
+                style={titleWidthPx ? { width: `${titleWidthPx}px`, maxWidth: `${titleWidthPx}px` } : undefined}
+                title={selectedProductName}
+              >
+                {selectedProductName}
+              </p>
+            )}
+          </div>
+          <button type="button" className="universe-launch" onClick={onToggleAdminMode}>
+            {adminMode ? "Back to Feedback" : "System Admin"}
           </button>
-          <button type="button" className="universe-launch" onClick={() => setShowQr(true)}>
-            QR Mobile
-          </button>
-          <select
-            className="role-chip"
-            value={sessionRole}
-            onChange={(event) => onSessionRoleChange(event.target.value as SessionRole)}
-            aria-label="Session role"
-          >
-            {ROLE_OPTIONS.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.label}
-              </option>
-            ))}
-          </select>
+          {!compactMode && (
+            <>
+              <button
+                type="button"
+                className="universe-launch"
+                onClick={() => {
+                  window.open("/universe.html", "_blank", "noopener,noreferrer");
+                }}
+                aria-label="Open FIS lending universe"
+                title="Open FIS Lending Universe"
+              >
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3.2" />
+                  <path d="M4.5 12c1.8-2.8 4.7-4.2 7.5-4.2s5.7 1.4 7.5 4.2" />
+                  <path d="M4.5 12c1.8 2.8 4.7 4.2 7.5 4.2s5.7-1.4 7.5-4.2" />
+                </svg>
+                <span>Universe</span>
+              </button>
+              <button type="button" className="universe-launch" onClick={() => setShowQr(true)}>
+                QR Mobile
+              </button>
+              <select
+                className="role-chip"
+                value={sessionRole}
+                onChange={(event) => onSessionRoleChange(event.target.value as SessionRole)}
+                aria-label="Session role"
+              >
+                {ROLE_OPTIONS.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.label}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
         </div>
-        {activeQuote ? (
-          <div className="quote-ticker" aria-live="polite">
-            <p>{activeQuote.text}</p>
-            <span>{activeQuote.role.toUpperCase()}</span>
-          </div>
-        ) : (
-          <div className="quote-ticker quote-ticker-placeholder">
-            <p>Collect 3 consent-approved quotes to activate live ticker</p>
-          </div>
+        {!compactMode && (
+          <>
+            {activeQuote ? (
+              <div className="quote-ticker" aria-live="polite">
+                <p>{activeQuote.text}</p>
+                <span>{activeQuote.role.toUpperCase()}</span>
+              </div>
+            ) : (
+              <div className="quote-ticker quote-ticker-placeholder">
+                <p>Collect 3 consent-approved quotes to activate live ticker</p>
+              </div>
+            )}
+            <div className="top-bar-metrics">
+              <button type="button" className="metric-card metric-card-button" onClick={onOpenLiveResponses}>
+                <span className="metric-label">Live Responses</span>
+                <strong>{summary.totalResponses}</strong>
+              </button>
+              <div className="metric-card">
+                <span className="metric-label">Synthesis Countdown</span>
+                <strong>{countdown}</strong>
+              </div>
+            </div>
+          </>
         )}
-        <div className="top-bar-metrics">
-          <div className="metric-card">
-            <span className="metric-label">Live Responses</span>
-            <strong>{summary.totalResponses}</strong>
-          </div>
-          <div className="metric-card">
-            <span className="metric-label">Synthesis Countdown</span>
-            <strong>{countdown}</strong>
-          </div>
-        </div>
       </header>
       {showQr && (
         <div className="overlay-modal" role="dialog" aria-modal="true" aria-label="Mobile QR access">

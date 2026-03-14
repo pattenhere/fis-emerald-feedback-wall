@@ -27,6 +27,32 @@ Implemented local prototype flows:
 
 Anthropic API integration is still pending; synthesis currently uses local deterministic generation.
 
+## OpenAI Core Module
+
+A reusable OpenAI client module now exists at:
+
+- `src/core/ai/openaiClient.ts`
+
+It supports:
+
+- Non-streaming text generation via the Responses API (`createOpenAIText`)
+- Streaming text generation (`streamOpenAIText`)
+- Config checks (`isOpenAIConfigured`, `getOpenAIClientInfo`)
+
+Environment flags:
+
+- `VITE_OPENAI_API_KEY`
+- `VITE_OPENAI_MODEL`
+- `VITE_OPENAI_BASE_URL`
+- `VITE_OPENAI_PROJECT`
+- `VITE_OPENAI_ORGANIZATION`
+- `VITE_ANTHROPIC_API_KEY`
+- `VITE_ANTHROPIC_MODEL`
+- `VITE_ANTHROPIC_BASE_URL`
+- `VITE_ANTHROPIC_VERSION`
+- `VITE_INSTITUTION_AI_PROVIDER` (`openai` or `anthropic`)
+- `VITE_INSTITUTION_MATCH_THRESHOLD` (default `0.6`, medium+)
+
 ## Styleguide
 
 Design tokens and visual system guidance live in:
@@ -47,6 +73,46 @@ npm run dev
 npm run typecheck
 npm run build
 ```
+
+## Data Model
+
+First table added:
+
+- `PRODUCTS` (see `db/migrations/001_create_products.sql`)
+- `INSTITUTION_PROFILES` (see `db/migrations/002_create_institution_profiles.sql`)
+- `PRODUCT_FEATURE_CATEGORIES` (see `db/migrations/003_create_product_feature_categories.sql`)
+- `PRODUCT_FEATURES` (see `db/migrations/005_create_product_features.sql`)
+
+Seed data from current lending product taxonomy:
+
+- `db/seeds/001_products_seed.sql`
+- `db/seeds/002_institution_profiles_seed.sql`
+- `db/seeds/003_product_feature_categories_seed.sql`
+- `db/seeds/004_product_features_seed.sql`
+
+Quick local SQLite bootstrap:
+
+```bash
+sqlite3 db/app.db < db/migrations/001_create_products.sql
+sqlite3 db/app.db < db/migrations/002_create_institution_profiles.sql
+sqlite3 db/app.db < db/migrations/003_create_product_feature_categories.sql
+sqlite3 db/app.db < db/migrations/004_add_ids_to_product_feature_categories.sql
+sqlite3 db/app.db < db/migrations/005_create_product_features.sql
+sqlite3 db/app.db < db/seeds/001_products_seed.sql
+sqlite3 db/app.db < db/seeds/002_institution_profiles_seed.sql
+sqlite3 db/app.db < db/seeds/003_product_feature_categories_seed.sql
+sqlite3 db/app.db < db/seeds/004_product_features_seed.sql
+```
+
+## System Administrator View
+
+The app now includes a `System Admin` page (toggle from top bar) that displays seed data table-by-table with:
+
+- table list and row/column counts
+- paginated result grid
+- reusable pagination module:
+  - `src/modules/pagination/usePagination.ts`
+  - `src/modules/pagination/PaginationControls.tsx`
 
 ## Next Build Phase
 

@@ -1,4 +1,4 @@
-import type { AppArea, AppScreen, CardSortConcept, FeatureRequest, KudosQuote } from "../types/domain";
+import type { AppArea, AppScreen, CardSortConcept, FeatureRequest, KudosQuote, ProductDefinition } from "../types/domain";
 
 export const APP_AREAS: Array<{ id: AppArea; label: string; dark?: boolean }> = [
   { id: "digital-experience", label: "Digital Experience" },
@@ -9,6 +9,73 @@ export const APP_AREAS: Array<{ id: AppArea; label: string; dark?: boolean }> = 
   { id: "syndication-complex-lending", label: "Syndication / Complex Lending" },
   { id: "analytics-inquiry", label: "Analytics & Inquiry" },
   { id: "platform-services", label: "Platform Services" },
+];
+
+export const PRODUCTS: ProductDefinition[] = [
+  {
+    id: "PRD-001",
+    category: "Lending",
+    subcategory: "Origination Solutions",
+    name: "Credit Assessment",
+    app: "credit-risk",
+    icon: "⬡",
+  },
+  {
+    id: "PRD-002",
+    category: "Lending",
+    subcategory: "Origination Solutions",
+    name: "Consumer & SMB Loan Origination",
+    app: "origination",
+    icon: "◇",
+  },
+  {
+    id: "PRD-003",
+    category: "Lending",
+    subcategory: "Origination Solutions",
+    name: "Commercial Loan Origination",
+    app: "origination",
+    icon: "◈",
+  },
+  {
+    id: "PRD-004",
+    category: "Lending",
+    subcategory: "Servicing Solutions",
+    name: "Consumer & SMB Loan Servicing",
+    app: "servicing",
+    icon: "⬢",
+  },
+  {
+    id: "PRD-005",
+    category: "Lending",
+    subcategory: "Servicing Solutions",
+    name: "Commercial Loan Servicing",
+    app: "servicing",
+    icon: "◉",
+  },
+  {
+    id: "PRD-006",
+    category: "Lending",
+    subcategory: "Specialty Lending Solutions",
+    name: "Asset & Auto Finance",
+    app: "platform-services",
+    icon: "◧",
+  },
+  {
+    id: "PRD-007",
+    category: "Lending",
+    subcategory: "Specialty Lending Solutions",
+    name: "Supply Chain Finance",
+    app: "monitoring-controls",
+    icon: "◬",
+  },
+  {
+    id: "PRD-008",
+    category: "Lending",
+    subcategory: "Specialty Lending Solutions",
+    name: "Syndication and Distribution",
+    app: "syndication-complex-lending",
+    icon: "✦",
+  },
 ];
 
 export const INITIAL_FEATURE_REQUESTS: FeatureRequest[] = [

@@ -5,6 +5,7 @@ interface FeaturesPanelProps {
   items: FeatureRequest[];
   activeApp: AppArea;
   selectedScreen: AppScreen;
+  selectedCategoryLabel: string;
   onAdd: (input: {
     title: string;
     workflowContext?: string;
@@ -19,6 +20,7 @@ export const FeaturesPanel = memo(({
   items,
   activeApp,
   selectedScreen,
+  selectedCategoryLabel,
   onAdd,
   onUpvote,
 }: FeaturesPanelProps): JSX.Element => {
@@ -53,7 +55,7 @@ export const FeaturesPanel = memo(({
     <section className="panel-stack">
       <header>
         <h2>Feature Requests</h2>
-        <p>Area: {selectedScreen.name}</p>
+        <p>Area: {selectedCategoryLabel}</p>
       </header>
 
       <div className="inline-form">
@@ -78,15 +80,19 @@ export const FeaturesPanel = memo(({
 
       <ul className="list-reset panel-list">
         {items.map((feature) => (
-          <li key={feature.id} className="feature-card">
+          <li key={feature.id} className="feature-card feature-card--stacked-vote">
             <div className="feature-card-body">
               <p className="card-title">{feature.title}</p>
               <p className="feature-brief">{feature.workflowContext ?? feature.title}</p>
               <p className="card-meta">Area: {feature.screenName}</p>
+              <button
+                type="button"
+                className={`vote-pill ${feature.votes >= 0 ? "is-positive" : "is-negative"}`}
+                onClick={() => onUpvote(feature.id)}
+              >
+                {feature.votes >= 0 ? "↑" : "↓"} {Math.abs(feature.votes)}
+              </button>
             </div>
-            <button type="button" className="vote-pill" onClick={() => onUpvote(feature.id)}>
-              Votes {feature.votes}
-            </button>
           </li>
         ))}
         {items.length === 0 && (

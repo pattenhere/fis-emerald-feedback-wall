@@ -1,30 +1,29 @@
 import { memo, type CSSProperties } from "react";
-import type { AppArea } from "../../types/domain";
 
 interface AppSelectorProps {
-  apps: Array<{ id: AppArea; label: string; dark?: boolean }>;
-  activeApp: AppArea;
-  heatmapIntensity: Record<AppArea, number>;
-  onChange: (app: AppArea) => void;
+  tabs: Array<{ id: string; label: string; dark?: boolean }>;
+  activeTabId: string;
+  heatmapIntensity?: Record<string, number>;
+  onChange: (id: string) => void;
 }
 
 export const AppSelector = memo(({
-  apps,
-  activeApp,
-  heatmapIntensity,
+  tabs,
+  activeTabId,
+  heatmapIntensity = {},
   onChange,
 }: AppSelectorProps): JSX.Element => {
   return (
-    <div className="app-selector" role="tablist" aria-label="Application areas">
-      {apps.map((app) => (
+    <div className="app-selector" role="tablist" aria-label="Product categories">
+      {tabs.map((tab) => (
         <button
-          key={app.id}
-          className={`app-pill ${activeApp === app.id ? "is-active" : ""} ${app.dark ? "is-dark" : ""}`}
+          key={tab.id}
+          className={`app-pill ${activeTabId === tab.id ? "is-active" : ""} ${tab.dark ? "is-dark" : ""}`}
           type="button"
-          onClick={() => onChange(app.id)}
-          style={{ "--heat": heatmapIntensity[app.id] ?? 0 } as CSSProperties}
+          onClick={() => onChange(tab.id)}
+          style={{ "--heat": heatmapIntensity[tab.id] ?? 0 } as CSSProperties}
         >
-          {app.label}
+          {tab.label}
         </button>
       ))}
     </div>
