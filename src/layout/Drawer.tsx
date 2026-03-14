@@ -5,7 +5,6 @@ interface DrawerProps {
   open: boolean;
   activeTab: DrawerTab;
   onTabChange: (tab: DrawerTab) => void;
-  onToggle: () => void;
   children: JSX.Element;
 }
 
@@ -48,7 +47,6 @@ const iconForTab = (tab: DrawerTab): JSX.Element => {
 const TABS: Array<{ id: DrawerTab; label: string }> = [
   { id: "features", label: "Feature Requests" },
   { id: "kudos", label: "Kudos" },
-  { id: "card-sort", label: "Card Sort · 2 min" },
   { id: "synthesis", label: "Synthesis" },
 ];
 
@@ -56,24 +54,10 @@ export const Drawer = memo(({
   open,
   activeTab,
   onTabChange,
-  onToggle,
   children,
 }: DrawerProps): JSX.Element => {
   return (
     <aside className={`drawer ${open ? "is-open" : "is-collapsed"}`}>
-      <button
-        className="drawer-toggle"
-        type="button"
-        onClick={onToggle}
-        aria-label={open ? "Collapse menu" : "Open menu"}
-      >
-        <span className="drawer-toggle-desktop" aria-hidden="true">
-          {open ? "<" : ">"}
-        </span>
-        <span className="drawer-toggle-mobile" aria-hidden="true">
-          ☰
-        </span>
-      </button>
       <nav className="drawer-tabs" aria-label="Feedback panel tabs">
         {TABS.map((tab) => (
           <button

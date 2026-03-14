@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CardSortPanel } from "./modules/card-sort/CardSortPanel";
 import { Drawer } from "./layout/Drawer";
 import { Hero } from "./layout/Hero";
 import { ProductLanding } from "./layout/ProductLanding";
+import { SplashPage } from "./layout/SplashPage";
 import { TopBar } from "./layout/TopBar";
-import { SystemAdministratorPage } from "./modules/admin/SystemAdministratorPage";
+import { ViewAllResponsesPage } from "./layout/ViewAllResponsesPage";
 import { FeaturesPanel } from "./modules/features/FeaturesPanel";
 import { KudosPanel } from "./modules/kudos/KudosPanel";
 import { SynthesisPanel } from "./modules/synthesis/SynthesisPanel";
@@ -23,6 +23,8 @@ const FALLBACK_SCREEN: AppScreen = {
   description: "Capture feedback for this feature.",
 };
 
+type AllResponseType = "Feedback" | "Feature Requests" | "Kudos";
+
 interface LiveResponseItem {
   id: string;
   category: string;
@@ -36,8 +38,9 @@ const App = (): JSX.Element => {
   const [idleQuoteIndex, setIdleQuoteIndex] = useState(0);
   const [nowTick, setNowTick] = useState(Date.now());
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const [adminMode, setAdminMode] = useState(false);
   const [showLiveResponses, setShowLiveResponses] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
+  const [showAllResponsesPage, setShowAllResponsesPage] = useState(false);
   const {
     activeDrawerTab,
     activeApp,
@@ -47,8 +50,6 @@ const App = (): JSX.Element => {
     appendFollowUpResponse,
     buildExportRecords,
     buildSynthesisPromptBody,
-    cardSortConcepts,
-    cardSortResponses,
     clearSynthesisOutput,
     conflicts,
     drawerOpen,
@@ -60,7 +61,6 @@ const App = (): JSX.Element => {
     selectedScreenId,
     setActiveApp,
     setActiveDrawerTab,
-    setCardSortTier,
     setDrawerOpen,
     setReadinessThreshold,
     setRevealNarrative,
@@ -69,8 +69,6 @@ const App = (): JSX.Element => {
     setSynthesisOutput,
     screenSubmissionCounts,
     screenFeedback,
-    sessionRole,
-    setSessionRole,
     signalSummary,
     synthesisCountdownTarget,
     synthesisMode,
@@ -203,9 +201,100 @@ const App = (): JSX.Element => {
       .sort((a, b) => a.category.localeCompare(b.category));
   }, [categoryByNormalizedFeatureName, featureCategoryLabelByFeatureId, featureRequests, kudosQuotes, screenFeedback]);
 
-  const handleToggleDrawer = useCallback(() => {
-    setDrawerOpen(!drawerOpen);
-  }, [drawerOpen, setDrawerOpen]);
+  const groupedAllResponses = useMemo(() => {
+    const resolveCategory = (screenId?: string, screenName?: string): string => {
+      if (screenId && featureCategoryLabelByFeatureId[screenId]) {
+        return featureCategoryLabelByFeatureId[screenId];
+      }
+      if (screenName) {
+        const normalized = screenName.toLowerCase().replace(/[^a-z0-9]/g, "");
+        return categoryByNormalizedFeatureName.get(normalized) ?? "Uncategorized";
+      }
+      return "Uncategorized";
+    };
+
+    const typeOrder: Record<AllResponseType, number> = {
+      Feedback: 0,
+      "Feature Requests": 1,
+      Kudos: 2,
+    };
+
+    const grouped = new Map<string, Array<{ id: string; type: AllResponseType; title: string; detail: string }>>();
+
+    for (const item of featureRequests) {
+      if (initialFeatureRequestIds.has(item.id)) {
+        continue;
+      }
+      const category = resolveCategory(item.screenId, item.screenName);
+      const list = grouped.get(category) ?? [];
+      list.push({
+        id: `feature-${item.id}`,
+        type: "Feature Requests",
+        title: item.title,
+        detail: item.screenName,
+      });
+      grouped.set(category, list);
+    }
+
+    for (const item of screenFeedback) {
+      const feedbackTypeLabel = item.type
+        .split("-")
+        .map((segment) => `${segment.slice(0, 1).toUpperCase()}${segment.slice(1)}`)
+        .join(" ");
+      const category = resolveCategory(item.screenId, item.screenName);
+      const list = grouped.get(category) ?? [];
+      list.push({
+        id: `feedback-${item.id}`,
+        type: "Feedback",
+        title: item.text?.trim() || feedbackTypeLabel,
+        detail: `${feedbackTypeLabel} • ${item.screenName}`,
+      });
+      grouped.set(category, list);
+    }
+
+    for (const item of kudosQuotes) {
+      const category = resolveCategory(item.screenId, item.screenName);
+      const list = grouped.get(category) ?? [];
+      list.push({
+        id: `kudos-${item.id}`,
+        type: "Kudos",
+        title: item.text,
+        detail: `${item.role.toUpperCase()}${item.screenName ? ` • ${item.screenName}` : ""}`,
+      });
+      grouped.set(category, list);
+    }
+
+    return [...grouped.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([category, items]) => {
+        const itemsByType = new Map<AllResponseType, Array<{ id: string; title: string; detail: string }>>();
+        for (const item of items) {
+          const list = itemsByType.get(item.type) ?? [];
+          list.push({ id: item.id, title: item.title, detail: item.detail });
+          itemsByType.set(item.type, list);
+        }
+
+        const sections = [...itemsByType.entries()]
+          .sort((a, b) => typeOrder[a[0]] - typeOrder[b[0]])
+          .map(([type, sectionItems]) => ({
+            type,
+            items: sectionItems.slice().sort((a, b) => a.title.localeCompare(b.title)),
+          }));
+
+        return {
+          category,
+          totalCount: items.length,
+          sections,
+        };
+      });
+  }, [
+    categoryByNormalizedFeatureName,
+    featureCategoryLabelByFeatureId,
+    featureRequests,
+    initialFeatureRequestIds,
+    kudosQuotes,
+    screenFeedback,
+  ]);
 
   const handleAppChange = useCallback(
     (app: AppArea) => {
@@ -219,6 +308,7 @@ const App = (): JSX.Element => {
     (id: string) => {
       setSelectedScreenId(id);
       setActiveDrawerTab("features");
+      setShowAllResponsesPage(false);
     },
     [setSelectedScreenId, setActiveDrawerTab],
   );
@@ -238,13 +328,10 @@ const App = (): JSX.Element => {
       setSelectedProductId(product.id);
       setActiveDrawerTab("features");
       setDrawerOpen(true);
+      setShowAllResponsesPage(false);
     },
     [firstFeatureScreenIdByProduct, productScreensByProduct, setActiveApp, setActiveDrawerTab, setDrawerOpen, setSelectedScreenId],
   );
-
-  const handleToggleAdminMode = useCallback(() => {
-    setAdminMode((current) => !current);
-  }, []);
 
   const drawerContent = useMemo((): JSX.Element => {
     if (activeDrawerTab === "features") {
@@ -272,16 +359,6 @@ const App = (): JSX.Element => {
               screenName: selectedScreen.name,
             })
           }
-        />
-      );
-    }
-
-    if (activeDrawerTab === "card-sort") {
-      return (
-        <CardSortPanel
-          concepts={cardSortConcepts}
-          responses={cardSortResponses}
-          onAssignTier={setCardSortTier}
         />
       );
     }
@@ -319,14 +396,11 @@ const App = (): JSX.Element => {
     addKudosQuote,
     buildExportRecords,
     buildSynthesisPromptBody,
-    cardSortConcepts,
-    cardSortResponses,
     clearSynthesisOutput,
     conflicts,
     featureRequests,
     readinessThreshold,
     revealNarrative,
-    setCardSortTier,
     setReadinessThreshold,
     setRevealNarrative,
     setSynthesisMode,
@@ -370,23 +444,30 @@ const App = (): JSX.Element => {
   const idleActive = nowTick - lastInteractionAt > 45_000 && publicQuotes.length >= 3;
   const idleQuote = publicQuotes[idleQuoteIndex % Math.max(publicQuotes.length, 1)];
 
+  if (showSplash) {
+    return (
+      <SplashPage
+        imageSrc="/assets/splash-wall-hero.png"
+        onContinue={() => setShowSplash(false)}
+      />
+    );
+  }
+
   return (
     <div className="app-shell">
         <TopBar
         summary={signalSummary}
         countdownTarget={synthesisCountdownTarget}
-        sessionRole={sessionRole}
-        onSessionRoleChange={setSessionRole}
         publicQuotes={publicQuotes}
-        adminMode={adminMode}
-        onToggleAdminMode={handleToggleAdminMode}
-        compactMode={!adminMode && inProductLanding}
+        compactMode={inProductLanding}
         selectedProductName={selectedProductName}
         onOpenLiveResponses={() => setShowLiveResponses(true)}
+        onOpenViewAll={() => setShowAllResponsesPage((current) => !current)}
+        viewAllActive={showAllResponsesPage}
       />
-      <main className={`content-shell ${adminMode ? "is-admin-mode" : inProductLanding ? "is-product-landing" : drawerOpen ? "" : "is-drawer-collapsed"}`}>
-        {adminMode ? (
-          <SystemAdministratorPage />
+      <main className={`content-shell ${showAllResponsesPage ? "is-admin-mode" : inProductLanding ? "is-product-landing" : drawerOpen ? "" : "is-drawer-collapsed"}`}>
+        {showAllResponsesPage ? (
+          <ViewAllResponsesPage groups={groupedAllResponses} />
         ) : inProductLanding ? (
           <ProductLanding onSelectProduct={handleSelectProduct} />
         ) : (
@@ -395,7 +476,6 @@ const App = (): JSX.Element => {
               open={drawerOpen}
               activeTab={activeDrawerTab}
               onTabChange={setActiveDrawerTab}
-              onToggle={handleToggleDrawer}
             >
               {drawerContent}
             </Drawer>
@@ -424,7 +504,7 @@ const App = (): JSX.Element => {
           </div>
         </button>
       )}
-      {showLiveResponses && !adminMode && !inProductLanding && (
+      {showLiveResponses && !inProductLanding && !showAllResponsesPage && (
         <>
           <button
             type="button"

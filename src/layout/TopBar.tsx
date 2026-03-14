@@ -1,40 +1,27 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import type { KudosQuote, SessionRole, SignalSummary } from "../types/domain";
+import type { KudosQuote, SignalSummary } from "../types/domain";
 import { formatCountdown } from "../utils/time";
 
 interface TopBarProps {
   summary: SignalSummary;
   countdownTarget: string;
-  sessionRole: SessionRole;
-  onSessionRoleChange: (role: SessionRole) => void;
   publicQuotes: KudosQuote[];
-  adminMode: boolean;
-  onToggleAdminMode: () => void;
   compactMode?: boolean;
   selectedProductName?: string | null;
   onOpenLiveResponses?: () => void;
+  onOpenViewAll?: () => void;
+  viewAllActive?: boolean;
 }
-
-const ROLE_OPTIONS: Array<{ id: SessionRole; label: string }> = [
-  { id: "unspecified", label: "I am a..." },
-  { id: "ops", label: "Ops" },
-  { id: "eng", label: "Eng" },
-  { id: "product", label: "Product" },
-  { id: "finance", label: "Finance" },
-  { id: "exec", label: "Exec" },
-];
 
 export const TopBar = memo(({
   summary,
   countdownTarget,
-  sessionRole,
-  onSessionRoleChange,
   publicQuotes,
-  adminMode,
-  onToggleAdminMode,
   compactMode = false,
   selectedProductName = null,
   onOpenLiveResponses,
+  onOpenViewAll,
+  viewAllActive = false,
 }: TopBarProps): JSX.Element => {
   const [countdown, setCountdown] = useState(formatCountdown(countdownTarget));
   const [quoteIndex, setQuoteIndex] = useState(0);
@@ -105,9 +92,6 @@ export const TopBar = memo(({
               </p>
             )}
           </div>
-          <button type="button" className="universe-launch" onClick={onToggleAdminMode}>
-            {adminMode ? "Back to Feedback" : "System Admin"}
-          </button>
           {!compactMode && (
             <>
               <button
@@ -129,18 +113,9 @@ export const TopBar = memo(({
               <button type="button" className="universe-launch" onClick={() => setShowQr(true)}>
                 QR Mobile
               </button>
-              <select
-                className="role-chip"
-                value={sessionRole}
-                onChange={(event) => onSessionRoleChange(event.target.value as SessionRole)}
-                aria-label="Session role"
-              >
-                {ROLE_OPTIONS.map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.label}
-                  </option>
-                ))}
-              </select>
+              <button type="button" className="role-chip role-chip-button" onClick={onOpenViewAll}>
+                {viewAllActive ? "Back to Wall" : "View All"}
+              </button>
             </>
           )}
         </div>
