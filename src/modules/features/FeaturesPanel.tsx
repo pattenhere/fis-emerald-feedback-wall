@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useState } from "react";
+import { memo, type KeyboardEvent, useState } from "react";
 import type { AppArea, AppScreen, FeatureRequest } from "../../types/domain";
 
 interface FeaturesPanelProps {
@@ -7,6 +7,7 @@ interface FeaturesPanelProps {
   selectedScreen: AppScreen;
   onAdd: (input: {
     title: string;
+    workflowContext?: string;
     app: AppArea;
     screenId: string;
     screenName: string;
@@ -14,7 +15,7 @@ interface FeaturesPanelProps {
   onUpvote: (featureId: string) => void;
 }
 
-export const FeaturesPanel = ({
+export const FeaturesPanel = memo(({
   items,
   activeApp,
   selectedScreen,
@@ -22,6 +23,7 @@ export const FeaturesPanel = ({
   onUpvote,
 }: FeaturesPanelProps): JSX.Element => {
   const [title, setTitle] = useState("");
+  const [workflowContext, setWorkflowContext] = useState("");
 
   const handleSubmit = (): void => {
     if (!title.trim()) {
@@ -30,11 +32,13 @@ export const FeaturesPanel = ({
 
     onAdd({
       title,
+      workflowContext,
       app: activeApp,
       screenId: selectedScreen.id,
       screenName: selectedScreen.name,
     });
     setTitle("");
+    setWorkflowContext("");
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
@@ -62,6 +66,14 @@ export const FeaturesPanel = ({
           maxLength={180}
           aria-label="Add feature"
         />
+        <input
+          type="text"
+          value={workflowContext}
+          onChange={(event) => setWorkflowContext(event.target.value)}
+          placeholder="Optional workflow context"
+          maxLength={180}
+          aria-label="Workflow context"
+        />
       </div>
 
       <ul className="list-reset panel-list">
@@ -85,4 +97,4 @@ export const FeaturesPanel = ({
       </ul>
     </section>
   );
-};
+});

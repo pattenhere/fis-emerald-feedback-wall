@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { memo, type FormEvent, useState } from "react";
 import type { KudosQuote, KudosRole } from "../../types/domain";
 
 interface KudosPanelProps {
@@ -8,7 +8,7 @@ interface KudosPanelProps {
 
 const ROLE_OPTIONS: KudosRole[] = ["ops", "eng", "product", "finance", "exec"];
 
-export const KudosPanel = ({ items, onAdd }: KudosPanelProps): JSX.Element => {
+export const KudosPanel = memo(({ items, onAdd }: KudosPanelProps): JSX.Element => {
   const [text, setText] = useState("");
   const [role, setRole] = useState<KudosRole>("unspecified");
   const [consentPublic, setConsentPublic] = useState(false);
@@ -78,4 +78,4 @@ export const KudosPanel = ({ items, onAdd }: KudosPanelProps): JSX.Element => {
       </ul>
     </section>
   );
-};
+});

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { DrawerTab } from "../types/domain";
 
 interface DrawerProps {
@@ -26,6 +27,16 @@ const iconForTab = (tab: DrawerTab): JSX.Element => {
       </svg>
     );
   }
+  if (tab === "card-sort") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M7 6h10M7 12h8M7 18h6" />
+        <path d="m4 6 1.3 1.3L7.5 5" />
+        <path d="m4 12 1.3 1.3L7.5 11" />
+        <path d="m4 18 1.3 1.3L7.5 17" />
+      </svg>
+    );
+  }
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M20 12a8 8 0 1 1-2.3-5.7" />
@@ -37,10 +48,11 @@ const iconForTab = (tab: DrawerTab): JSX.Element => {
 const TABS: Array<{ id: DrawerTab; label: string }> = [
   { id: "features", label: "Features" },
   { id: "kudos", label: "Kudos" },
+  { id: "card-sort", label: "Card Sort · 2 min" },
   { id: "synthesis", label: "Synthesis" },
 ];
 
-export const Drawer = ({
+export const Drawer = memo(({
   open,
   activeTab,
   onTabChange,
@@ -82,4 +94,4 @@ export const Drawer = ({
       {open && <section className="drawer-content">{children}</section>}
     </aside>
   );
-};
+});

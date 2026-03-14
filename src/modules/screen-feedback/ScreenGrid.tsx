@@ -1,14 +1,17 @@
+import { memo } from "react";
 import type { AppScreen } from "../../types/domain";
 
 interface ScreenGridProps {
   screens: AppScreen[];
   selectedScreenId: string;
+  submissionCounts: Record<string, number>;
   onSelectScreen: (id: string) => void;
 }
 
-export const ScreenGrid = ({
+export const ScreenGrid = memo(({
   screens,
   selectedScreenId,
+  submissionCounts,
   onSelectScreen,
 }: ScreenGridProps): JSX.Element => {
   return (
@@ -20,10 +23,13 @@ export const ScreenGrid = ({
           type="button"
           onClick={() => onSelectScreen(screen.id)}
         >
+          {(submissionCounts[screen.id] ?? 0) > 0 && (
+            <span className="screen-count-badge">{submissionCounts[screen.id]}</span>
+          )}
           <span className="screen-thumb-title">{screen.name}</span>
           <span className="screen-thumb-caption">Wireframe preview</span>
         </button>
       ))}
     </section>
   );
-};
+});

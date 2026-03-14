@@ -48,6 +48,7 @@ interface ParsedFeature {
   text: string;
   votes: number;
   workflow: string;
+  role: string;
 }
 
 interface ParsedFeedback {
@@ -55,6 +56,7 @@ interface ParsedFeedback {
   screen: string;
   type: string;
   text: string;
+  role: string;
 }
 
 interface ParsedKudos {
@@ -84,6 +86,7 @@ const parseFeatures = (value: string): ParsedFeature[] => {
         text,
         votes: votesMatch ? Number(votesMatch[1]) : 0,
         workflow: workflowMatch ? workflowMatch[1].trim() : "n/a",
+        role: line.match(/role=([^|]+)/)?.[1]?.trim() ?? "unspecified",
       };
     });
 };
@@ -97,7 +100,8 @@ const parseScreenFeedback = (value: string): ParsedFeedback[] => {
       const screen = line.match(/screen=([^|]+)/)?.[1]?.trim() ?? "unknown";
       const type = line.match(/type=([^|]+)/)?.[1]?.trim() ?? "suggestion";
       const text = line.match(/text=(.*)$/)?.[1]?.trim() ?? "n/a";
-      return { app, screen, type, text };
+      const role = line.match(/role=([^|]+)/)?.[1]?.trim() ?? "unspecified";
+      return { app, screen, type, text, role };
     });
 };
 
@@ -137,6 +141,22 @@ const synthesizeLocally = (mode: "roadmap" | "prd", prompt: string): string => {
   const p0 = features.slice(0, 2);
   const p1 = features.slice(2, 6);
   const p2 = features.slice(6);
+  const p0Only = prompt.includes("Constrain output to P0 items only");
+  const emphasizeMarketing = prompt.includes("Emphasize consent-approved marketing-safe quotes");
+  const roleCounts = new Map<string, number>();
+  for (const item of [...features.map((feature) => feature.role), ...feedback.map((item) => item.role)]) {
+    if (!item || item === "unspecified") {
+      continue;
+    }
+    roleCounts.set(item, (roleCounts.get(item) ?? 0) + 1);
+  }
+  const roleLines =
+    roleCounts.size > 0
+      ? [...roleCounts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([role, count], index) => `${index + 1}. ${role.toUpperCase()} contributed ${count} signals.`)
+          .join("\n")
+      : "1. Role-segmented patterns are limited due to unspecified role usage.";
 
   if (mode === "roadmap") {
     const p0Lines = p0.length
@@ -157,24 +177,35 @@ const synthesizeLocally = (mode: "roadmap" | "prd", prompt: string): string => {
     const quoteLines = publicQuotes.length
       ? publicQuotes.map((quote, index) => `${index + 1}. "${quote.text}" (${quote.role.toUpperCase()})`).join("\n")
       : "1. No consent-approved quotes yet.";
+    const extendedQuotes =
+      emphasizeMarketing && quoteLines !== "1. No consent-approved quotes yet."
+        ? `${quoteLines}\n4. Promote quoted client outcomes during Day 2 reveal walkthrough.`
+        : quoteLines;
 
     return [
       "# Roadmap Draft",
       "",
       "## P0 - Build Tonight",
       p0Lines,
-      "",
-      "## P1 - Next Sprint",
-      p1Lines,
-      "",
-      "## P2 - Backlog",
-      p2Lines,
+      ...(p0Only
+        ? []
+        : [
+            "",
+            "## P1 - Next Sprint",
+            p1Lines,
+            "",
+            "## P2 - Backlog",
+            p2Lines,
+          ]),
       "",
       "## Patterns & Insights",
       patternLines,
       "",
+      "## Role-Segmented Signals",
+      roleLines,
+      "",
       "## Marketing Moments",
-      quoteLines,
+      extendedQuotes,
     ].join("\n");
   }
 
@@ -215,6 +246,9 @@ const synthesizeLocally = (mode: "roadmap" | "prd", prompt: string): string => {
     "",
     "## Design Guidance",
     patterns.length ? patterns.map((line, index) => `${index + 1}. ${line}`).join("\n") : "1. Emphasize clarity in feedback categorization and submission flow.",
+    "",
+    "## Role-Segmented Signals",
+    roleLines,
     "",
     "## Success Metrics",
     "1. Day 2 demo includes at least one completed P0 flow.",

@@ -1,4 +1,4 @@
-import type { AppArea, AppScreen, FeatureRequest, KudosQuote } from "../types/domain";
+import type { AppArea, AppScreen, CardSortConcept, FeatureRequest, KudosQuote } from "../types/domain";
 
 export const APP_AREAS: Array<{ id: AppArea; label: string; dark?: boolean }> = [
   { id: "digital-experience", label: "Digital Experience" },
@@ -21,6 +21,7 @@ export const INITIAL_FEATURE_REQUESTS: FeatureRequest[] = [
     workflowContext: "Reduce intake completion time and drop-off for repeat applicants.",
     votes: 12,
     createdAt: "2026-03-12T08:00:00Z",
+    origin: "kiosk",
   },
   {
     id: "fr-2",
@@ -31,6 +32,7 @@ export const INITIAL_FEATURE_REQUESTS: FeatureRequest[] = [
     workflowContext: "Speed reviewer confidence and improve transparent approvals.",
     votes: 8,
     createdAt: "2026-03-12T08:05:00Z",
+    origin: "kiosk",
   },
 ];
 
@@ -263,3 +265,55 @@ export const SCREEN_LIBRARY: AppScreen[] = [
     description: "Enable admin configuration of rules, workflows, and platform behaviors.",
   },
 ];
+
+export const CARD_SORT_CONCEPTS: CardSortConcept[] = [
+  {
+    id: "concept-agent-covenant-monitor",
+    title: "Agentic Covenant Monitor",
+    description: "Continuously monitors covenant drift and proposes next-best remediation actions.",
+  },
+  {
+    id: "concept-origination-copilot",
+    title: "Origination Copilot",
+    description: "Suggests underwriting data checks and approval pathways from prior outcomes.",
+  },
+  {
+    id: "concept-servicing-predictive",
+    title: "Predictive Servicing Alerts",
+    description: "Flags likely payment exceptions before billing cycles complete.",
+  },
+  {
+    id: "concept-portfolio-narrative",
+    title: "Portfolio Narrative Brief",
+    description: "Generates executive-ready summaries from portfolio and transaction trends.",
+  },
+  {
+    id: "concept-participant-insight",
+    title: "Syndication Participant Insight Hub",
+    description: "Surfaces cross-party obligations, delays, and communication bottlenecks in one view.",
+  },
+];
+
+export const SCREENS_BY_APP: Record<AppArea, AppScreen[]> = APP_AREAS.reduce(
+  (acc, area) => {
+    acc[area.id] = SCREEN_LIBRARY.filter((screen) => screen.app === area.id);
+    return acc;
+  },
+  {} as Record<AppArea, AppScreen[]>,
+);
+
+export const FIRST_SCREEN_ID_BY_APP: Record<AppArea, string | null> = APP_AREAS.reduce(
+  (acc, area) => {
+    acc[area.id] = SCREENS_BY_APP[area.id][0]?.id ?? null;
+    return acc;
+  },
+  {} as Record<AppArea, string | null>,
+);
+
+export const SCREEN_COUNT_BY_APP: Record<AppArea, number> = APP_AREAS.reduce(
+  (acc, area) => {
+    acc[area.id] = SCREENS_BY_APP[area.id].length;
+    return acc;
+  },
+  {} as Record<AppArea, number>,
+);

@@ -1,4 +1,4 @@
-export type DrawerTab = "features" | "kudos" | "synthesis";
+export type DrawerTab = "features" | "kudos" | "card-sort" | "synthesis";
 
 export type AppArea =
   | "digital-experience"
@@ -18,6 +18,7 @@ export type FeedbackType =
   | "suggestion";
 
 export type KudosRole = "ops" | "eng" | "product" | "finance" | "exec" | "unspecified";
+export type SessionRole = KudosRole;
 
 export type SynthesisMode = "roadmap" | "prd";
 
@@ -30,6 +31,7 @@ export interface FeatureRequest {
   workflowContext?: string;
   votes: number;
   createdAt: string;
+  origin?: "kiosk" | "mobile";
 }
 
 export interface KudosQuote {
@@ -55,6 +57,8 @@ export interface ScreenFeedback {
   screenName: string;
   type: FeedbackType;
   text?: string;
+  followUpQuestion?: string;
+  followUpResponse?: string;
   createdAt: string;
 }
 
@@ -63,4 +67,33 @@ export interface SignalSummary {
   screenFeedbackCount: number;
   kudosCount: number;
   totalResponses: number;
+}
+
+export interface ConflictEntry {
+  app: AppArea;
+  screenId: string;
+  screenName: string;
+  positiveCount: number;
+  negativeCount: number;
+}
+
+export interface CardSortConcept {
+  id: string;
+  title: string;
+  description: string;
+}
+
+export type CardSortTier = "high" | "medium" | "low";
+
+export interface CardSortResponse {
+  conceptId: string;
+  tier: CardSortTier;
+  updatedAt: string;
+}
+
+export interface MacroState {
+  upweightApp?: AppArea;
+  p0Only: boolean;
+  excludeLowSignalBelow?: number;
+  emphasizeMarketingQuotes: boolean;
 }

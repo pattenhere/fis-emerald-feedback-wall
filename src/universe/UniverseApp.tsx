@@ -221,6 +221,17 @@ const GALAXIES: Galaxy[] = [
   },
 ];
 
+const GALAXY_SPEED: Record<string, number> = {
+  cls: 0.0018,
+  ibs: 0.0014,
+  origination: 0.002,
+  asset: 0.0016,
+  als: 0.0022,
+  supplychain: 0.0025,
+  concierge: 0.003,
+  innovation: 0.0035,
+};
+
 const CLS_JOURNEY_DEFS: JourneyDef[] = [
   { id: "booking", label: "Booking", color: FIS.green },
   { id: "inquiry", label: "Inquiry", color: FIS.cyan },
@@ -1045,16 +1056,6 @@ function UniverseView({ onZoomCLS }: { onZoomCLS: () => void }) {
   );
   const rafRef = useRef<number | null>(null);
   const lastRef = useRef<number | null>(null);
-  const GALAXY_SPEED: Record<string, number> = {
-    cls: 0.0018,
-    ibs: 0.0014,
-    origination: 0.002,
-    asset: 0.0016,
-    als: 0.0022,
-    supplychain: 0.0025,
-    concierge: 0.003,
-    innovation: 0.0035,
-  };
 
   const CX = 500;
   const CY = 420;
