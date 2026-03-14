@@ -11,11 +11,11 @@ export type AppArea =
   | "platform-services";
 
 export type FeedbackType =
-  | "pain-point"
-  | "confusing"
-  | "missing-element"
+  | "issue"
+  | "suggestion"
+  | "missing"
   | "works-well"
-  | "suggestion";
+  ;
 
 export type KudosRole = "ops" | "eng" | "product" | "finance" | "exec" | "unspecified";
 export type SessionRole = KudosRole;

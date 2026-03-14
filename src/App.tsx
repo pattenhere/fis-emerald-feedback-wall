@@ -10,20 +10,10 @@ import { KudosPanel } from "./modules/kudos/KudosPanel";
 import { SynthesisPanel } from "./modules/synthesis/SynthesisPanel";
 import { ADMIN_SEED_TABLES } from "./state/adminSeedData";
 import { INITIAL_FEATURE_REQUESTS, INITIAL_KUDOS, PRODUCTS } from "./state/seedData";
+import { buildProductFeatureCatalog } from "./state/productFeatureModel";
 import { useWallState } from "./state/useWallState";
 import type { AppArea, AppScreen } from "./types/domain";
 import "./styles/app.css";
-
-const appAreaFromCategory = (category: string): AppArea => {
-  if (category === "Digital Experience") return "digital-experience";
-  if (category === "Origination") return "origination";
-  if (category === "Credit & Risk" || category === "Customer Risk & Credit") return "credit-risk";
-  if (category === "Servicing" || category === "SBA & Re-Amort, Servicing") return "servicing";
-  if (category === "Monitoring & Controls") return "monitoring-controls";
-  if (category === "Syndication / Complex Lending" || category === "Syndication") return "syndication-complex-lending";
-  if (category === "Analytics & Inquiry") return "analytics-inquiry";
-  return "platform-services";
-};
 
 const FALLBACK_SCREEN: AppScreen = {
   id: "fallback-screen",
@@ -32,6 +22,13 @@ const FALLBACK_SCREEN: AppScreen = {
   wireframeLabel: "Feature detail · working prototype taxonomy",
   description: "Capture feedback for this feature.",
 };
+
+interface LiveResponseItem {
+  id: string;
+  category: string;
+  title: string;
+  meta: string;
+}
 
 const App = (): JSX.Element => {
   const state = useWallState();
@@ -48,7 +45,6 @@ const App = (): JSX.Element => {
     addKudosQuote,
     addScreenFeedback,
     appendFollowUpResponse,
-    appHeatmapIntensity,
     buildExportRecords,
     buildSynthesisPromptBody,
     cardSortConcepts,
@@ -84,52 +80,11 @@ const App = (): JSX.Element => {
     unlockSynthesis,
     upvoteFeatureRequest,
   } = state;
-  const categoriesRows = useMemo(
-    () => ADMIN_SEED_TABLES.find((table) => table.id === "product_feature_categories")?.rows ?? [],
+  const productFeatureCatalog = useMemo(
+    () => buildProductFeatureCatalog(ADMIN_SEED_TABLES),
     [],
   );
-  const productFeatureRows = useMemo(
-    () => ADMIN_SEED_TABLES.find((table) => table.id === "product_features")?.rows ?? [],
-    [],
-  );
-  const categoryLabelById = useMemo(
-    () => new Map(categoriesRows.map((row) => [String(row.id), String(row.category)])),
-    [categoriesRows],
-  );
-  const productScreensByProduct = useMemo(() => {
-    const grouped = new Map<string, Array<{ category: string; screen: AppScreen }>>();
-    for (const row of productFeatureRows) {
-      const productId = String(row.product_id ?? "");
-      const categoryLabel = categoryLabelById.get(String(row.feature_category_id ?? "")) ?? "";
-      const name = String(row.name ?? "").trim();
-      if (!productId || !name || !categoryLabel) {
-        continue;
-      }
-      const description =
-        typeof row.description === "string" && row.description.trim().length > 0
-          ? row.description
-          : `Capture feedback for ${name}.`;
-      const screen: AppScreen = {
-        id: String(row.id),
-        app: appAreaFromCategory(categoryLabel),
-        name,
-        wireframeLabel: "Feature detail · working prototype taxonomy",
-        description,
-      };
-      const current = grouped.get(productId) ?? [];
-      current.push({ category: categoryLabel, screen });
-      grouped.set(productId, current);
-    }
-    const result: Record<string, AppScreen[]> = {};
-    for (const [productId, entries] of grouped.entries()) {
-      entries.sort((a, b) => {
-        const categoryCompare = a.category.localeCompare(b.category);
-        return categoryCompare !== 0 ? categoryCompare : a.screen.name.localeCompare(b.screen.name);
-      });
-      result[productId] = entries.map((entry) => entry.screen);
-    }
-    return result;
-  }, [categoryLabelById, productFeatureRows]);
+  const { productScreensByProduct, featureCategoryLabelByFeatureId } = productFeatureCatalog;
   const productScreens = selectedProductId ? productScreensByProduct[selectedProductId] ?? [] : [];
   const selectedScreen = useMemo(
     () => productScreens.find((screen) => screen.id === selectedScreenId) ?? productScreens[0] ?? FALLBACK_SCREEN,
@@ -138,6 +93,14 @@ const App = (): JSX.Element => {
   const areaFeatures = useMemo(
     () => featureRequests.filter((feature) => feature.screenId === selectedScreen.id),
     [featureRequests, selectedScreen.id],
+  );
+  const selectedScreenFeedback = useMemo(
+    () =>
+      screenFeedback
+        .filter((item) => item.screenId === selectedScreen.id)
+        .slice()
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [screenFeedback, selectedScreen.id],
   );
   const initialFeatureRequestIds = useMemo(() => new Set(INITIAL_FEATURE_REQUESTS.map((item) => item.id)), []);
   const initialKudosIds = useMemo(() => new Set(INITIAL_KUDOS.map((item) => item.id)), []);
@@ -152,21 +115,6 @@ const App = (): JSX.Element => {
       ),
     [initialKudosIds, kudosQuotes, selectedScreen.id],
   );
-  const areaScreenFeedback = useMemo(
-    () => screenFeedback.filter((item) => item.screenId === selectedScreen.id),
-    [screenFeedback, selectedScreen.id],
-  );
-  const nextScreenId = useMemo(() => {
-    if (productScreens.length < 2) {
-      return null;
-    }
-    const currentIndex = productScreens.findIndex((screen) => screen.id === selectedScreen.id);
-    if (currentIndex === -1) {
-      return productScreens[0].id;
-    }
-    const nextIndex = (currentIndex + 1) % productScreens.length;
-    return productScreens[nextIndex].id;
-  }, [productScreens, selectedScreen.id]);
   const inProductLanding = selectedProductId === null;
   const selectedProductName = useMemo(
     () => PRODUCTS.find((product) => product.id === selectedProductId)?.name ?? null,
@@ -185,12 +133,75 @@ const App = (): JSX.Element => {
     if (!selectedProductId) {
       return selectedScreen.name;
     }
-    const match = productFeatureRows.find((row) => String(row.id) === selectedScreen.id && String(row.product_id) === selectedProductId);
-    if (!match) {
-      return selectedScreen.name;
+    return featureCategoryLabelByFeatureId[selectedScreen.id] ?? selectedScreen.name;
+  }, [featureCategoryLabelByFeatureId, selectedProductId, selectedScreen.id, selectedScreen.name]);
+  const allProductScreens = useMemo(
+    () => Object.values(productScreensByProduct).flat(),
+    [productScreensByProduct],
+  );
+  const categoryByNormalizedFeatureName = useMemo(() => {
+    const normalize = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return new Map(allProductScreens.map((screen) => [normalize(screen.name), screen.categoryLabel]));
+  }, [allProductScreens]);
+  const liveResponsesByCategory = useMemo(() => {
+    const normalize = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const resolveCategory = (screenId?: string, screenName?: string): string => {
+      if (screenId && featureCategoryLabelByFeatureId[screenId]) {
+        return featureCategoryLabelByFeatureId[screenId];
+      }
+      if (screenName) {
+        return categoryByNormalizedFeatureName.get(normalize(screenName)) ?? "Uncategorized";
+      }
+      return "Uncategorized";
+    };
+
+    const allResponses: LiveResponseItem[] = [];
+
+    for (const feature of featureRequests) {
+      allResponses.push({
+        id: `feature-${feature.id}`,
+        category: resolveCategory(feature.screenId, feature.screenName),
+        title: feature.title,
+        meta: `Feature Request • ${feature.screenName}`,
+      });
     }
-    return categoryLabelById.get(String(match.feature_category_id ?? "")) ?? selectedScreen.name;
-  }, [categoryLabelById, productFeatureRows, selectedProductId, selectedScreen.id, selectedScreen.name]);
+
+    for (const quote of kudosQuotes) {
+      allResponses.push({
+        id: `kudos-${quote.id}`,
+        category: resolveCategory(quote.screenId, quote.screenName),
+        title: quote.text,
+        meta: `Kudos • ${quote.role.toUpperCase()}`,
+      });
+    }
+
+    for (const feedback of screenFeedback) {
+      const feedbackTypeLabel = feedback.type
+        .split("-")
+        .map((segment) => `${segment.slice(0, 1).toUpperCase()}${segment.slice(1)}`)
+        .join(" ");
+      allResponses.push({
+        id: `screen-${feedback.id}`,
+        category: resolveCategory(feedback.screenId, feedback.screenName),
+        title: feedback.text?.trim() || feedbackTypeLabel,
+        meta: `Screen Feedback • ${feedbackTypeLabel} • ${feedback.screenName}`,
+      });
+    }
+
+    const grouped = new Map<string, LiveResponseItem[]>();
+    for (const response of allResponses) {
+      const list = grouped.get(response.category) ?? [];
+      list.push(response);
+      grouped.set(response.category, list);
+    }
+
+    return [...grouped.entries()]
+      .map(([category, responses]) => ({
+        category,
+        responses: responses.slice().sort((a, b) => a.title.localeCompare(b.title)),
+      }))
+      .sort((a, b) => a.category.localeCompare(b.category));
+  }, [categoryByNormalizedFeatureName, featureCategoryLabelByFeatureId, featureRequests, kudosQuotes, screenFeedback]);
 
   const handleToggleDrawer = useCallback(() => {
     setDrawerOpen(!drawerOpen);
@@ -211,12 +222,6 @@ const App = (): JSX.Element => {
     },
     [setSelectedScreenId, setActiveDrawerTab],
   );
-
-  const handlePromptNextScreen = useCallback(() => {
-    if (nextScreenId) {
-      setSelectedScreenId(nextScreenId);
-    }
-  }, [nextScreenId, setSelectedScreenId]);
 
   const handleSelectProduct = useCallback(
     (productId: string) => {
@@ -397,15 +402,16 @@ const App = (): JSX.Element => {
 
             <Hero
               selectedProductId={selectedProductId ?? ""}
-              appHeatmapIntensity={appHeatmapIntensity}
               onAppChange={handleAppChange}
               selectedScreenId={selectedScreenId}
               screenSubmissionCounts={screenSubmissionCounts}
+              featureRequests={featureRequests}
+              kudosQuotes={kudosQuotes}
+              allScreenFeedback={screenFeedback}
+              screenFeedbackItems={selectedScreenFeedback}
               onScreenChange={handleScreenChange}
               onSubmitFeedback={addScreenFeedback}
               onSaveFollowUp={appendFollowUpResponse}
-              onPromptNextScreen={handlePromptNextScreen}
-              canPromptNextScreen={Boolean(nextScreenId)}
             />
           </>
         )}
@@ -437,50 +443,26 @@ const App = (): JSX.Element => {
                 Close
               </button>
             </div>
-            <p className="live-responses-context">Feature: {selectedScreen.name}</p>
-            <div className="live-responses-group">
-              <h3>Feature Requests ({sessionAreaFeatures.length})</h3>
-              {sessionAreaFeatures.length === 0 ? (
-                <p className="live-empty">No session feature requests for this feature yet.</p>
+            <p className="live-responses-context">
+              {signalSummary.totalResponses} total responses across all categories
+            </p>
+            <div className="live-responses-scroll">
+              {liveResponsesByCategory.length === 0 ? (
+                <p className="live-empty">No responses submitted yet.</p>
               ) : (
-                <ul className="list-reset live-responses-list">
-                  {sessionAreaFeatures.map((item) => (
-                    <li key={item.id}>
-                      <p className="live-title">{item.title}</p>
-                      {item.workflowContext && <p className="live-meta">{item.workflowContext}</p>}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className="live-responses-group">
-              <h3>Kudos ({areaKudos.length})</h3>
-              {areaKudos.length === 0 ? (
-                <p className="live-empty">No session kudos for this feature yet.</p>
-              ) : (
-                <ul className="list-reset live-responses-list">
-                  {areaKudos.map((item) => (
-                    <li key={item.id}>
-                      <p className="live-title">{item.text}</p>
-                      <p className="live-meta">Role: {item.role.toUpperCase()}</p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className="live-responses-group">
-              <h3>Screen Feedback ({areaScreenFeedback.length})</h3>
-              {areaScreenFeedback.length === 0 ? (
-                <p className="live-empty">No screen feedback for this feature yet.</p>
-              ) : (
-                <ul className="list-reset live-responses-list">
-                  {areaScreenFeedback.map((item) => (
-                    <li key={item.id}>
-                      <p className="live-title">{item.type.replace("-", " ")}</p>
-                      {item.text && <p className="live-meta">{item.text}</p>}
-                    </li>
-                  ))}
-                </ul>
+                liveResponsesByCategory.map((group) => (
+                  <div key={group.category} className="live-responses-group">
+                    <h3>{group.category}</h3>
+                    <ul className="list-reset live-responses-list">
+                      {group.responses.map((item) => (
+                        <li key={item.id}>
+                          <p className="live-title">{item.title}</p>
+                          <p className="live-meta">{item.meta}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))
               )}
             </div>
           </aside>

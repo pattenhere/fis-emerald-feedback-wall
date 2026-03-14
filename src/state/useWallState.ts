@@ -30,7 +30,7 @@ import { makeId } from "../utils/id";
 const DEFAULT_SYNTHESIS_PIN = "2468";
 const SYNTHESIS_PIN_LENGTH_RANGE = { min: 4, max: 6 } as const;
 const POSITIVE_TYPES = new Set<FeedbackType>(["works-well", "suggestion"]);
-const NEGATIVE_TYPES = new Set<FeedbackType>(["pain-point", "confusing"]);
+const NEGATIVE_TYPES = new Set<FeedbackType>(["issue", "missing"]);
 
 export interface ExportRecord {
   submission_type: "feature" | "screen_feedback" | "kudos" | "card_sort";

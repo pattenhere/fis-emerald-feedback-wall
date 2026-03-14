@@ -262,7 +262,7 @@ const CLS_JOURNEY_DEFS: JourneyDef[] = [
 ];
 
 const CLS_JCOLOR = Object.fromEntries(CLS_JOURNEY_DEFS.map((j) => [j.id, j.color])) as Record<JourneyId, string>;
-const CLS_ORBIT_R: [number, number, number, number] = [0, 148, 262, 388];
+const CLS_ORBIT_R: [number, number, number, number] = [0, 128, 220, 320];
 const CLS_ORBIT_SPEED: Record<1 | 2 | 3, number> = { 1: 0.008, 2: 0.0045, 3: 0.0025 };
 const CLS_ORBIT_COLOR = ["", FIS.green, FIS.cyan, FIS.blue] as const;
 const CLS_EFFORT_COLOR = { XL: FIS.orange, L: FIS.cyan, M: FIS.green, S: FIS.amber } as const;
@@ -290,12 +290,7 @@ const CLS_VISION = [
   },
 ] as const;
 
-const CLS_STRATEGIC_OUTCOMES: OutcomeDef[] = [
-  { id: "farmerMac", label: "Farmer Mac Q2", x: 165, y: 115, color: FIS.green },
-  { id: "migration", label: "Full UI Migration", x: 805, y: 115, color: FIS.cyan },
-  { id: "efficiency", label: "Processor UX", x: 805, y: 645, color: FIS.blue },
-  { id: "compliance", label: "Audit & Compliance", x: 165, y: 645, color: FIS.amber },
-];
+const CLS_STRATEGIC_OUTCOMES: OutcomeDef[] = [];
 
 const COMPANY_HINTS = ["bank", "lender", "finance", "credit", "institution", "wells fargo", "chase", "citi", "farmer mac"];
 const CAPABILITY_HINTS = [
@@ -986,7 +981,6 @@ function FeaturePanel({
   votes,
   votedIds,
   onVote,
-  showOutcomes,
   searchResult,
 }: {
   sel: Feature | null;
@@ -994,7 +988,6 @@ function FeaturePanel({
   votes: Record<number, number>;
   votedIds: Set<number>;
   onVote: (id: number) => void;
-  showOutcomes: boolean;
   searchResult: SearchResult | null;
 }) {
   if (!sel) return null;
@@ -1073,32 +1066,38 @@ function FeaturePanel({
           {voted ? "✓ VOTED" : "↑ VOTE"}
         </button>
       </div>
-      {sel.outcomes.length > 0 && showOutcomes && (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ fontSize: 9, letterSpacing: 2, color: `${FIS.offWhite}33`, marginBottom: 6, fontFamily: "'Source Sans 3',sans-serif", fontWeight: 600 }}>STRATEGIC OUTCOMES</div>
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-            {sel.outcomes.map((oid) => {
-              const o = CLS_STRATEGIC_OUTCOMES.find((x) => x.id === oid);
-              return o ? (
-                <span key={oid} style={{ fontSize: 9, padding: "3px 9px", borderRadius: 2, background: `${o.color}14`, border: `1px solid ${o.color}30`, color: o.color, letterSpacing: 0.5, fontFamily: "'Source Sans 3',sans-serif" }}>
+      {(() => {
+        const matchedOutcomes = sel.outcomes
+          .map((oid) => CLS_STRATEGIC_OUTCOMES.find((x) => x.id === oid))
+          .filter((outcome): outcome is OutcomeDef => Boolean(outcome));
+        if (matchedOutcomes.length === 0) {
+          return null;
+        }
+        return (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 9, letterSpacing: 2, color: `${FIS.offWhite}33`, marginBottom: 6, fontFamily: "'Source Sans 3',sans-serif", fontWeight: 600 }}>STRATEGIC OUTCOMES</div>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+              {matchedOutcomes.map((o) => (
+                <span key={o.id} style={{ fontSize: 9, padding: "3px 9px", borderRadius: 2, background: `${o.color}14`, border: `1px solid ${o.color}30`, color: o.color, letterSpacing: 0.5, fontFamily: "'Source Sans 3',sans-serif" }}>
                   {o.label}
                 </span>
-              ) : null;
-            })}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
 
 function CLSGalaxyView({ onBack }: { onBack: () => void }) {
+  const CLS_CENTER_X = 485;
+  const CLS_CENTER_Y = 360;
   const [journeyFilter, setJourney] = useState<"all" | JourneyId>("all");
   const [orbitFilter, setOrbit] = useState<0 | 1 | 2 | 3>(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const [animating, setAnimating] = useState(false);
-  const [showOutcomes, setOutcomes] = useState(true);
   const [showVision, setVision] = useState(false);
   const [showSearch, setSearch] = useState(false);
   const [searchResult, setResult] = useState<SearchResult | null>(null);
@@ -1140,7 +1139,10 @@ function CLSGalaxyView({ onBack }: { onBack: () => void }) {
 
   const pos = (f: Feature): { x: number; y: number } => {
     const rad = (angles[f.id] * Math.PI) / 180;
-    return { x: 485 + CLS_ORBIT_R[f.orbit] * Math.cos(rad), y: 390 + CLS_ORBIT_R[f.orbit] * Math.sin(rad) };
+    return {
+      x: CLS_CENTER_X + CLS_ORBIT_R[f.orbit] * Math.cos(rad),
+      y: CLS_CENTER_Y + CLS_ORBIT_R[f.orbit] * Math.sin(rad),
+    };
   };
 
   const isSearchActive = Boolean(searchResult && searchResult.matchedIds.length > 0);
@@ -1176,7 +1178,11 @@ function CLSGalaxyView({ onBack }: { onBack: () => void }) {
             r={s.r}
             fill="#fff"
             opacity={s.op}
-            style={{ "--op": s.op, animation: `twinkle ${3 + s.d}s ease-in-out infinite`, animationDelay: `${s.d}s` } as CSSProperties}
+            style={{
+              "--op": s.op,
+              animation: animating ? `twinkle ${3 + s.d}s ease-in-out infinite` : "none",
+              animationDelay: `${s.d}s`,
+            } as CSSProperties}
           />
         ))}
       </svg>
@@ -1186,7 +1192,6 @@ function CLSGalaxyView({ onBack }: { onBack: () => void }) {
           <button onClick={onBack} style={{ background: "transparent", border: `1px solid ${FIS.cyan}33`, color: FIS.cyan, padding: "6px 14px", borderRadius: 3, fontSize: 10, letterSpacing: 1.5, cursor: "pointer", fontFamily: "'Source Sans 3',sans-serif", fontWeight: 600, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
             ← BACK TO FIS LENDING UNIVERSE
           </button>
-          <div style={{ fontSize: 10, letterSpacing: 4, color: FIS.green, marginBottom: 5, fontFamily: "'Source Sans 3',sans-serif", fontWeight: 600, textTransform: "uppercase" }}>FIS · CLS UI Modernization · Farmer Mac</div>
           <h1 style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: 2, lineHeight: 1, textTransform: "uppercase", color: "#ffffff" }}>Product Roadmap Galaxy</h1>
           <div style={{ fontSize: 11.5, color: `${FIS.offWhite}55`, marginTop: 3, fontFamily: "'Source Sans 3',sans-serif", fontWeight: 300, letterSpacing: 0.5 }}>12 Hero Journeys · 202 Epics · 72 Released · 21 Features Charted</div>
         </div>
@@ -1264,7 +1269,6 @@ function CLSGalaxyView({ onBack }: { onBack: () => void }) {
           </div>
         </div>
         <div style={{ flex: "0 0 auto", display: "flex", gap: 8, alignItems: "flex-end", paddingBottom: 2 }}>
-          <button onClick={() => setOutcomes((v) => !v)} style={{ background: showOutcomes ? `${FIS.green}18` : "transparent", border: `1px solid ${showOutcomes ? `${FIS.green}55` : `${FIS.green}22`}`, color: showOutcomes ? FIS.green : `${FIS.green}44`, padding: "9px 14px", borderRadius: 3, fontSize: 11, letterSpacing: 1.5, cursor: "pointer", fontFamily: "'Source Sans 3',sans-serif", fontWeight: 600 }}>{showOutcomes ? "◉" : "○"} OUTCOMES</button>
           <button onClick={() => setAnimating((a) => !a)} style={{ background: animating ? `${FIS.cyan}14` : "transparent", border: `1px solid ${animating ? `${FIS.cyan}44` : `${FIS.cyan}18`}`, color: animating ? FIS.cyan : `${FIS.cyan}44`, padding: "9px 14px", borderRadius: 3, fontSize: 11, letterSpacing: 1.5, cursor: "pointer", fontFamily: "'Source Sans 3',sans-serif", fontWeight: 600 }}>{animating ? "⏸ PAUSE" : "▶ ORBIT"}</button>
         </div>
       </div>
@@ -1319,17 +1323,28 @@ function CLSGalaxyView({ onBack }: { onBack: () => void }) {
           </defs>
 
           {[1, 2, 3].map((i) => (
-            <circle key={i} cx={485} cy={390} r={CLS_ORBIT_R[i as 1 | 2 | 3]} fill="none" stroke={CLS_ORBIT_COLOR[i as 1 | 2 | 3]} strokeWidth={1} strokeDasharray="4 10" className="ring" style={{ animationDelay: `${i * 1.6}s` }} />
+            <circle
+              key={i}
+              cx={CLS_CENTER_X}
+              cy={CLS_CENTER_Y}
+              r={CLS_ORBIT_R[i as 1 | 2 | 3]}
+              fill="none"
+              stroke={CLS_ORBIT_COLOR[i as 1 | 2 | 3]}
+              strokeWidth={1}
+              strokeDasharray="4 10"
+              className="ring"
+              style={{ animationDelay: `${i * 1.6}s`, animationPlayState: animating ? "running" : "paused" }}
+            />
           ))}
 
-          {selectedFeature && showOutcomes && !isSearchActive && selectedFeature.outcomes.map((oid) => {
+          {selectedFeature && !isSearchActive && selectedFeature.outcomes.map((oid) => {
             const o = CLS_STRATEGIC_OUTCOMES.find((x) => x.id === oid);
             if (!o) return null;
             const p = pos(selectedFeature);
             return <line key={oid} x1={o.x} y1={o.y} x2={p.x} y2={p.y} stroke={o.color} strokeWidth={0.8} opacity={0.25} strokeDasharray="4 8" />;
           })}
 
-          {showOutcomes && !isSearchActive && CLS_STRATEGIC_OUTCOMES.map((o) => (
+          {!isSearchActive && CLS_STRATEGIC_OUTCOMES.map((o) => (
             <g key={o.id}>
               <circle cx={o.x} cy={o.y} r={13} fill={`${o.color}14`} stroke={o.color} strokeWidth={1} filter="url(#c-gsm)" opacity={0.7} />
               <text x={o.x} y={o.y + 3} textAnchor="middle" fontSize={7} fill={o.color} fontFamily="'Source Sans 3',sans-serif" fontWeight={600} style={{ pointerEvents: "none" }}>◈</text>
@@ -1337,10 +1352,17 @@ function CLSGalaxyView({ onBack }: { onBack: () => void }) {
             </g>
           ))}
 
-          <g onClick={() => { setVision((v) => !v); setSelected(null); }} className="core">
-            <circle cx={485} cy={390} r={110} fill="url(#c-core-glow)" />
-            <circle cx={485} cy={390} r={42} fill="url(#c-core-fill)" stroke={FIS.green} strokeWidth={1.2} />
-            <text x={485} y={394} textAnchor="middle" fontSize={13} fill={FIS.green} fontFamily="'Barlow Condensed',sans-serif" fontWeight={800} letterSpacing={3} style={{ pointerEvents: "none" }}>CLS</text>
+          <g
+            onClick={() => {
+              setVision((v) => !v);
+              setSelected(null);
+            }}
+            className="core"
+            style={{ animationPlayState: animating ? "running" : "paused" }}
+          >
+            <circle cx={CLS_CENTER_X} cy={CLS_CENTER_Y} r={110} fill="url(#c-core-glow)" />
+            <circle cx={CLS_CENTER_X} cy={CLS_CENTER_Y} r={42} fill="url(#c-core-fill)" stroke={FIS.green} strokeWidth={1.2} />
+            <text x={CLS_CENTER_X} y={CLS_CENTER_Y + 4} textAnchor="middle" fontSize={13} fill={FIS.green} fontFamily="'Barlow Condensed',sans-serif" fontWeight={800} letterSpacing={3} style={{ pointerEvents: "none" }}>CLS</text>
           </g>
 
           {FEATURES.map((f) => {
@@ -1376,11 +1398,9 @@ function CLSGalaxyView({ onBack }: { onBack: () => void }) {
                 {bright && <circle cx={p.x} cy={p.y} r={sz + 10} fill="none" stroke={c} strokeWidth={0.8} opacity={0.25} />}
                 <ProgressArc cx={p.x} cy={p.y} r={arcR} pct={f.progress / 100} color={c} />
                 <circle cx={p.x} cy={p.y} r={sz} fill={`${c}18`} stroke={c} strokeWidth={isS ? 2 : isMatched ? 1.8 : 1.2} filter={bright || isMatched ? "url(#c-gmd)" : "url(#c-gsm)"} />
-                {(f.orbit === 1 || bright || isMatched) && (
-                  <text x={p.x} y={p.y + sz + 12} textAnchor="middle" fontSize={7} fill={c} fontFamily="'Source Sans 3',sans-serif" fontWeight={600} letterSpacing={0.5} opacity={bright ? 1 : 0.75} style={{ pointerEvents: "none" }}>
-                    {f.name.length > 24 ? `${f.name.slice(0, 23)}…` : f.name}
-                  </text>
-                )}
+                <text x={p.x} y={p.y + sz + 12} textAnchor="middle" fontSize={7} fill={c} fontFamily="'Source Sans 3',sans-serif" fontWeight={600} letterSpacing={0.5} opacity={bright ? 1 : 0.75} style={{ pointerEvents: "none" }}>
+                  {f.name.length > 24 ? `${f.name.slice(0, 23)}…` : f.name}
+                </text>
                 {isMatched && relevancePct && (
                   <g transform={`translate(${p.x},${p.y - sz - 10})`}>
                     <rect x={-14} y={-8} width={28} height={16} rx={2} fill={FIS.navy} stroke={c} strokeWidth={0.8} opacity={0.95} />
@@ -1408,7 +1428,6 @@ function CLSGalaxyView({ onBack }: { onBack: () => void }) {
             setVotedIds((s) => new Set([...s, id]));
           }
         }}
-        showOutcomes={showOutcomes}
         searchResult={searchResult}
       />
 
@@ -1434,7 +1453,7 @@ function CLSGalaxyView({ onBack }: { onBack: () => void }) {
 function UniverseView({ onZoomCLS }: { onZoomCLS: () => void }) {
   const [selectedGalaxy, setSelGal] = useState<string | null>(null);
   const [hoveredGalaxy, setHovGal] = useState<string | null>(null);
-  const [animating, setAnimating] = useState(true);
+  const [animating, setAnimating] = useState(false);
   const [angles, setAngles] = useState<Record<string, number>>(() =>
     Object.fromEntries(GALAXIES.map((g) => [g.id, g.angle])) as Record<string, number>,
   );
@@ -1494,7 +1513,11 @@ function UniverseView({ onZoomCLS }: { onZoomCLS: () => void }) {
             r={s.r}
             fill="#fff"
             opacity={s.op}
-            style={{ "--op": s.op, animation: `twinkle ${3 + s.d}s ease-in-out infinite`, animationDelay: `${s.d}s` } as CSSProperties}
+            style={{
+              "--op": s.op,
+              animation: animating ? `twinkle ${3 + s.d}s ease-in-out infinite` : "none",
+              animationDelay: `${s.d}s`,
+            } as CSSProperties}
           />
         ))}
       </svg>
@@ -1537,7 +1560,7 @@ function UniverseView({ onZoomCLS }: { onZoomCLS: () => void }) {
             return <line key={`l-${g.id}`} x1={CX} y1={CY} x2={p.x} y2={p.y} stroke={g.color} strokeWidth={0.6} opacity={0.08} strokeDasharray="3 12" />;
           })}
 
-          <g style={{ animation: "corePulse 4s ease-in-out infinite" }}>
+          <g style={{ animation: animating ? "corePulse 4s ease-in-out infinite" : "none" }}>
             <circle cx={CX} cy={CY} r={200} fill="url(#u-centerHalo)" />
             <circle cx={CX} cy={CY} r={72} fill="url(#u-centerCore)" stroke={FIS.green} strokeWidth={1.5} filter="url(#u-glowM)" />
             <circle cx={CX} cy={CY} r={82} fill="none" stroke={FIS.green} strokeWidth={0.6} strokeDasharray="2 5" opacity={0.3} />
@@ -1561,7 +1584,19 @@ function UniverseView({ onZoomCLS }: { onZoomCLS: () => void }) {
                 ))}
                 {bright && <circle cx={p.x} cy={p.y} r={g.galaxyR + 8} fill="none" stroke={g.color} strokeWidth={0.8} opacity={0.35} filter="url(#u-glowS)" />}
                 <circle cx={p.x} cy={p.y} r={g.galaxyR} fill={`${g.color}12`} stroke={g.color} strokeWidth={bright ? 1.8 : 1} filter={bright ? "url(#u-glowM)" : "url(#u-glowS)"} style={{ transition: "all 0.25s" }} />
-                {g.wired && <circle cx={p.x} cy={p.y} r={g.galaxyR + 5} fill="none" stroke={g.color} strokeWidth={0.8} strokeDasharray="3 4" opacity={bright ? 0.7 : 0.35} style={{ animation: "haloSpin 20s linear infinite" }} />}
+                {g.wired && (
+                  <circle
+                    cx={p.x}
+                    cy={p.y}
+                    r={g.galaxyR + 5}
+                    fill="none"
+                    stroke={g.color}
+                    strokeWidth={0.8}
+                    strokeDasharray="3 4"
+                    opacity={bright ? 0.7 : 0.35}
+                    style={{ animation: animating ? "haloSpin 20s linear infinite" : "none" }}
+                  />
+                )}
                 {lines.map((line, li) => (
                   <text key={li} x={p.x} y={p.y + g.galaxyR + 16 + li * 13} textAnchor="middle" fontSize={9.5} fill={bright ? g.color : `${g.color}88`} fontFamily="'Source Sans 3',sans-serif" fontWeight={bright ? 700 : 500} letterSpacing={0.5} style={{ pointerEvents: "none", transition: "fill 0.2s" }}>{line}</text>
                 ))}

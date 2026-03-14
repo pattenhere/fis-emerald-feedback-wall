@@ -130,7 +130,6 @@ const productFeatureCategoryRows: SeedRow[] = [
   { id: "PFCT-007", category: "Servicing" },
   { id: "PFCT-008", category: "Origination" },
   { id: "PFCT-009", category: "Digital Experience" },
-  { id: "PFCT-010", category: "Customer Risk & Credit" },
 ];
 
 const productFeaturesRows: SeedRow[] = [
@@ -162,10 +161,10 @@ const productFeaturesRows: SeedRow[] = [
   { id: "PF-026", product_id: "PRD-005", feature_category_id: "PFCT-008", name: "Underwriting", clsv: "SEED-026", journey: "origination", status: "planned", progress: 0, votes: 0, eta: "TBD" },
   { id: "PF-027", product_id: "PRD-005", feature_category_id: "PFCT-008", name: "Pricing / Approval", clsv: "SEED-027", journey: "origination", status: "planned", progress: 0, votes: 0, eta: "TBD" },
   { id: "PF-028", product_id: "PRD-005", feature_category_id: "PFCT-008", name: "Onboarding to Servicing", clsv: "SEED-028", journey: "origination", status: "planned", progress: 0, votes: 0, eta: "TBD" },
-  { id: "PF-029", product_id: "PRD-005", feature_category_id: "PFCT-010", name: "Credit Assessment", clsv: "SEED-029", journey: "customer-risk-credit", status: "planned", progress: 0, votes: 0, eta: "TBD" },
-  { id: "PF-030", product_id: "PRD-005", feature_category_id: "PFCT-010", name: "Risk Rating", clsv: "SEED-030", journey: "customer-risk-credit", status: "planned", progress: 0, votes: 0, eta: "TBD" },
-  { id: "PF-031", product_id: "PRD-005", feature_category_id: "PFCT-010", name: "Exposure Visibility", clsv: "SEED-031", journey: "customer-risk-credit", status: "planned", progress: 0, votes: 0, eta: "TBD" },
-  { id: "PF-032", product_id: "PRD-005", feature_category_id: "PFCT-010", name: "Compliance Monitoring", clsv: "SEED-032", journey: "customer-risk-credit", status: "planned", progress: 0, votes: 0, eta: "TBD" },
+  { id: "PF-029", product_id: "PRD-005", feature_category_id: "PFCT-003", name: "Credit Assessment", clsv: "SEED-029", journey: "customer-risk-credit", status: "planned", progress: 0, votes: 0, eta: "TBD" },
+  { id: "PF-030", product_id: "PRD-005", feature_category_id: "PFCT-003", name: "Risk Rating", clsv: "SEED-030", journey: "customer-risk-credit", status: "planned", progress: 0, votes: 0, eta: "TBD" },
+  { id: "PF-031", product_id: "PRD-005", feature_category_id: "PFCT-003", name: "Exposure Visibility", clsv: "SEED-031", journey: "customer-risk-credit", status: "planned", progress: 0, votes: 0, eta: "TBD" },
+  { id: "PF-032", product_id: "PRD-005", feature_category_id: "PFCT-003", name: "Compliance Monitoring", clsv: "SEED-032", journey: "customer-risk-credit", status: "planned", progress: 0, votes: 0, eta: "TBD" },
   { id: "PF-033", product_id: "PRD-005", feature_category_id: "PFCT-007", name: "Booking / Maintenance", clsv: "SEED-033", journey: "servicing", status: "planned", progress: 0, votes: 0, eta: "TBD" },
   { id: "PF-034", product_id: "PRD-005", feature_category_id: "PFCT-007", name: "Payments / Billing / Payoff", clsv: "SEED-034", journey: "servicing", status: "planned", progress: 0, votes: 0, eta: "TBD" },
   { id: "PF-035", product_id: "PRD-005", feature_category_id: "PFCT-007", name: "Amortization / Accruals", clsv: "SEED-035", journey: "servicing", status: "planned", progress: 0, votes: 0, eta: "TBD" },

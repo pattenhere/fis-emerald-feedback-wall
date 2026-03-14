@@ -192,25 +192,25 @@ INSERT INTO PRODUCT_FEATURES (
     NULL, NULL, NULL, NULL, 'Seed', 'onboarding to servicing; origination', 'N/A'
   ),
   (
-    'PF-029', 'PRD-005', 'PFCT-010', 'Credit Assessment', NULL, 'customer-risk-credit', 'planned', 0, 1, 160, 14, 'M', '2', 'med', 'TBD',
+    'PF-029', 'PRD-005', 'PFCT-003', 'Credit Assessment', NULL, 'customer-risk-credit', 'planned', 0, 1, 160, 14, 'M', '2', 'med', 'TBD',
     'seed', 0,
     'Seed feature for Customer Risk & Credit: Credit Assessment.',
     NULL, NULL, NULL, NULL, 'Seed', 'credit assessment; customer risk credit', 'N/A'
   ),
   (
-    'PF-030', 'PRD-005', 'PFCT-010', 'Risk Rating', NULL, 'customer-risk-credit', 'planned', 0, 1, 180, 14, 'M', '2', 'med', 'TBD',
+    'PF-030', 'PRD-005', 'PFCT-003', 'Risk Rating', NULL, 'customer-risk-credit', 'planned', 0, 1, 180, 14, 'M', '2', 'med', 'TBD',
     'seed', 0,
     'Seed feature for Customer Risk & Credit: Risk Rating.',
     NULL, NULL, NULL, NULL, 'Seed', 'risk rating; customer risk credit', 'N/A'
   ),
   (
-    'PF-031', 'PRD-005', 'PFCT-010', 'Exposure Visibility', NULL, 'customer-risk-credit', 'planned', 0, 1, 200, 14, 'M', '2', 'med', 'TBD',
+    'PF-031', 'PRD-005', 'PFCT-003', 'Exposure Visibility', NULL, 'customer-risk-credit', 'planned', 0, 1, 200, 14, 'M', '2', 'med', 'TBD',
     'seed', 0,
     'Seed feature for Customer Risk & Credit: Exposure Visibility.',
     NULL, NULL, NULL, NULL, 'Seed', 'exposure visibility; customer risk credit', 'N/A'
   ),
   (
-    'PF-032', 'PRD-005', 'PFCT-010', 'Compliance Monitoring', NULL, 'customer-risk-credit', 'planned', 0, 1, 220, 14, 'M', '2', 'med', 'TBD',
+    'PF-032', 'PRD-005', 'PFCT-003', 'Compliance Monitoring', NULL, 'customer-risk-credit', 'planned', 0, 1, 220, 14, 'M', '2', 'med', 'TBD',
     'seed', 0,
     'Seed feature for Customer Risk & Credit: Compliance Monitoring.',
     NULL, NULL, NULL, NULL, 'Seed', 'compliance monitoring; customer risk credit', 'N/A'

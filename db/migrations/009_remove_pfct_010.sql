@@ -1,0 +1,6 @@
+UPDATE PRODUCT_FEATURES
+SET feature_category_id = 'PFCT-003'
+WHERE feature_category_id = 'PFCT-010';
+
+DELETE FROM PRODUCT_FEATURE_CATEGORIES
+WHERE id = 'PFCT-010';

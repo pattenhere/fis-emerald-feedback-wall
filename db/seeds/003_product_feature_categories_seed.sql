@@ -7,8 +7,7 @@ INSERT INTO PRODUCT_FEATURE_CATEGORIES (id, category) VALUES
   ('PFCT-006', 'Analytics & Inquiry'),
   ('PFCT-007', 'Servicing'),
   ('PFCT-008', 'Origination'),
-  ('PFCT-009', 'Digital Experience'),
-  ('PFCT-010', 'Customer Risk & Credit')
+  ('PFCT-009', 'Digital Experience')
 ON CONFLICT(id) DO UPDATE SET
   category = excluded.category,
   updated_at = CURRENT_TIMESTAMP;

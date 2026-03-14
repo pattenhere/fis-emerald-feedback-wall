@@ -1,24 +1,25 @@
-import { memo, type FormEvent, useMemo, useState } from "react";
-import type { AppScreen, FeedbackType } from "../../types/domain";
+import { memo, type FormEvent, useEffect, useMemo, useState } from "react";
+import { PaginationControls } from "../pagination/PaginationControls";
+import { usePagination } from "../pagination/usePagination";
+import type { AppScreen, FeedbackType, ScreenFeedback } from "../../types/domain";
 
 const FEEDBACK_TYPES: Array<{ id: FeedbackType; label: string }> = [
-  { id: "pain-point", label: "Pain Point" },
-  { id: "confusing", label: "Confusing" },
-  { id: "missing-element", label: "Missing Element" },
-  { id: "works-well", label: "Works Well" },
+  { id: "issue", label: "Issue" },
   { id: "suggestion", label: "Suggestion" },
+  { id: "missing", label: "Missing" },
+  { id: "works-well", label: "Works Well" },
 ];
 
 const FOLLOW_UP_FALLBACK: Record<FeedbackType, string> = {
-  "pain-point": "What would you have expected to happen instead?",
-  confusing: "Was it the terminology, the layout, or something else?",
-  "missing-element": "What action or information did you expect to see here?",
-  "works-well": "What would make this even better for your workflow?",
+  issue: "What specifically is the issue and how does it affect your workflow?",
   suggestion: "If we only changed one thing first, what should it be?",
+  missing: "What action or information did you expect to see here?",
+  "works-well": "What would make this even better for your workflow?",
 };
 
 interface ScreenDetailPanelProps {
   screen: AppScreen;
+  feedbackHistory: ScreenFeedback[];
   onSubmitFeedback: (input: {
     app: AppScreen["app"];
     screenId: string;
@@ -27,18 +28,15 @@ interface ScreenDetailPanelProps {
     text?: string;
   }) => string;
   onSaveFollowUp: (feedbackId: string, question: string, response?: string) => void;
-  onPromptNextScreen: () => void;
-  canPromptNextScreen: boolean;
 }
 
-type FlowStage = "compose" | "follow-up" | "done";
+type FlowStage = "compose" | "follow-up";
 
 export const ScreenDetailPanel = memo(({
   screen,
+  feedbackHistory,
   onSubmitFeedback,
   onSaveFollowUp,
-  onPromptNextScreen,
-  canPromptNextScreen,
 }: ScreenDetailPanelProps): JSX.Element => {
   const [feedbackType, setFeedbackType] = useState<FeedbackType | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
@@ -47,11 +45,14 @@ export const ScreenDetailPanel = memo(({
   const [followUpQuestion, setFollowUpQuestion] = useState("");
   const [followUpAnswer, setFollowUpAnswer] = useState("");
   const [lastSubmissionId, setLastSubmissionId] = useState<string | null>(null);
+  const [feedbackPage, setFeedbackPage] = useState(1);
+  const feedbackPagination = usePagination(feedbackHistory, feedbackPage, 5);
+
+  useEffect(() => {
+    setFeedbackPage(1);
+  }, [screen.id]);
 
   const helperText = useMemo(() => {
-    if (flowStage === "done") {
-      return "Feedback captured. You can continue to another screen.";
-    }
     if (flowStage === "follow-up") {
       return "Optional: add one more detail to strengthen synthesis quality.";
     }
@@ -101,7 +102,21 @@ export const ScreenDetailPanel = memo(({
     onSaveFollowUp(lastSubmissionId, followUpQuestion || FOLLOW_UP_FALLBACK[feedbackType], response);
     setFollowUpAnswer("");
     setFeedbackType(null);
-    setFlowStage("done");
+    setFlowStage("compose");
+  };
+
+  const formatFeedbackType = (type: FeedbackType): string =>
+    type
+      .split("-")
+      .map((segment) => `${segment.slice(0, 1).toUpperCase()}${segment.slice(1)}`)
+      .join(" ");
+
+  const formatCreatedAt = (createdAt: string): string => {
+    const timestamp = new Date(createdAt);
+    if (Number.isNaN(timestamp.getTime())) {
+      return createdAt;
+    }
+    return timestamp.toLocaleString();
   };
 
   return (
@@ -160,7 +175,7 @@ export const ScreenDetailPanel = memo(({
               <h3>Tell us more</h3>
               <textarea
                 className="feedback-detail-textarea"
-                placeholder="What specifically on this screen? Be as detailed as you like..."
+                placeholder="Tell us what you saw vs. what you expected to see"
                 rows={4}
                 value={feedbackText}
                 onChange={(event) => setFeedbackText(event.target.value)}
@@ -202,23 +217,48 @@ export const ScreenDetailPanel = memo(({
             </div>
           )}
 
-          {flowStage === "done" && (
-            <div className="feedback-actions">
-              <button
-                type="button"
-                className="secondary-btn"
-                disabled={!canPromptNextScreen}
-                onClick={() => {
-                  onPromptNextScreen();
-                  setFlowStage("compose");
-                }}
-              >
-                Feedback another screen →
-              </button>
-            </div>
-          )}
         </form>
       </div>
+      {feedbackHistory.length > 0 && (
+        <article className="feature-feedback-history">
+          <header className="feature-feedback-history-head">
+            <h3>Submitted Feedback</h3>
+            <p>
+              Showing {feedbackPagination.startItem}-{feedbackPagination.endItem} of{" "}
+              {feedbackPagination.totalItems}
+            </p>
+          </header>
+          <div className="feature-feedback-table-wrap">
+            <table className="feature-feedback-table">
+              <thead>
+                <tr>
+                  <th>Submitted</th>
+                  <th>Type</th>
+                  <th>Feedback</th>
+                  <th>Follow-up</th>
+                </tr>
+              </thead>
+              <tbody>
+                {feedbackPagination.pageItems.map((item) => (
+                  <tr key={item.id}>
+                    <td>{formatCreatedAt(item.createdAt)}</td>
+                    <td>{formatFeedbackType(item.type)}</td>
+                    <td>{item.text?.trim() || "—"}</td>
+                    <td>{item.followUpResponse?.trim() || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <footer className="feature-feedback-history-footer">
+            <PaginationControls
+              page={feedbackPagination.page}
+              totalPages={feedbackPagination.totalPages}
+              onPageChange={setFeedbackPage}
+            />
+          </footer>
+        </article>
+      )}
     </section>
   );
 });

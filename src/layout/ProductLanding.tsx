@@ -1,5 +1,7 @@
-import { memo } from "react";
-import { PRODUCTS, SCREENS_BY_APP } from "../state/seedData";
+import { memo, useMemo } from "react";
+import { ADMIN_SEED_TABLES } from "../state/adminSeedData";
+import { buildProductFeatureCatalog } from "../state/productFeatureModel";
+import { PRODUCTS } from "../state/seedData";
 
 interface ProductLandingProps {
   onSelectProduct: (productId: string) => void;
@@ -7,6 +9,14 @@ interface ProductLandingProps {
 
 export const ProductLanding = memo(({ onSelectProduct }: ProductLandingProps): JSX.Element => {
   const enabledProductId = "PRD-005";
+  const featureCountByProductId = useMemo(() => {
+    const catalog = buildProductFeatureCatalog(ADMIN_SEED_TABLES);
+    const result: Record<string, number> = {};
+    for (const [productId, screens] of Object.entries(catalog.productScreensByProduct)) {
+      result[productId] = screens.length;
+    }
+    return result;
+  }, []);
 
   return (
     <section className="product-landing" aria-label="Product selection">
@@ -16,15 +26,16 @@ export const ProductLanding = memo(({ onSelectProduct }: ProductLandingProps): J
 
       <div className="product-tile-grid">
         {PRODUCTS.map((product) => {
-          const featureCount = SCREENS_BY_APP[product.app]?.length ?? 0;
+          const featureCount = featureCountByProductId[product.id] ?? 0;
           const isEnabled = product.id === enabledProductId;
           return (
             <button
               key={product.id}
               type="button"
-              className={`product-tile ${isEnabled ? "is-enabled" : "is-disabled"}`}
+              className="product-tile"
               onClick={() => onSelectProduct(product.id)}
               disabled={!isEnabled}
+              aria-disabled={!isEnabled}
               aria-label={`${product.name}, ${featureCount} features`}
             >
               <span className="product-tile-icon" aria-hidden="true">

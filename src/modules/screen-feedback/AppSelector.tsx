@@ -3,14 +3,14 @@ import { memo, type CSSProperties } from "react";
 interface AppSelectorProps {
   tabs: Array<{ id: string; label: string; dark?: boolean }>;
   activeTabId: string;
-  heatmapIntensity?: Record<string, number>;
+  signalIntensity?: Record<string, number>;
   onChange: (id: string) => void;
 }
 
 export const AppSelector = memo(({
   tabs,
   activeTabId,
-  heatmapIntensity = {},
+  signalIntensity = {},
   onChange,
 }: AppSelectorProps): JSX.Element => {
   return (
@@ -21,7 +21,7 @@ export const AppSelector = memo(({
           className={`app-pill ${activeTabId === tab.id ? "is-active" : ""} ${tab.dark ? "is-dark" : ""}`}
           type="button"
           onClick={() => onChange(tab.id)}
-          style={{ "--heat": heatmapIntensity[tab.id] ?? 0 } as CSSProperties}
+          style={{ "--signal": signalIntensity[tab.id] ?? 0 } as CSSProperties}
         >
           {tab.label}
         </button>

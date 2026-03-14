@@ -79,45 +79,45 @@ export const PRODUCTS: ProductDefinition[] = [
 ];
 
 export const INITIAL_FEATURE_REQUESTS: FeatureRequest[] = [
-  {
-    id: "fr-1",
-    app: "digital-experience",
-    screenId: "de-borrower-intake",
-    screenName: "Borrower Intake",
-    title: "Pre-fill borrower profile with prior application and KYC data",
-    workflowContext: "Reduce intake completion time and drop-off for repeat applicants.",
-    votes: 12,
-    createdAt: "2026-03-12T08:00:00Z",
-    origin: "kiosk",
-  },
-  {
-    id: "fr-2",
-    app: "origination",
-    screenId: "or-underwriting",
-    screenName: "Underwriting",
-    title: "Expose explainable decision factors directly in underwriting workspace",
-    workflowContext: "Speed reviewer confidence and improve transparent approvals.",
-    votes: 8,
-    createdAt: "2026-03-12T08:05:00Z",
-    origin: "kiosk",
-  },
+  //{
+  //  id: "fr-1",
+  //  app: "digital-experience",
+  //  screenId: "de-borrower-intake",
+  //  screenName: "Borrower Intake",
+  //  title: "Pre-fill borrower profile with prior application and KYC data",
+  //  workflowContext: "Reduce intake completion time and drop-off for repeat applicants.",
+  //  votes: 12,
+  //  createdAt: "2026-03-12T08:00:00Z",
+  //  origin: "kiosk",
+  //},
+  //{
+  //  id: "fr-2",
+  //  app: "origination",
+  //  screenId: "or-underwriting",
+  //  screenName: "Underwriting",
+  //  title: "Expose explainable decision factors directly in underwriting workspace",
+  //  workflowContext: "Speed reviewer confidence and improve transparent approvals.",
+  //  votes: 8,
+  //  createdAt: "2026-03-12T08:05:00Z",
+  //  origin: "kiosk",
+  //},
 ];
 
 export const INITIAL_KUDOS: KudosQuote[] = [
-  {
-    id: "kd-1",
-    text: "The anomaly drill-down view cut our triage time in half.",
-    role: "ops",
-    consentPublic: true,
-    createdAt: "2026-03-12T08:10:00Z",
-  },
-  {
-    id: "kd-2",
-    text: "The workflow naming still confuses new team members.",
-    role: "product",
-    consentPublic: false,
-    createdAt: "2026-03-12T08:11:00Z",
-  },
+  //{
+  //  id: "kd-1",
+  //  text: "The anomaly drill-down view cut our triage time in half.",
+  //  role: "ops",
+  //  consentPublic: true,
+  //  createdAt: "2026-03-12T08:10:00Z",
+  //},
+  //{
+  //  id: "kd-2",
+  //  text: "The workflow naming still confuses new team members.",
+  //  role: "product",
+  //  consentPublic: false,
+  //  createdAt: "2026-03-12T08:11:00Z",
+  //},
 ];
 
 export const SCREEN_LIBRARY: AppScreen[] = [

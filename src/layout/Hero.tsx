@@ -3,14 +3,18 @@ import { ScreenDetailPanel } from "../modules/screen-feedback/ScreenDetailPanel"
 import { ScreenGrid } from "../modules/screen-feedback/ScreenGrid";
 import { memo, useMemo } from "react";
 import { ADMIN_SEED_TABLES } from "../state/adminSeedData";
-import type { AppArea, AppScreen, FeedbackType } from "../types/domain";
+import { buildProductFeatureCatalog } from "../state/productFeatureModel";
+import type { AppArea, AppScreen, FeedbackType, FeatureRequest, KudosQuote, ScreenFeedback } from "../types/domain";
 
 interface HeroProps {
   selectedProductId: string;
-  appHeatmapIntensity: Record<AppArea, number>;
   onAppChange: (app: AppArea) => void;
   selectedScreenId: string;
   screenSubmissionCounts: Record<string, number>;
+  featureRequests: FeatureRequest[];
+  kudosQuotes: KudosQuote[];
+  allScreenFeedback: ScreenFeedback[];
+  screenFeedbackItems: ScreenFeedback[];
   onScreenChange: (id: string) => void;
   onSubmitFeedback: (input: {
     app: AppArea;
@@ -20,77 +24,36 @@ interface HeroProps {
     text?: string;
   }) => string;
   onSaveFollowUp: (feedbackId: string, question: string, response?: string) => void;
-  onPromptNextScreen: () => void;
-  canPromptNextScreen: boolean;
 }
-
-const appAreaFromCategory = (category: string): AppArea => {
-  if (category === "Digital Experience") return "digital-experience";
-  if (category === "Origination") return "origination";
-  if (category === "Credit & Risk" || category === "Customer Risk & Credit") return "credit-risk";
-  if (category === "Servicing" || category === "SBA & Re-Amort, Servicing") return "servicing";
-  if (category === "Monitoring & Controls") return "monitoring-controls";
-  if (category === "Syndication / Complex Lending" || category === "Syndication") return "syndication-complex-lending";
-  if (category === "Analytics & Inquiry") return "analytics-inquiry";
-  return "platform-services";
-};
 
 export const Hero = memo(({
   selectedProductId,
-  appHeatmapIntensity,
   onAppChange,
   selectedScreenId,
   screenSubmissionCounts,
+  featureRequests,
+  kudosQuotes,
+  allScreenFeedback,
+  screenFeedbackItems,
   onScreenChange,
   onSubmitFeedback,
   onSaveFollowUp,
-  onPromptNextScreen,
-  canPromptNextScreen,
 }: HeroProps): JSX.Element => {
-  const categoriesRows = useMemo(
-    () => ADMIN_SEED_TABLES.find((table) => table.id === "product_feature_categories")?.rows ?? [],
+  const productFeatureCatalog = useMemo(
+    () => buildProductFeatureCatalog(ADMIN_SEED_TABLES),
     [],
   );
-  const productFeaturesRows = useMemo(
-    () => ADMIN_SEED_TABLES.find((table) => table.id === "product_features")?.rows ?? [],
-    [],
-  );
+  const productScreens = productFeatureCatalog.productScreensByProduct[selectedProductId] ?? [];
 
   const categoryBuckets = useMemo(() => {
-    const categoryLabelById = new Map(
-      categoriesRows.map((row) => [String(row.id), String(row.category)]),
-    );
     const buckets = new Map<string, { id: string; label: string; screens: AppScreen[] }>();
 
-    for (const row of productFeaturesRows) {
-      if (String(row.product_id) !== selectedProductId) {
-        continue;
-      }
-
-      const categoryId = String(row.feature_category_id ?? "");
-      const categoryLabel = categoryLabelById.get(categoryId);
-      if (!categoryLabel) {
-        continue;
-      }
-      const name = String(row.name ?? "").trim();
-      if (!name) continue;
-      const description =
-        typeof row.description === "string" && row.description.trim().length > 0
-          ? row.description
-          : `Capture feedback for ${name}.`;
-      const screen: AppScreen = {
-        id: String(row.id),
-        app: appAreaFromCategory(categoryLabel),
-        name,
-        wireframeLabel: "Feature detail · working prototype taxonomy",
-        description,
-      };
-
-      const bucket = buckets.get(categoryId) ?? { id: categoryId, label: categoryLabel, screens: [] };
+    for (const screen of productScreens) {
+      const bucket = buckets.get(screen.categoryId) ?? { id: screen.categoryId, label: screen.categoryLabel, screens: [] };
       if (!bucket.screens.some((entry) => entry.id === screen.id)) {
         bucket.screens.push(screen);
       }
-      buckets.set(categoryId, bucket);
+      buckets.set(screen.categoryId, bucket);
     }
 
     return [...buckets.values()]
@@ -99,7 +62,7 @@ export const Hero = memo(({
         screens: bucket.screens.slice().sort((a, b) => a.name.localeCompare(b.name)),
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [categoriesRows, productFeaturesRows, selectedProductId]);
+  }, [productScreens]);
 
   const selectedCategoryId =
     categoryBuckets.find((bucket) => bucket.screens.some((screen) => screen.id === selectedScreenId))?.id
@@ -114,15 +77,17 @@ export const Hero = memo(({
     [categoryBuckets],
   );
 
-  const selectorHeat = useMemo(() => {
-    const heat: Record<string, number> = {};
+  const categorySignalIntensity = useMemo(() => {
+    const signal: Record<string, number> = {};
     for (const bucket of categoryBuckets) {
-      const scores = bucket.screens.map((screen) => appHeatmapIntensity[screen.app] ?? 0);
-      const total = scores.reduce((sum, score) => sum + score, 0);
-      heat[bucket.id] = scores.length > 0 ? total / scores.length : 0;
+      const screenIds = new Set(bucket.screens.map((screen) => screen.id));
+      const featureRequestCount = featureRequests.filter((item) => screenIds.has(item.screenId)).length;
+      const kudosCount = kudosQuotes.filter((item) => item.screenId && screenIds.has(item.screenId)).length;
+      const feedbackCount = allScreenFeedback.filter((item) => screenIds.has(item.screenId)).length;
+      signal[bucket.id] = featureRequestCount + kudosCount + feedbackCount > 0 ? 1 : 0;
     }
-    return heat;
-  }, [appHeatmapIntensity, categoryBuckets]);
+    return signal;
+  }, [allScreenFeedback, categoryBuckets, featureRequests, kudosQuotes]);
 
   const selectedScreen = useMemo(
     () => screensForCategory.find((screen) => screen.id === selectedScreenId) ?? screensForCategory[0],
@@ -134,7 +99,7 @@ export const Hero = memo(({
       <AppSelector
         tabs={selectorTabs}
         activeTabId={selectedCategoryId}
-        heatmapIntensity={selectorHeat}
+        signalIntensity={categorySignalIntensity}
         onChange={(categoryId) => {
           const nextCategory = categoryBuckets.find((bucket) => bucket.id === categoryId);
           const firstScreen = nextCategory?.screens[0];
@@ -155,10 +120,9 @@ export const Hero = memo(({
         {selectedScreen && (
           <ScreenDetailPanel
             screen={selectedScreen}
+            feedbackHistory={screenFeedbackItems}
             onSubmitFeedback={onSubmitFeedback}
             onSaveFollowUp={onSaveFollowUp}
-            onPromptNextScreen={onPromptNextScreen}
-            canPromptNextScreen={canPromptNextScreen}
           />
         )}
       </div>
