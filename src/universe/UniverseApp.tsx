@@ -97,6 +97,7 @@ const INSTITUTION_AI_PROVIDER: InstitutionAIProvider =
   String(import.meta.env.VITE_INSTITUTION_AI_PROVIDER ?? "openai").toLowerCase() === "anthropic"
     ? "anthropic"
     : "openai";
+
 const INSTITUTION_MATCH_THRESHOLD = (() => {
   const parsed = Number(import.meta.env.VITE_INSTITUTION_MATCH_THRESHOLD ?? 0.6);
   if (!Number.isFinite(parsed)) return 0.6;

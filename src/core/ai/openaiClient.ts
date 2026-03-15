@@ -32,6 +32,9 @@ const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const OPENAI_MODEL = import.meta.env.VITE_OPENAI_MODEL ?? "gpt-5-mini";
 const OPENAI_PROJECT = import.meta.env.VITE_OPENAI_PROJECT;
 const OPENAI_ORGANIZATION = import.meta.env.VITE_OPENAI_ORGANIZATION;
+const AI_DEBUG_LOGS = import.meta.env.DEV;
+const isOpenAIOrgId = (value: string | undefined): boolean => /^org_[A-Za-z0-9]+$/u.test(String(value ?? "").trim());
+const isOpenAIProjectId = (value: string | undefined): boolean => /^proj_[A-Za-z0-9]+$/u.test(String(value ?? "").trim());
 
 const ensureConfigured = (): void => {
   if (!OPENAI_API_KEY) {
@@ -44,10 +47,10 @@ const buildHeaders = (): HeadersInit => {
     "Content-Type": "application/json",
     Authorization: `Bearer ${OPENAI_API_KEY ?? ""}`,
   };
-  if (OPENAI_PROJECT) {
+  if (OPENAI_PROJECT && isOpenAIProjectId(OPENAI_PROJECT)) {
     headers["OpenAI-Project"] = OPENAI_PROJECT;
   }
-  if (OPENAI_ORGANIZATION) {
+  if (OPENAI_ORGANIZATION && isOpenAIOrgId(OPENAI_ORGANIZATION)) {
     headers["OpenAI-Organization"] = OPENAI_ORGANIZATION;
   }
   return headers;
@@ -87,6 +90,36 @@ const extractText = (payload: unknown): string => {
   return chunks.join("");
 };
 
+const summarizeMessages = (messages: OpenAITextMessage[]): string => {
+  return messages
+    .map((message, index) => {
+      const text = message.content.replace(/\s+/g, " ").trim();
+      const preview = text.length > 160 ? `${text.slice(0, 157)}...` : text;
+      return `${index + 1}. ${message.role.toUpperCase()}: ${preview}`;
+    })
+    .join("\n");
+};
+
+const logOpenAIRequest = (phase: string, request: OpenAITextRequest): void => {
+  if (!AI_DEBUG_LOGS) return;
+  console.groupCollapsed(`[AI][OpenAI] ${phase}`);
+  console.info("Endpoint:", `${OPENAI_BASE_URL}/responses`);
+  console.info("Model:", request.model ?? OPENAI_MODEL);
+  console.info("Max tokens:", request.maxOutputTokens ?? 1400);
+  console.info("Temperature:", request.temperature ?? "(default)");
+  console.info("Messages:\n" + summarizeMessages(request.messages));
+  console.groupEnd();
+};
+
+const logOpenAIResponse = (phase: string, status: "ok" | "error", details: string): void => {
+  if (!AI_DEBUG_LOGS) return;
+  if (status === "ok") {
+    console.info(`[AI][OpenAI] ${phase} succeeded: ${details}`);
+    return;
+  }
+  console.error(`[AI][OpenAI] ${phase} failed: ${details}`);
+};
+
 export const isOpenAIConfigured = (): boolean => Boolean(OPENAI_API_KEY);
 
 export const getOpenAIClientInfo = (): string => {
@@ -98,6 +131,7 @@ export const getOpenAIClientInfo = (): string => {
 
 export const createOpenAIText = async (request: OpenAITextRequest): Promise<OpenAITextResponse> => {
   ensureConfigured();
+  logOpenAIRequest("text request", request);
 
   const response = await fetch(`${OPENAI_BASE_URL}/responses`, {
     method: "POST",
@@ -112,10 +146,12 @@ export const createOpenAIText = async (request: OpenAITextRequest): Promise<Open
 
   if (!response.ok) {
     const reason = await response.text();
+    logOpenAIResponse("text request", "error", `HTTP ${response.status} ${reason}`);
     throw new Error(`OpenAI request failed (${response.status}): ${reason}`);
   }
 
   const data = (await response.json()) as { id?: string; model?: string };
+  logOpenAIResponse("text request", "ok", `id=${data.id ?? "n/a"} model=${data.model ?? request.model ?? OPENAI_MODEL}`);
   return {
     id: data.id,
     model: data.model ?? request.model ?? OPENAI_MODEL,
@@ -128,6 +164,7 @@ export const streamOpenAIText = async function* (
   request: OpenAITextRequest,
 ): AsyncGenerator<OpenAIStreamChunk, OpenAITextResponse> {
   ensureConfigured();
+  logOpenAIRequest("stream request", request);
 
   const response = await fetch(`${OPENAI_BASE_URL}/responses`, {
     method: "POST",
@@ -143,6 +180,7 @@ export const streamOpenAIText = async function* (
 
   if (!response.ok || !response.body) {
     const reason = await response.text();
+    logOpenAIResponse("stream request", "error", `HTTP ${response.status} ${reason}`);
     throw new Error(`OpenAI stream request failed (${response.status}): ${reason}`);
   }
 
@@ -152,6 +190,7 @@ export const streamOpenAIText = async function* (
   let fullText = "";
   let responseId = "";
   let model = request.model ?? OPENAI_MODEL;
+  let tokenCount = 0;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -195,12 +234,14 @@ export const streamOpenAIText = async function* (
 
         if (event.type === "response.output_text.delta" && typeof event.delta === "string") {
           fullText += event.delta;
+          tokenCount += 1;
           yield { token: event.delta, done: false };
         }
       }
     }
   }
 
+  logOpenAIResponse("stream request", "ok", `id=${responseId || "n/a"} model=${model} chunks=${tokenCount}`);
   return {
     id: responseId || undefined,
     model,
@@ -208,4 +249,3 @@ export const streamOpenAIText = async function* (
     raw: { id: responseId || undefined, model, text: fullText },
   };
 };
-

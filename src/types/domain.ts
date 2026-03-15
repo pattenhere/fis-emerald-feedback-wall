@@ -23,30 +23,42 @@ export type SessionRole = KudosRole;
 export type SynthesisMode = "roadmap" | "prd";
 
 export interface FeatureRequest {
-  id: string;
+  id: number | string;
+  productId?: number;
+  featureId?: number;
+  screenId?: number | string;
   app: AppArea;
-  screenId: string;
   screenName: string;
   title: string;
+  description?: string;
   workflowContext?: string;
+  status?: string;
   votes: number;
   createdAt: string;
+  legacyRequestCode?: string;
   origin?: "kiosk" | "mobile";
 }
 
 export interface KudosQuote {
-  id: string;
+  id: number | string;
+  productId?: number;
+  featureId?: number;
+  screenId?: number | string;
   text: string;
   role: KudosRole;
   consentPublic: boolean;
   app?: AppArea;
-  screenId?: string;
   screenName?: string;
   createdAt: string;
 }
 
 export interface AppScreen {
-  id: string;
+  id: number | string;
+  productId?: number;
+  legacyScreenCode?: string;
+  featureId?: number;
+  categoryId?: number | string;
+  categoryLabel?: string;
   app: AppArea;
   name: string;
   wireframeLabel: string;
@@ -54,9 +66,11 @@ export interface AppScreen {
 }
 
 export interface ScreenFeedback {
-  id: string;
+  id: number | string;
+  productId?: number;
+  featureId?: number;
+  screenId?: number | string;
   app: AppArea;
-  screenId: string;
   screenName: string;
   type: FeedbackType;
   text?: string;
@@ -74,7 +88,7 @@ export interface SignalSummary {
 
 export interface ConflictEntry {
   app: AppArea;
-  screenId: string;
+  screenId: number | string;
   screenName: string;
   positiveCount: number;
   negativeCount: number;
@@ -95,7 +109,8 @@ export interface CardSortResponse {
 }
 
 export interface ProductDefinition {
-  id: string;
+  id: number | string;
+  legacyProductCode?: string;
   category: string;
   subcategory: string;
   name: string;

@@ -10,41 +10,28 @@ const FEEDBACK_TYPES: Array<{ id: FeedbackType; label: string }> = [
   { id: "works-well", label: "Works Well" },
 ];
 
-const FOLLOW_UP_FALLBACK: Record<FeedbackType, string> = {
-  issue: "What specifically is the issue and how does it affect your workflow?",
-  suggestion: "If we only changed one thing first, what should it be?",
-  missing: "What action or information did you expect to see here?",
-  "works-well": "What would make this even better for your workflow?",
-};
-
 interface ScreenDetailPanelProps {
   screen: AppScreen;
   feedbackHistory: ScreenFeedback[];
   onSubmitFeedback: (input: {
     app: AppScreen["app"];
-    screenId: string;
+    productId: number;
+    featureId?: number;
+    screenId?: number;
     screenName: string;
     type: FeedbackType;
     text?: string;
-  }) => string;
-  onSaveFollowUp: (feedbackId: string, question: string, response?: string) => void;
+  }) => number;
 }
-
-type FlowStage = "compose" | "follow-up";
 
 export const ScreenDetailPanel = memo(({
   screen,
   feedbackHistory,
   onSubmitFeedback,
-  onSaveFollowUp,
 }: ScreenDetailPanelProps): JSX.Element => {
   const [feedbackType, setFeedbackType] = useState<FeedbackType | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [error, setError] = useState("");
-  const [flowStage, setFlowStage] = useState<FlowStage>("compose");
-  const [followUpQuestion, setFollowUpQuestion] = useState("");
-  const [followUpAnswer, setFollowUpAnswer] = useState("");
-  const [lastSubmissionId, setLastSubmissionId] = useState<string | null>(null);
   const [feedbackPage, setFeedbackPage] = useState(1);
   const feedbackPagination = usePagination(feedbackHistory, feedbackPage, 5);
 
@@ -52,26 +39,7 @@ export const ScreenDetailPanel = memo(({
     setFeedbackPage(1);
   }, [screen.id]);
 
-  const helperText = useMemo(() => {
-    if (flowStage === "follow-up") {
-      return "Optional: add one more detail to strengthen synthesis quality.";
-    }
-    return "Tag your feedback and optionally add context.";
-  }, [flowStage]);
-
-  const requestFollowUpQuestion = (type: FeedbackType): void => {
-    const fallbackQuestion = FOLLOW_UP_FALLBACK[type];
-    setFollowUpQuestion(fallbackQuestion);
-
-    const start = performance.now();
-    window.setTimeout(() => {
-      if (performance.now() - start > 1500) {
-        return;
-      }
-      const generated = `${fallbackQuestion} (about ${screen.name})`;
-      setFollowUpQuestion(generated);
-    }, 700);
-  };
+  const helperText = useMemo(() => "Select a feedback type, add details, and submit.", []);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -80,29 +48,19 @@ export const ScreenDetailPanel = memo(({
       return;
     }
 
-    const submissionId = onSubmitFeedback({
+    onSubmitFeedback({
       app: screen.app,
-      screenId: screen.id,
+      productId: screen.productId ?? 0,
+      featureId: screen.featureId,
+      screenId: Number(screen.id),
       screenName: screen.name,
       type: feedbackType,
       text: feedbackText,
     });
 
     setError("");
-    setFeedbackText("");
-    setLastSubmissionId(submissionId);
-    requestFollowUpQuestion(feedbackType);
-    setFlowStage("follow-up");
-  };
-
-  const handleFollowUp = (response?: string): void => {
-    if (!lastSubmissionId || !feedbackType) {
-      return;
-    }
-    onSaveFollowUp(lastSubmissionId, followUpQuestion || FOLLOW_UP_FALLBACK[feedbackType], response);
-    setFollowUpAnswer("");
     setFeedbackType(null);
-    setFlowStage("compose");
+    setFeedbackText("");
   };
 
   const formatFeedbackType = (type: FeedbackType): string =>
@@ -116,7 +74,13 @@ export const ScreenDetailPanel = memo(({
     if (Number.isNaN(timestamp.getTime())) {
       return createdAt;
     }
-    return timestamp.toLocaleString();
+    return timestamp.toLocaleString([], {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
   };
 
   return (
@@ -147,75 +111,44 @@ export const ScreenDetailPanel = memo(({
               </div>
             </div>
           </div>
-          <p className="wireframe-caption">Representative wireframe · not final UI</p>
+          <p className="wireframe-caption">Representative wireframe only · not final UI</p>
         </article>
 
         <form className="feedback-panel feature-feedback-panel" onSubmit={handleSubmit}>
-          <h3>Type of feedback</h3>
+          <h3>Feature feedback</h3>
           <p className="helper-copy">{helperText}</p>
 
-          {flowStage === "compose" && (
-            <div className="compose-feedback-shell">
-              <div className="feedback-types">
-                {FEEDBACK_TYPES.map((type) => (
-                  <button
-                    key={type.id}
-                    type="button"
-                    className={`chip ${feedbackType === type.id ? "is-active" : ""}`}
-                    onClick={() => {
-                      setFeedbackType(type.id);
-                      setError("");
-                    }}
-                  >
-                    {type.label}
-                  </button>
-                ))}
-              </div>
-
-              <h3>Tell us more</h3>
-              <textarea
-                className="feedback-detail-textarea"
-                placeholder="Tell us what you saw vs. what you expected to see"
-                rows={4}
-                value={feedbackText}
-                onChange={(event) => setFeedbackText(event.target.value)}
-                maxLength={900}
-              />
-              {error && <p className="error-text">{error}</p>}
-
-              <div className="feedback-actions feedback-actions--anchored">
-                <button type="submit" className="primary-btn feedback-submit-btn">
-                  Submit Feedback
-                </button>
-              </div>
-            </div>
-          )}
-
-          {flowStage === "follow-up" && (
-            <div className="follow-up-shell">
-              <h3>Tell us more</h3>
-              <p className="follow-up-question">{followUpQuestion}</p>
-              <input
-                type="text"
-                value={followUpAnswer}
-                maxLength={240}
-                placeholder="Optional follow-up response"
-                onChange={(event) => setFollowUpAnswer(event.target.value)}
-              />
-              <div className="feedback-actions">
+          <div className="compose-feedback-shell">
+            <div className="feedback-types">
+              {FEEDBACK_TYPES.map((type) => (
                 <button
+                  key={type.id}
                   type="button"
-                  className="primary-btn feedback-submit-btn"
-                  onClick={() => handleFollowUp(followUpAnswer)}
+                  className={`chip ${feedbackType === type.id ? "is-active" : ""}`}
+                  onClick={() => {
+                    setFeedbackType(type.id);
+                    setError("");
+                  }}
                 >
-                  Save Follow-up
+                  {type.label}
                 </button>
-                <button type="button" className="secondary-btn" onClick={() => handleFollowUp()}>
-                  Skip
-                </button>
-              </div>
+              ))}
             </div>
-          )}
+            <textarea
+              className="feedback-detail-textarea"
+              rows={5}
+              placeholder="What specifically on this feature worked well, is missing, or needs improvement?"
+              value={feedbackText}
+              onChange={(event) => setFeedbackText(event.target.value)}
+            />
+            {error && <p className="error-text">{error}</p>}
+
+            <div className="feedback-actions feedback-actions--anchored">
+              <button type="submit" className="primary-btn feedback-submit-btn">
+                Submit Feedback
+              </button>
+            </div>
+          </div>
 
         </form>
       </div>
@@ -235,7 +168,6 @@ export const ScreenDetailPanel = memo(({
                   <th>Submitted</th>
                   <th>Type</th>
                   <th>Feedback</th>
-                  <th>Follow-up</th>
                 </tr>
               </thead>
               <tbody>
@@ -244,7 +176,6 @@ export const ScreenDetailPanel = memo(({
                     <td>{formatCreatedAt(item.createdAt)}</td>
                     <td>{formatFeedbackType(item.type)}</td>
                     <td>{item.text?.trim() || "—"}</td>
-                    <td>{item.followUpResponse?.trim() || "—"}</td>
                   </tr>
                 ))}
               </tbody>

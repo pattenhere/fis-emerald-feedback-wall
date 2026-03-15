@@ -1,257 +1,176 @@
-import type {
-  SynthesisRequest,
-  SynthesisResponse,
-  SynthesisStreamChunk,
-} from "../types/synthesis";
+import type { SynthesisRequest, SynthesisResponse, SynthesisStreamChunk, SynthesisStreamEvent } from "../types/synthesis";
 
 const SYNTHESIS_API_BASE = import.meta.env.VITE_SYNTHESIS_API_BASE_URL;
+const SYNTHESIS_STREAM_PATH = "/api/synthesis/stream";
+const AI_DEBUG_LOGS = import.meta.env.DEV;
 
-export const buildPromptEnvelope = (request: SynthesisRequest): string => {
-  return [
-    `Mode: ${request.mode}`,
-    "Signal Summary:",
-    `- Total feature votes: ${request.context.summary.totalFeatureVotes}`,
-    `- Screen feedback count: ${request.context.summary.screenFeedbackCount}`,
-    `- Kudos count: ${request.context.summary.kudosCount}`,
-    "",
-    "Compiled Inputs:",
-    request.context.promptBody,
-  ].join("\n");
+const resolveSynthesisUrl = (): string => {
+  if (!SYNTHESIS_API_BASE) {
+    return SYNTHESIS_STREAM_PATH;
+  }
+  return `${String(SYNTHESIS_API_BASE).replace(/\/$/, "")}${SYNTHESIS_STREAM_PATH}`;
+};
+
+const fallbackSynthesisUrl = (): string => SYNTHESIS_STREAM_PATH;
+
+const parseSseEvent = (line: string): SynthesisStreamEvent | null => {
+  try {
+    return JSON.parse(line) as SynthesisStreamEvent;
+  } catch {
+    return null;
+  }
+};
+
+const toErrorMessage = async (response: Response): Promise<string> => {
+  const fallback = `Synthesis API error (${response.status})`;
+  try {
+    const text = await response.text();
+    if (!text) return fallback;
+    try {
+      const json = JSON.parse(text) as { error?: string; message?: string };
+      return json.error || json.message || fallback;
+    } catch {
+      return text.slice(0, 400);
+    }
+  } catch {
+    return fallback;
+  }
 };
 
 export const streamSynthesis = async function* (
   request: SynthesisRequest,
 ): AsyncGenerator<SynthesisStreamChunk, SynthesisResponse> {
-  const prompt = buildPromptEnvelope(request);
-  const markdown = synthesizeLocally(request.mode, prompt);
+  let response: Response;
+  const primaryUrl = resolveSynthesisUrl();
+  try {
+    response = await fetch(primaryUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(request),
+    });
+  } catch {
+    // Fallback to same-origin API path if configured base URL is unreachable.
+    try {
+      const fallbackUrl = fallbackSynthesisUrl();
+      if (AI_DEBUG_LOGS) {
+        console.warn(`[AI][Synthesis] Primary endpoint unreachable (${primaryUrl}); retrying ${fallbackUrl}`);
+      }
+      response = await fetch(fallbackUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(request),
+      });
+    } catch {
+      throw new Error("Unable to reach synthesis service. Check server/API connectivity and try again.");
+    }
+  }
 
-  for (const token of markdown.split(" ")) {
-    await new Promise((resolve) => setTimeout(resolve, 18));
-    yield { token: `${token} `, done: false };
+  if (!response.ok || !response.body) {
+    const message = await toErrorMessage(response);
+    throw new Error(message);
+  }
+
+  const decoder = new TextDecoder();
+  const reader = response.body.getReader();
+  let buffer = "";
+  let finalMode = request.outputMode;
+  let finalMarkdown = "";
+  let generatedAt = new Date().toISOString();
+  let gotDoneEvent = false;
+
+  const processFrame = async (frame: string): Promise<SynthesisStreamChunk[]> => {
+    const chunks: SynthesisStreamChunk[] = [];
+    const lines = frame
+      .split("\n")
+      .filter((line) => line.startsWith("data: "))
+      .map((line) => line.slice(6).trim())
+      .filter(Boolean);
+    for (const line of lines) {
+      const event = parseSseEvent(line);
+      if (!event) continue;
+      if (event.type === "phase2_token") {
+        chunks.push({ token: event.token, done: false, event });
+        continue;
+      }
+      if (event.type === "provider_call") {
+        if (AI_DEBUG_LOGS) {
+          console.groupCollapsed(`[AI][Synthesis][${event.phase}] ${event.provider.toUpperCase()} call`);
+          console.info("Endpoint:", event.endpoint);
+          console.info("Model:", event.model);
+          console.info("Max tokens:", event.maxTokens);
+          console.info("Temperature:", event.temperature);
+          console.groupEnd();
+        }
+        chunks.push({ token: "", done: false, event });
+        continue;
+      }
+      if (event.type === "debug_prompt") {
+        if (AI_DEBUG_LOGS) {
+          console.groupCollapsed(`[AI][Synthesis][${event.phase}] ${event.provider.toUpperCase()} full payload`);
+          const payload = event.payload as { readableMessages?: string };
+          if (payload?.readableMessages) {
+            console.info("Readable prompt/messages:\n" + payload.readableMessages);
+          }
+          console.info("Raw request payload:\n" + JSON.stringify(event.payload, null, 2));
+          console.groupEnd();
+        }
+        chunks.push({ token: "", done: false, event });
+        continue;
+      }
+      if (event.type === "done") {
+        finalMode = event.outputMode;
+        finalMarkdown = event.finalOutput;
+        generatedAt = event.generatedAt;
+        gotDoneEvent = true;
+        chunks.push({ token: "", done: true, event });
+        continue;
+      }
+      if (event.type === "error") {
+        const code = event.code ? `${event.code}: ` : "";
+        throw new Error(`${code}${event.message}`);
+      }
+      chunks.push({ token: "", done: false, event });
+    }
+    return chunks;
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    buffer += decoder.decode(value, { stream: true });
+    const frames = buffer.split("\n\n");
+    buffer = frames.pop() ?? "";
+    for (const frame of frames) {
+      const chunks = await processFrame(frame);
+      for (const chunk of chunks) {
+        yield chunk;
+      }
+    }
+  }
+
+  if (buffer.trim().length > 0) {
+    const chunks = await processFrame(buffer);
+    for (const chunk of chunks) {
+      yield chunk;
+    }
+  }
+
+  if (!gotDoneEvent) {
+    throw new Error("Synthesis stream ended unexpectedly before completion. Please try again.");
   }
 
   return {
-    mode: request.mode,
-    markdown,
-    generatedAt: new Date().toISOString(),
+    mode: finalMode,
+    markdown: finalMarkdown,
+    generatedAt,
   };
 };
 
 export const getSynthesisEndpointInfo = (): string => {
   if (!SYNTHESIS_API_BASE) {
-    return "Synthesis endpoint not configured";
+    return "Configured endpoint: /api/synthesis/stream";
   }
-  return `Configured endpoint: ${SYNTHESIS_API_BASE}`;
-};
-
-interface ParsedFeature {
-  text: string;
-  votes: number;
-  workflow: string;
-  role: string;
-}
-
-interface ParsedFeedback {
-  app: string;
-  screen: string;
-  type: string;
-  text: string;
-  role: string;
-}
-
-interface ParsedKudos {
-  role: string;
-  consentPublic: boolean;
-  text: string;
-}
-
-const section = (prompt: string, heading: string, nextHeading: string): string => {
-  const start = prompt.indexOf(heading);
-  const end = prompt.indexOf(nextHeading);
-  if (start === -1 || end === -1 || end <= start) {
-    return "";
-  }
-  return prompt.slice(start + heading.length, end).trim();
-};
-
-const parseFeatures = (value: string): ParsedFeature[] => {
-  return value
-    .split("\n")
-    .filter((line) => /^\d+\./.test(line))
-    .map((line) => {
-      const text = line.split("|")[0].replace(/^\d+\.\s*/, "").trim();
-      const votesMatch = line.match(/votes=(\d+)/);
-      const workflowMatch = line.match(/workflow=(.*)$/);
-      return {
-        text,
-        votes: votesMatch ? Number(votesMatch[1]) : 0,
-        workflow: workflowMatch ? workflowMatch[1].trim() : "n/a",
-        role: line.match(/role=([^|]+)/)?.[1]?.trim() ?? "unspecified",
-      };
-    });
-};
-
-const parseScreenFeedback = (value: string): ParsedFeedback[] => {
-  return value
-    .split("\n")
-    .filter((line) => /^\d+\./.test(line))
-    .map((line) => {
-      const app = line.match(/app=([^|]+)/)?.[1]?.trim() ?? "unknown";
-      const screen = line.match(/screen=([^|]+)/)?.[1]?.trim() ?? "unknown";
-      const type = line.match(/type=([^|]+)/)?.[1]?.trim() ?? "suggestion";
-      const text = line.match(/text=(.*)$/)?.[1]?.trim() ?? "n/a";
-      const role = line.match(/role=([^|]+)/)?.[1]?.trim() ?? "unspecified";
-      return { app, screen, type, text, role };
-    });
-};
-
-const parseKudos = (value: string): ParsedKudos[] => {
-  return value
-    .split("\n")
-    .filter((line) => /^\d+\./.test(line))
-    .map((line) => {
-      const role = line.match(/role=([^|]+)/)?.[1]?.trim() ?? "unspecified";
-      const consentPublic = line.includes("consentPublic=yes");
-      const text = line.match(/text=(.*)$/)?.[1]?.trim() ?? "";
-      return { role, consentPublic, text };
-    });
-};
-
-const topPatterns = (feedback: ParsedFeedback[]): string[] => {
-  const counts = new Map<string, number>();
-  for (const item of feedback) {
-    counts.set(item.type, (counts.get(item.type) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([type, count]) => `${type} appears ${count} times across screens.`);
-};
-
-const synthesizeLocally = (mode: "roadmap" | "prd", prompt: string): string => {
-  const featureSection = section(prompt, "Feature Requests", "Screen Feedback");
-  const feedbackSection = section(prompt, "Screen Feedback", "Kudos");
-  const kudosSection = prompt.split("Kudos")[1]?.trim() ?? "";
-
-  const features = parseFeatures(featureSection).sort((a, b) => b.votes - a.votes);
-  const feedback = parseScreenFeedback(feedbackSection);
-  const kudos = parseKudos(kudosSection);
-  const publicQuotes = kudos.filter((item) => item.consentPublic).slice(0, 3);
-  const patterns = topPatterns(feedback);
-  const p0 = features.slice(0, 2);
-  const p1 = features.slice(2, 6);
-  const p2 = features.slice(6);
-  const p0Only = prompt.includes("Constrain output to P0 items only");
-  const emphasizeMarketing = prompt.includes("Emphasize consent-approved marketing-safe quotes");
-  const roleCounts = new Map<string, number>();
-  for (const item of [...features.map((feature) => feature.role), ...feedback.map((item) => item.role)]) {
-    if (!item || item === "unspecified") {
-      continue;
-    }
-    roleCounts.set(item, (roleCounts.get(item) ?? 0) + 1);
-  }
-  const roleLines =
-    roleCounts.size > 0
-      ? [...roleCounts.entries()]
-          .sort((a, b) => b[1] - a[1])
-          .map(([role, count], index) => `${index + 1}. ${role.toUpperCase()} contributed ${count} signals.`)
-          .join("\n")
-      : "1. Role-segmented patterns are limited due to unspecified role usage.";
-
-  if (mode === "roadmap") {
-    const p0Lines = p0.length
-      ? p0.map((item, index) => `${index + 1}. ${item.text} (8-hour prototype scope)`).join("\n")
-      : "1. No clear P0 signal yet.";
-    const p1Lines = p1.length
-      ? p1
-          .map(
-            (item, index) =>
-              `${index + 1}. ${item.text} — rationale: ${item.workflow !== "n/a" ? item.workflow : "high vote demand"}`,
-          )
-          .join("\n")
-      : "1. No P1 themes yet.";
-    const p2Lines = p2.length ? p2.map((item, index) => `${index + 1}. ${item.text}`).join("\n") : "1. None";
-    const patternLines = patterns.length
-      ? patterns.map((line, index) => `${index + 1}. ${line}`).join("\n")
-      : "1. Collect more feedback to establish stable patterns.";
-    const quoteLines = publicQuotes.length
-      ? publicQuotes.map((quote, index) => `${index + 1}. "${quote.text}" (${quote.role.toUpperCase()})`).join("\n")
-      : "1. No consent-approved quotes yet.";
-    const extendedQuotes =
-      emphasizeMarketing && quoteLines !== "1. No consent-approved quotes yet."
-        ? `${quoteLines}\n4. Promote quoted client outcomes during Day 2 reveal walkthrough.`
-        : quoteLines;
-
-    return [
-      "# Roadmap Draft",
-      "",
-      "## P0 - Build Tonight",
-      p0Lines,
-      ...(p0Only
-        ? []
-        : [
-            "",
-            "## P1 - Next Sprint",
-            p1Lines,
-            "",
-            "## P2 - Backlog",
-            p2Lines,
-          ]),
-      "",
-      "## Patterns & Insights",
-      patternLines,
-      "",
-      "## Role-Segmented Signals",
-      roleLines,
-      "",
-      "## Marketing Moments",
-      extendedQuotes,
-    ].join("\n");
-  }
-
-  const acceptance = p0.length
-    ? p0
-        .map(
-          (item, index) =>
-            `${index + 1}. ${item.text}: can be demoed in <8 hours with a clickable happy path and synthetic data.`,
-        )
-        .join("\n")
-    : "1. Define a P0 feature once vote signals are captured.";
-
-  return [
-    "# PRD Draft",
-    "",
-    "## Overview",
-    "This overnight draft consolidates conference signals into a focused Day 2 prototype plan.",
-    "",
-    "## Problem Statement",
-    `Attendees submitted ${features.length} feature requests and ${feedback.length} screen signals, indicating friction in high-volume operational workflows.`,
-    "",
-    "## Scope - Tonight's Build",
-    p0.length ? p0.map((item, index) => `${index + 1}. ${item.text}`).join("\n") : "1. No P0 signals yet.",
-    "",
-    "## Out of Scope",
-    "1. Long-tail enhancements not in top-voted themes.",
-    "2. Production hardening, authentication, and integration work.",
-    "",
-    "## User Stories",
-    "1. As an operations lead, I want to upvote feature ideas so top priorities emerge quickly.",
-    "2. As an attendee, I want to tag screen issues so the team can group feedback accurately.",
-    "3. As a product manager, I want workflow context on requests so implementation is actionable.",
-    "4. As a facilitator, I want PIN-gated synthesis so attendee and admin actions remain separated.",
-    "5. As marketing, I want consent-approved quotes so event proof points are publishable.",
-    "",
-    "## Acceptance Criteria",
-    acceptance,
-    "",
-    "## Design Guidance",
-    patterns.length ? patterns.map((line, index) => `${index + 1}. ${line}`).join("\n") : "1. Emphasize clarity in feedback categorization and submission flow.",
-    "",
-    "## Role-Segmented Signals",
-    roleLines,
-    "",
-    "## Success Metrics",
-    "1. Day 2 demo includes at least one completed P0 flow.",
-    "2. Facilitators can explain how captured feedback mapped directly to prototype changes.",
-  ].join("\n");
+  return `Configured endpoint: ${String(SYNTHESIS_API_BASE).replace(/\/$/, "")}`;
 };

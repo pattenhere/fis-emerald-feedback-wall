@@ -3,9 +3,9 @@ import type { AppScreen } from "../../types/domain";
 
 interface ScreenGridProps {
   screens: AppScreen[];
-  selectedScreenId: string;
-  submissionCounts: Record<string, number>;
-  onSelectScreen: (id: string) => void;
+  selectedScreenId: number;
+  submissionCounts: Record<number, number>;
+  onSelectScreen: (id: number) => void;
 }
 
 export const ScreenGrid = memo(({
@@ -19,12 +19,12 @@ export const ScreenGrid = memo(({
       {screens.map((screen) => (
         <button
           key={screen.id}
-          className={`screen-thumb ${selectedScreenId === screen.id ? "is-active" : ""}`}
+          className={`screen-thumb ${selectedScreenId === Number(screen.id) ? "is-active" : ""}`}
           type="button"
-          onClick={() => onSelectScreen(screen.id)}
+          onClick={() => onSelectScreen(Number(screen.id))}
         >
-          {(submissionCounts[screen.id] ?? 0) > 0 && (
-            <span className="screen-count-badge">{submissionCounts[screen.id]}</span>
+          {(submissionCounts[Number(screen.id)] ?? 0) > 0 && (
+            <span className="screen-count-badge">{submissionCounts[Number(screen.id)]}</span>
           )}
           <span className="screen-thumb-title">{screen.name}</span>
         </button>

@@ -1,0 +1,27 @@
+[
+  {
+    "id": "concept-agent-covenant-monitor",
+    "title": "Agentic Covenant Monitor",
+    "description": "Continuously monitors covenant drift and proposes next-best remediation actions."
+  },
+  {
+    "id": "concept-origination-copilot",
+    "title": "Origination Copilot",
+    "description": "Suggests underwriting data checks and approval pathways from prior outcomes."
+  },
+  {
+    "id": "concept-servicing-predictive",
+    "title": "Predictive Servicing Alerts",
+    "description": "Flags likely payment exceptions before billing cycles complete."
+  },
+  {
+    "id": "concept-portfolio-narrative",
+    "title": "Portfolio Narrative Brief",
+    "description": "Generates executive-ready summaries from portfolio and transaction trends."
+  },
+  {
+    "id": "concept-participant-insight",
+    "title": "Syndication Participant Insight Hub",
+    "description": "Surfaces cross-party obligations, delays, and communication bottlenecks in one view."
+  }
+]

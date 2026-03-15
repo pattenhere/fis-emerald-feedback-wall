@@ -1,0 +1,102 @@
+[
+  {
+    "id": "IP-001",
+    "institution_name": "Crédit Agricole CIB (CA-CIB)",
+    "institution_type": "Global Investment Bank",
+    "business_lines": "Corporate Banking, Project Finance, Structured Finance, Capital Markets",
+    "target_segments": "Large Corporate, Infrastructure Sponsors, Energy",
+    "geography": "Global (EU, Americas, APAC)",
+    "known_strengths": "Project finance leadership, structured lending, energy transition financing",
+    "signals": "participates in syndicated loans, complex cross-border deals, multi-currency facilities"
+  },
+  {
+    "id": "IP-002",
+    "institution_name": "Farmer Mac",
+    "institution_type": "Government-Sponsored Enterprise",
+    "business_lines": "Agricultural Finance, Secondary Loan Market, Structured Agricultural Lending",
+    "target_segments": "Agricultural Lenders, Rural Utilities, Farm Operators",
+    "geography": "United States (Rural Markets)",
+    "known_strengths": "Secondary agricultural loan market, risk transfer for farm credit institutions",
+    "signals": "securitizes agricultural loans, regulatory compliance focus, portfolio-level loan monitoring"
+  },
+  {
+    "id": "IP-003",
+    "institution_name": "JPMorgan Chase",
+    "institution_type": "Global Universal Bank",
+    "business_lines": "Corporate Banking, Investment Banking, Treasury Services, Commercial Lending",
+    "target_segments": "Global Corporates, Middle Market, Institutional Clients",
+    "geography": "Global",
+    "known_strengths": "Syndicated lending leader, treasury services scale, complex credit structuring",
+    "signals": "participates in large syndicated loans, complex facility structures, multi-jurisdiction lending"
+  },
+  {
+    "id": "IP-004",
+    "institution_name": "Capital One",
+    "institution_type": "Large U.S. Bank",
+    "business_lines": "Commercial Banking, Credit Cards, Consumer Lending, Digital Banking",
+    "target_segments": "Middle Market, Commercial Real Estate, Consumers",
+    "geography": "United States",
+    "known_strengths": "Data-driven credit models, digital banking capabilities",
+    "signals": "strong credit risk analytics, commercial real estate lending, high-volume loan servicing"
+  },
+  {
+    "id": "IP-005",
+    "institution_name": "Citizens Bank",
+    "institution_type": "Regional Bank",
+    "business_lines": "Commercial Banking, Corporate Finance, Asset-Based Lending",
+    "target_segments": "Middle Market Companies, Regional Businesses",
+    "geography": "United States (Northeast, Midwest)",
+    "known_strengths": "Middle-market lending, asset-based lending expertise",
+    "signals": "participates in syndicated deals, collateralized lending structures"
+  },
+  {
+    "id": "IP-006",
+    "institution_name": "First Horizon Bank",
+    "institution_type": "Regional Bank",
+    "business_lines": "Commercial Banking, Wealth Management, Treasury Services",
+    "target_segments": "Small Business, Middle Market",
+    "geography": "United States (Southeast)",
+    "known_strengths": "Relationship banking, regional commercial lending",
+    "signals": "moderate facility complexity, secured commercial loans"
+  },
+  {
+    "id": "IP-007",
+    "institution_name": "BNP Paribas",
+    "institution_type": "Global Universal Bank",
+    "business_lines": "Corporate Banking, Capital Markets, Trade Finance, Structured Finance",
+    "target_segments": "Global Corporations, Institutional Investors",
+    "geography": "Global (Europe-focused)",
+    "known_strengths": "Structured finance, cross-border financing, derivatives integration",
+    "signals": "multi-currency lending, syndicated credit facilities, regulatory-heavy environments"
+  },
+  {
+    "id": "IP-008",
+    "institution_name": "Third Coast Bank",
+    "institution_type": "Community / Regional Bank",
+    "business_lines": "Commercial Banking, CRE Lending, Treasury Management",
+    "target_segments": "Local Businesses, Small-to-Mid Commercial Clients",
+    "geography": "United States (Texas)",
+    "known_strengths": "Commercial real estate lending, relationship banking",
+    "signals": "secured commercial lending, moderate loan servicing needs"
+  },
+  {
+    "id": "IP-009",
+    "institution_name": "CIT Group",
+    "institution_type": "Commercial Bank / Specialty Finance",
+    "business_lines": "Equipment Finance, Commercial Lending, Factoring",
+    "target_segments": "Middle Market, Transportation, Manufacturing",
+    "geography": "United States",
+    "known_strengths": "Equipment finance leadership, asset-backed lending",
+    "signals": "heavy collateral management, asset-based loan monitoring"
+  },
+  {
+    "id": "IP-010",
+    "institution_name": "First Republic Bank",
+    "institution_type": "Private / Relationship Bank",
+    "business_lines": "Private Banking, Commercial Lending, Wealth Management",
+    "target_segments": "High-Net-Worth Individuals, Professional Services Firms",
+    "geography": "United States (Coastal markets)",
+    "known_strengths": "Relationship lending, jumbo mortgage lending",
+    "signals": "relatively simple facility structures, relationship-based underwriting"
+  }
+]

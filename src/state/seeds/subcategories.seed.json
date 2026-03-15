@@ -1,0 +1,17 @@
+[
+  {
+    "id": "SUB-001",
+    "category_id": "CAT-001",
+    "subcategory": "Origination Solutions"
+  },
+  {
+    "id": "SUB-002",
+    "category_id": "CAT-001",
+    "subcategory": "Servicing Solutions"
+  },
+  {
+    "id": "SUB-003",
+    "category_id": "CAT-001",
+    "subcategory": "Specialty Lending Solutions"
+  }
+]

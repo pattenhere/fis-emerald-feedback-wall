@@ -1,0 +1,38 @@
+[
+  {
+    "id": "PFCT-001",
+    "category": "Syndication / Complex Lending"
+  },
+  {
+    "id": "PFCT-002",
+    "category": "Monitoring & Controls"
+  },
+  {
+    "id": "PFCT-003",
+    "category": "Credit & Risk"
+  },
+  {
+    "id": "PFCT-004",
+    "category": "Platform Services"
+  },
+  {
+    "id": "PFCT-005",
+    "category": "SBA & Re-Amort, Servicing"
+  },
+  {
+    "id": "PFCT-006",
+    "category": "Analytics & Inquiry"
+  },
+  {
+    "id": "PFCT-007",
+    "category": "Servicing"
+  },
+  {
+    "id": "PFCT-008",
+    "category": "Origination"
+  },
+  {
+    "id": "PFCT-009",
+    "category": "Digital Experience"
+  }
+]

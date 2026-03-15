@@ -34,32 +34,40 @@ export const ViewAllResponsesPage = memo(({
       ) : (
         <div className="view-all-groups">
           {groups.map((group) => (
-            <article key={group.category} className="view-all-group">
-              <h3>
-                {group.category} ({group.totalCount})
-              </h3>
-              {group.sections.map((section) => (
-                <div key={`${group.category}-${section.type}`} className="view-all-section">
-                  <h4>{section.type}</h4>
-                  <table className="view-all-table">
-                    <thead>
-                      <tr>
-                        <th>Item</th>
-                        <th>Detail</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {section.items.map((item) => (
-                        <tr key={item.id}>
-                          <td>{item.title}</td>
-                          <td>{item.detail}</td>
+            <details key={group.category} className="view-all-group">
+              <summary className="view-all-group-summary">
+                <h3>
+                  {group.category} ({group.totalCount})
+                </h3>
+              </summary>
+              <div className="view-all-group-body">
+                {group.sections.map((section) => (
+                  <details key={`${group.category}-${section.type}`} className="view-all-section">
+                    <summary className="view-all-section-summary">
+                      <h4>
+                        {section.type} ({section.items.length})
+                      </h4>
+                    </summary>
+                    <table className="view-all-table">
+                      <thead>
+                        <tr>
+                          <th>Item</th>
+                          <th>Detail</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
-            </article>
+                      </thead>
+                      <tbody>
+                        {section.items.map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.title}</td>
+                            <td>{item.detail}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </details>
+                ))}
+              </div>
+            </details>
           ))}
         </div>
       )}

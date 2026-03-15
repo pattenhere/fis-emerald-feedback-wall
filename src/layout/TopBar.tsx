@@ -10,7 +10,9 @@ interface TopBarProps {
   selectedProductName?: string | null;
   onOpenLiveResponses?: () => void;
   onOpenViewAll?: () => void;
+  onOpenSystemAdmin?: () => void;
   viewAllActive?: boolean;
+  systemAdminActive?: boolean;
 }
 
 export const TopBar = memo(({
@@ -21,7 +23,9 @@ export const TopBar = memo(({
   selectedProductName = null,
   onOpenLiveResponses,
   onOpenViewAll,
+  onOpenSystemAdmin,
   viewAllActive = false,
+  systemAdminActive = false,
 }: TopBarProps): JSX.Element => {
   const [countdown, setCountdown] = useState(formatCountdown(countdownTarget));
   const [quoteIndex, setQuoteIndex] = useState(0);
@@ -111,10 +115,13 @@ export const TopBar = memo(({
                 <span>Universe</span>
               </button>
               <button type="button" className="universe-launch" onClick={() => setShowQr(true)}>
-                QR Mobile
+                MOBILE QR
+              </button>
+              <button type="button" className="universe-launch" onClick={onOpenSystemAdmin}>
+                {systemAdminActive ? "BACK TO WALL" : "System Admin"}
               </button>
               <button type="button" className="role-chip role-chip-button" onClick={onOpenViewAll}>
-                {viewAllActive ? "Back to Wall" : "View All"}
+                {viewAllActive ? "BACK TO WALL" : "VIEW ALL"}
               </button>
             </>
           )}

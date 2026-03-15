@@ -26,6 +26,7 @@ const ANTHROPIC_BASE_URL = (import.meta.env.VITE_ANTHROPIC_BASE_URL ?? "https://
 const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = import.meta.env.VITE_ANTHROPIC_MODEL ?? "claude-3-5-sonnet-latest";
 const ANTHROPIC_VERSION = import.meta.env.VITE_ANTHROPIC_VERSION ?? "2023-06-01";
+const AI_DEBUG_LOGS = import.meta.env.DEV;
 
 const ensureConfigured = (): void => {
   if (!ANTHROPIC_API_KEY) {
@@ -48,12 +49,43 @@ const extractText = (payload: unknown): string => {
   return chunks.join("");
 };
 
+const summarizeMessages = (messages: AnthropicTextMessage[]): string => {
+  return messages
+    .map((message, index) => {
+      const text = message.content.replace(/\s+/g, " ").trim();
+      const preview = text.length > 160 ? `${text.slice(0, 157)}...` : text;
+      return `${index + 1}. ${message.role.toUpperCase()}: ${preview}`;
+    })
+    .join("\n");
+};
+
+const logAnthropicRequest = (request: AnthropicTextRequest): void => {
+  if (!AI_DEBUG_LOGS) return;
+  console.groupCollapsed("[AI][Anthropic] text request");
+  console.info("Endpoint:", `${ANTHROPIC_BASE_URL}/messages`);
+  console.info("Model:", request.model ?? ANTHROPIC_MODEL);
+  console.info("Max tokens:", request.maxOutputTokens ?? 1400);
+  console.info("Temperature:", request.temperature ?? "(default)");
+  console.info("Messages:\n" + summarizeMessages(request.messages));
+  console.groupEnd();
+};
+
+const logAnthropicResponse = (status: "ok" | "error", details: string): void => {
+  if (!AI_DEBUG_LOGS) return;
+  if (status === "ok") {
+    console.info(`[AI][Anthropic] text request succeeded: ${details}`);
+    return;
+  }
+  console.error(`[AI][Anthropic] text request failed: ${details}`);
+};
+
 export const isAnthropicConfigured = (): boolean => Boolean(ANTHROPIC_API_KEY);
 
 export const createAnthropicText = async (
   request: AnthropicTextRequest,
 ): Promise<AnthropicTextResponse> => {
   ensureConfigured();
+  logAnthropicRequest(request);
 
   const system = request.messages
     .filter((message) => message.role === "system")
@@ -86,10 +118,12 @@ export const createAnthropicText = async (
 
   if (!response.ok) {
     const reason = await response.text();
+    logAnthropicResponse("error", `HTTP ${response.status} ${reason}`);
     throw new Error(`Anthropic request failed (${response.status}): ${reason}`);
   }
 
   const data = (await response.json()) as { id?: string; model?: string };
+  logAnthropicResponse("ok", `id=${data.id ?? "n/a"} model=${data.model ?? request.model ?? ANTHROPIC_MODEL}`);
   return {
     id: data.id,
     model: data.model ?? request.model ?? ANTHROPIC_MODEL,

@@ -1,7 +1,6 @@
 import { memo, useMemo, useState } from "react";
 import { getSynthesisEndpointInfo, streamSynthesis } from "../../services/synthesisService";
 import type {
-  AppArea,
   ConflictEntry,
   FeatureRequest,
   MacroState,
@@ -11,10 +10,10 @@ import type {
 import type { ExportRecord } from "../../state/useWallState";
 import { APP_AREAS } from "../../state/seedData";
 import { copyText } from "../../utils/clipboard";
+import type { SynthesisStreamEvent } from "../../types/synthesis";
 
 interface SynthesisPanelProps {
   summary: SignalSummary;
-  activeApp: AppArea;
   conflicts: ConflictEntry[];
   readinessThreshold: number;
   onReadinessThresholdChange: (next: number) => void;
@@ -73,9 +72,10 @@ const activeMacroCount = (macros: MacroState): number => {
   ].filter(Boolean).length;
 };
 
+const SORTED_APP_AREAS = APP_AREAS.slice().sort((a, b) => a.label.localeCompare(b.label));
+
 export const SynthesisPanel = memo(({
   summary,
-  activeApp,
   conflicts,
   readinessThreshold,
   onReadinessThresholdChange,
@@ -96,6 +96,11 @@ export const SynthesisPanel = memo(({
   const [pinAttempt, setPinAttempt] = useState("");
   const [pinError, setPinError] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [phaseStatus, setPhaseStatus] = useState<"idle" | "analyzing" | "generating">("idle");
+  const [streamWarnings, setStreamWarnings] = useState<string[]>([]);
+  const [streamError, setStreamError] = useState("");
+  const [macroApplicationLog, setMacroApplicationLog] = useState<string[]>([]);
+  const [showMacroLog, setShowMacroLog] = useState(false);
   const [copyState, setCopyState] = useState<"" | "copied" | "failed">("");
   const [macroOpen, setMacroOpen] = useState(false);
   const [revealMode, setRevealMode] = useState(false);
@@ -109,9 +114,9 @@ export const SynthesisPanel = memo(({
 
   const stats = useMemo(
     () => [
-      { label: "Feature votes", value: summary.totalFeatureVotes },
-      { label: "Screen feedback", value: summary.screenFeedbackCount },
+      { label: "Feature Requests", value: summary.totalFeatureVotes },
       { label: "Kudos", value: summary.kudosCount },
+      { label: "Screen Feedback", value: summary.screenFeedbackCount },
     ],
     [summary],
   );
@@ -149,30 +154,76 @@ export const SynthesisPanel = memo(({
     }
   };
 
-  const handleGenerate = async (): Promise<void> => {
+  const handleGenerate = async (nextMode: SynthesisMode = mode): Promise<void> => {
     setIsGenerating(true);
+    setPhaseStatus("analyzing");
+    setStreamWarnings([]);
+    setStreamError("");
+    setMacroApplicationLog([]);
+    setShowMacroLog(false);
     setCopyState("");
     onOutputChange("");
+    if (mode !== nextMode) {
+      onModeChange(nextMode);
+    }
     let streamedOutput = "";
 
     try {
       const stream = streamSynthesis({
-        mode,
+        outputMode: nextMode,
         pin: "unlocked",
+        macros,
         context: {
-          summary,
-          promptBody: buildPromptBody(macros),
+          summary: {
+            totalFeatureVotes: summary.totalFeatureVotes,
+            screenFeedbackCount: summary.screenFeedbackCount,
+            kudosCount: summary.kudosCount,
+          },
+          diagnostics: {
+            localPromptPreview: buildPromptBody(macros),
+          },
         },
       });
 
       for await (const chunk of stream) {
+        const event = chunk.event as SynthesisStreamEvent | undefined;
+        if (event?.type === "phase1_started") {
+          setPhaseStatus("analyzing");
+        }
+        if (event?.type === "phase1_completed") {
+          setPhaseStatus("analyzing");
+          if (Array.isArray(event.macroApplicationLog) && event.macroApplicationLog.length > 0) {
+            setMacroApplicationLog(event.macroApplicationLog);
+            setShowMacroLog(true);
+          }
+        }
+        if (event?.type === "phase2_started") {
+          setPhaseStatus("generating");
+        }
+        if (event?.type === "warning") {
+          setStreamWarnings((current) => [...current, event.message]);
+        }
+        if (event?.type === "error") {
+          setStreamError(event.message);
+        }
+        if (event?.type === "done" && event.finalOutput) {
+          streamedOutput = event.finalOutput;
+          onOutputChange(streamedOutput);
+          continue;
+        }
         streamedOutput += chunk.token;
         onOutputChange(streamedOutput);
       }
-    } catch {
-      onOutputChange("Synthesis failed. Check API connectivity and try again.");
+      if (!streamedOutput) {
+        setPhaseStatus("idle");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Synthesis failed. Check API connectivity and try again.";
+      setStreamError(message);
+      onOutputChange(`Synthesis failed.\n\n${message}`);
     } finally {
       setIsGenerating(false);
+      setPhaseStatus("idle");
     }
   };
 
@@ -211,7 +262,13 @@ export const SynthesisPanel = memo(({
       <section className="panel-stack">
         <h2>Synthesis (Admin)</h2>
         <p>Enter facilitator PIN to access synthesis controls.</p>
-        <div className="inline-form">
+        <form
+          className="inline-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleUnlock();
+          }}
+        >
           <input
             type="password"
             inputMode="numeric"
@@ -223,11 +280,11 @@ export const SynthesisPanel = memo(({
             placeholder={`${pinLengthRange.min}-${pinLengthRange.max} digit PIN`}
             maxLength={pinLengthRange.max}
           />
-          <button type="button" className="primary-btn" onClick={handleUnlock}>
+          <button type="submit" className="primary-btn">
             Unlock
           </button>
           {pinError && <p className="error-text">{pinError}</p>}
-        </div>
+        </form>
       </section>
     );
   }
@@ -279,8 +336,29 @@ export const SynthesisPanel = memo(({
     <section className="panel-stack">
       <header>
         <h2>Synthesis</h2>
-        <p>{getSynthesisEndpointInfo()}</p>
+        <p className="synthesis-endpoint">{getSynthesisEndpointInfo()}</p>
       </header>
+      <p className="helper-copy">
+        {phaseStatus === "analyzing" && "Analyzing signals..."}
+        {phaseStatus === "generating" && "Generating output..."}
+        {phaseStatus === "idle" && !isGenerating && "Ready to generate."}
+      </p>
+      {streamWarnings.map((warning, index) => (
+        <p key={`${warning}-${index}`} className="helper-copy">
+          {warning}
+        </p>
+      ))}
+      {streamError && <p className="error-text">{streamError}</p>}
+      {macroApplicationLog.length > 0 && (
+        <details className="macro-log-panel" open={showMacroLog} onToggle={(event) => setShowMacroLog(event.currentTarget.open)}>
+          <summary>What the AI was instructed to do</summary>
+          <ul className="list-reset">
+            {macroApplicationLog.map((line, index) => (
+              <li key={`${line}-${index}`}>{line}</li>
+            ))}
+          </ul>
+        </details>
+      )}
 
       <div className="stats-grid">
         {stats.map((item) => (
@@ -301,9 +379,6 @@ export const SynthesisPanel = memo(({
         <div className="readiness-track">
           <span style={{ width: `${progress * 100}%` }} />
         </div>
-        <p className="helper-copy">
-          {summary.screenFeedbackCount} screen items · {summary.totalFeatureVotes} feature votes · {summary.kudosCount} kudos
-        </p>
         {totalSignals < readinessThreshold && (
           <p className="error-text">
             Signal volume is below recommended threshold. Synthesis quality may be reduced.
@@ -350,12 +425,12 @@ export const SynthesisPanel = memo(({
               onChange={(event) =>
                 updateMacros({
                   ...macros,
-                  upweightApp: (event.target.value || undefined) as AppArea | undefined,
+                  upweightApp: (event.target.value || undefined) as MacroState["upweightApp"],
                 })
               }
             >
               <option value="">Off</option>
-              {APP_AREAS.map((app) => (
+              {SORTED_APP_AREAS.map((app) => (
                 <option key={app.id} value={app.id}>
                   {app.label}
                 </option>
@@ -363,13 +438,13 @@ export const SynthesisPanel = memo(({
             </select>
           </label>
 
-          <label className="macro-card checkbox-row">
+          <label className="macro-card macro-checkbox-row">
+            <span>P0 focus only</span>
             <input
               type="checkbox"
               checked={macros.p0Only}
               onChange={(event) => updateMacros({ ...macros, p0Only: event.target.checked })}
             />
-            <span>P0 focus only</span>
           </label>
 
           <label className="macro-card">
@@ -394,7 +469,8 @@ export const SynthesisPanel = memo(({
             </select>
           </label>
 
-          <label className="macro-card checkbox-row">
+          <label className="macro-card macro-checkbox-row">
+            <span>Emphasize marketing-safe quotes</span>
             <input
               type="checkbox"
               checked={macros.emphasizeMarketingQuotes}
@@ -402,34 +478,32 @@ export const SynthesisPanel = memo(({
                 updateMacros({ ...macros, emphasizeMarketingQuotes: event.target.checked })
               }
             />
-            <span>Emphasize marketing-safe quotes</span>
           </label>
         </div>
         {macroError && <p className="error-text">{macroError}</p>}
-        <p className="helper-copy">Active macros: {activeMacroCount(macros)} / 2 · upweight default app: {activeApp}</p>
       </details>
 
-      <div className="mode-toggle">
+      <div className="synthesis-generate-actions">
         <button
           type="button"
-          className={mode === "roadmap" ? "is-active" : ""}
-          onClick={() => onModeChange("roadmap")}
+          className="secondary-btn synthesis-generate-btn"
+          onClick={() => void handleGenerate("roadmap")}
+          disabled={isGenerating}
         >
-          Roadmap
+          {isGenerating && mode === "roadmap" ? "Generating Roadmap..." : "Generate Roadmap"}
         </button>
         <button
           type="button"
-          className={mode === "prd" ? "is-active" : ""}
-          onClick={() => onModeChange("prd")}
+          className="secondary-btn synthesis-generate-btn"
+          onClick={() => void handleGenerate("prd")}
+          disabled={isGenerating}
         >
-          PRD
+          {isGenerating && mode === "prd" ? "Generating PRD..." : "Generate PRD"}
         </button>
       </div>
 
-      <div className="feedback-actions">
-        <button type="button" className="primary-btn" onClick={handleGenerate} disabled={isGenerating}>
-          {isGenerating ? "Generating..." : "Generate"}
-        </button>
+      <pre className="synthesis-output">{output || "Output will stream here."}</pre>
+      <div className="synthesis-output-actions">
         <button type="button" className="secondary-btn" onClick={handleCopy}>
           Copy Output
         </button>
@@ -448,8 +522,6 @@ export const SynthesisPanel = memo(({
       </div>
       {copyState === "copied" && <p className="helper-copy">Output copied to clipboard.</p>}
       {copyState === "failed" && <p className="error-text">Copy failed on this browser.</p>}
-
-      <pre className="synthesis-output">{output || "Output will stream here."}</pre>
     </section>
   );
 });

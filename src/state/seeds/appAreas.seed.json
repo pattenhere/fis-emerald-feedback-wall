@@ -1,0 +1,34 @@
+[
+  {
+    "id": "digital-experience",
+    "label": "Digital Experience"
+  },
+  {
+    "id": "origination",
+    "label": "Origination"
+  },
+  {
+    "id": "credit-risk",
+    "label": "Credit & Risk"
+  },
+  {
+    "id": "servicing",
+    "label": "Servicing"
+  },
+  {
+    "id": "monitoring-controls",
+    "label": "Monitoring & Controls"
+  },
+  {
+    "id": "syndication-complex-lending",
+    "label": "Syndication / Complex Lending"
+  },
+  {
+    "id": "analytics-inquiry",
+    "label": "Analytics & Inquiry"
+  },
+  {
+    "id": "platform-services",
+    "label": "Platform Services"
+  }
+]

@@ -10,10 +10,12 @@ interface FeaturesPanelProps {
     title: string;
     workflowContext?: string;
     app: AppArea;
-    screenId: string;
+    productId: number;
+    featureId?: number;
+    screenId?: number;
     screenName: string;
   }) => void;
-  onUpvote: (featureId: string) => void;
+  onUpvote: (featureId: number) => void;
 }
 
 export const FeaturesPanel = memo(({
@@ -36,7 +38,9 @@ export const FeaturesPanel = memo(({
       title,
       workflowContext,
       app: activeApp,
-      screenId: selectedScreen.id,
+      productId: selectedScreen.productId ?? 0,
+      featureId: selectedScreen.featureId,
+      screenId: Number(selectedScreen.id),
       screenName: selectedScreen.name,
     });
     setTitle("");
@@ -88,7 +92,7 @@ export const FeaturesPanel = memo(({
               <button
                 type="button"
                 className={`vote-pill ${feature.votes >= 0 ? "is-positive" : "is-negative"}`}
-                onClick={() => onUpvote(feature.id)}
+                onClick={() => onUpvote(Number(feature.id))}
               >
                 {feature.votes >= 0 ? "↑" : "↓"} {Math.abs(feature.votes)}
               </button>

@@ -2,13 +2,13 @@ import type { SeedTableDefinition } from "./adminSeedData";
 import type { AppArea, AppScreen } from "../types/domain";
 
 export interface ProductFeatureScreen extends AppScreen {
-  productId: string;
+  productId: number;
   categoryId: string;
   categoryLabel: string;
 }
 
 export interface ProductFeatureCatalog {
-  productScreensByProduct: Record<string, ProductFeatureScreen[]>;
+  productScreensByProduct: Record<number, ProductFeatureScreen[]>;
   featureCategoryLabelByFeatureId: Record<string, string>;
 }
 
@@ -23,7 +23,7 @@ export const appAreaFromCategory = (category: string): AppArea => {
   return "platform-services";
 };
 
-const rowsFor = (tables: SeedTableDefinition[], tableId: string): Array<Record<string, string | number>> =>
+const rowsFor = (tables: SeedTableDefinition[], tableId: string): Array<Record<string, unknown>> =>
   tables.find((table) => table.id === tableId)?.rows ?? [];
 
 export const buildProductFeatureCatalog = (tables: SeedTableDefinition[]): ProductFeatureCatalog => {
@@ -31,11 +31,11 @@ export const buildProductFeatureCatalog = (tables: SeedTableDefinition[]): Produ
   const productFeaturesRows = rowsFor(tables, "product_features");
   const categoryLabelById = new Map(categoriesRows.map((row) => [String(row.id), String(row.category)]));
 
-  const grouped = new Map<string, ProductFeatureScreen[]>();
+  const grouped = new Map<number, ProductFeatureScreen[]>();
   const featureCategoryLabelByFeatureId: Record<string, string> = {};
 
   for (const row of productFeaturesRows) {
-    const productId = String(row.product_id ?? "");
+    const productId = Number(row.product_id ?? 0);
     const featureId = String(row.id ?? "");
     const categoryId = String(row.feature_category_id ?? "");
     const categoryLabel = categoryLabelById.get(categoryId) ?? "";
@@ -51,11 +51,11 @@ export const buildProductFeatureCatalog = (tables: SeedTableDefinition[]): Produ
 
     const screen: ProductFeatureScreen = {
       id: featureId,
+      productId,
       app: appAreaFromCategory(categoryLabel),
       name,
       wireframeLabel: "Feature detail · working prototype taxonomy",
       description,
-      productId,
       categoryId,
       categoryLabel,
     };
@@ -66,7 +66,7 @@ export const buildProductFeatureCatalog = (tables: SeedTableDefinition[]): Produ
     featureCategoryLabelByFeatureId[featureId] = categoryLabel;
   }
 
-  const productScreensByProduct: Record<string, ProductFeatureScreen[]> = {};
+  const productScreensByProduct: Record<number, ProductFeatureScreen[]> = {};
   for (const [productId, screens] of grouped.entries()) {
     productScreensByProduct[productId] = screens.slice().sort((a, b) => {
       const categoryCompare = a.categoryLabel.localeCompare(b.categoryLabel);

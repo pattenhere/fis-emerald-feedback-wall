@@ -5,18 +5,19 @@ import { ProductLanding } from "./layout/ProductLanding";
 import { SplashPage } from "./layout/SplashPage";
 import { TopBar } from "./layout/TopBar";
 import { ViewAllResponsesPage } from "./layout/ViewAllResponsesPage";
+import { SystemAdministratorPage } from "./modules/admin/SystemAdministratorPage";
 import { FeaturesPanel } from "./modules/features/FeaturesPanel";
 import { KudosPanel } from "./modules/kudos/KudosPanel";
 import { SynthesisPanel } from "./modules/synthesis/SynthesisPanel";
-import { ADMIN_SEED_TABLES } from "./state/adminSeedData";
-import { INITIAL_FEATURE_REQUESTS, INITIAL_KUDOS, PRODUCTS } from "./state/seedData";
-import { buildProductFeatureCatalog } from "./state/productFeatureModel";
+import { useDbDataSource } from "./config/runtimeConfig";
+import { INITIAL_FEATURE_REQUESTS, INITIAL_KUDOS } from "./state/seedData";
 import { useWallState } from "./state/useWallState";
 import type { AppArea, AppScreen } from "./types/domain";
 import "./styles/app.css";
 
 const FALLBACK_SCREEN: AppScreen = {
-  id: "fallback-screen",
+  id: 0,
+  productId: 0,
   app: "servicing",
   name: "Feature",
   wireframeLabel: "Feature detail · working prototype taxonomy",
@@ -29,7 +30,21 @@ interface LiveResponseItem {
   id: string;
   category: string;
   title: string;
-  meta: string;
+  sourceType: "Feature Request" | "Kudos" | "Screen Feedback";
+  feedbackType?: "Issue" | "Suggestion" | "Missing" | "Works Well";
+  screenLabel: string;
+  roleLabel?: string;
+}
+
+interface LiveResponseTypeGroup {
+  type: LiveResponseItem["sourceType"];
+  items: LiveResponseItem[];
+}
+
+interface LiveResponseCategoryGroup {
+  category: string;
+  totalCount: number;
+  typeGroups: LiveResponseTypeGroup[];
 }
 
 const App = (): JSX.Element => {
@@ -37,17 +52,17 @@ const App = (): JSX.Element => {
   const [lastInteractionAt, setLastInteractionAt] = useState(Date.now());
   const [idleQuoteIndex, setIdleQuoteIndex] = useState(0);
   const [nowTick, setNowTick] = useState(Date.now());
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [showLiveResponses, setShowLiveResponses] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [showAllResponsesPage, setShowAllResponsesPage] = useState(false);
+  const [showSystemAdminPage, setShowSystemAdminPage] = useState(false);
   const {
     activeDrawerTab,
     activeApp,
     addFeatureRequest,
     addKudosQuote,
     addScreenFeedback,
-    appendFollowUpResponse,
     buildExportRecords,
     buildSynthesisPromptBody,
     clearSynthesisOutput,
@@ -67,8 +82,13 @@ const App = (): JSX.Element => {
     setSelectedScreenId,
     setSynthesisMode,
     setSynthesisOutput,
-    screenSubmissionCounts,
     screenFeedback,
+    products,
+    screens,
+    adminTables,
+    reseeding,
+    reseedData,
+    refreshAdminTables,
     signalSummary,
     synthesisCountdownTarget,
     synthesisMode,
@@ -78,12 +98,10 @@ const App = (): JSX.Element => {
     unlockSynthesis,
     upvoteFeatureRequest,
   } = state;
-  const productFeatureCatalog = useMemo(
-    () => buildProductFeatureCatalog(ADMIN_SEED_TABLES),
-    [],
+  const productScreens = useMemo(
+    () => (selectedProductId == null ? [] : screens.filter((screen) => screen.productId === selectedProductId)),
+    [screens, selectedProductId],
   );
-  const { productScreensByProduct, featureCategoryLabelByFeatureId } = productFeatureCatalog;
-  const productScreens = selectedProductId ? productScreensByProduct[selectedProductId] ?? [] : [];
   const selectedScreen = useMemo(
     () => productScreens.find((screen) => screen.id === selectedScreenId) ?? productScreens[0] ?? FALLBACK_SCREEN,
     [productScreens, selectedScreenId],
@@ -100,6 +118,27 @@ const App = (): JSX.Element => {
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [screenFeedback, selectedScreen.id],
   );
+  const screenBadgeCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+
+    for (const item of screenFeedback) {
+      if (item.screenId == null) continue;
+      const key = Number(item.screenId);
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    for (const item of kudosQuotes) {
+      if (item.screenId == null) continue;
+      const key = Number(item.screenId);
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    for (const item of featureRequests) {
+      if (item.screenId == null) continue;
+      const key = Number(item.screenId);
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+
+    return counts;
+  }, [featureRequests, kudosQuotes, screenFeedback]);
   const initialFeatureRequestIds = useMemo(() => new Set(INITIAL_FEATURE_REQUESTS.map((item) => item.id)), []);
   const initialKudosIds = useMemo(() => new Set(INITIAL_KUDOS.map((item) => item.id)), []);
   const sessionAreaFeatures = useMemo(
@@ -114,38 +153,57 @@ const App = (): JSX.Element => {
     [initialKudosIds, kudosQuotes, selectedScreen.id],
   );
   const inProductLanding = selectedProductId === null;
+  const featureCountByProductId = useMemo(() => {
+    const counts: Record<number, number> = {};
+    for (const screen of screens) {
+      if (screen.productId == null) continue;
+      counts[screen.productId] = (counts[screen.productId] ?? 0) + 1;
+    }
+    return counts;
+  }, [screens]);
   const selectedProductName = useMemo(
-    () => PRODUCTS.find((product) => product.id === selectedProductId)?.name ?? null,
-    [selectedProductId],
+    () => products.find((product) => Number(product.id) === selectedProductId)?.name ?? null,
+    [products, selectedProductId],
   );
   const firstFeatureScreenIdByProduct = useMemo(() => {
-    const result: Record<string, string> = {};
-    for (const [productId, screens] of Object.entries(productScreensByProduct)) {
-      if (screens.length > 0) {
-        result[productId] = screens[0].id;
+    const result: Record<number, number> = {};
+    for (const product of products) {
+      const first = screens.find((screen) => screen.productId === Number(product.id));
+      if (first) {
+        result[Number(product.id)] = Number(first.id);
       }
     }
     return result;
-  }, [productScreensByProduct]);
+  }, [products, screens]);
   const selectedCategoryLabel = useMemo(() => {
     if (!selectedProductId) {
       return selectedScreen.name;
     }
-    return featureCategoryLabelByFeatureId[selectedScreen.id] ?? selectedScreen.name;
-  }, [featureCategoryLabelByFeatureId, selectedProductId, selectedScreen.id, selectedScreen.name]);
-  const allProductScreens = useMemo(
-    () => Object.values(productScreensByProduct).flat(),
-    [productScreensByProduct],
-  );
+    return selectedScreen.categoryLabel ?? selectedScreen.name;
+  }, [selectedProductId, selectedScreen.categoryLabel, selectedScreen.name]);
+  const allProductScreens = screens;
   const categoryByNormalizedFeatureName = useMemo(() => {
     const normalize = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]/g, "");
-    return new Map(allProductScreens.map((screen) => [normalize(screen.name), screen.categoryLabel]));
+    return new Map(allProductScreens.map((screen) => [normalize(screen.name), screen.categoryLabel ?? screen.app]));
   }, [allProductScreens]);
   const liveResponsesByCategory = useMemo(() => {
     const normalize = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const resolveCategory = (screenId?: string, screenName?: string): string => {
-      if (screenId && featureCategoryLabelByFeatureId[screenId]) {
-        return featureCategoryLabelByFeatureId[screenId];
+    const categoryByScreenId = new Map(allProductScreens.map((screen) => [String(screen.id), screen.categoryLabel ?? screen.app]));
+    const screensByLengthDesc = allProductScreens
+      .slice()
+      .sort((a, b) => b.name.length - a.name.length);
+    const inferScreenFromText = (text: string): AppScreen | null => {
+      const normalizedText = text.toLowerCase();
+      for (const screen of screensByLengthDesc) {
+        if (normalizedText.includes(screen.name.toLowerCase())) {
+          return screen;
+        }
+      }
+      return null;
+    };
+    const resolveCategory = (screenId?: number | string, screenName?: string): string => {
+      if (screenId != null && categoryByScreenId.has(String(screenId))) {
+        return categoryByScreenId.get(String(screenId)) ?? "Uncategorized";
       }
       if (screenName) {
         return categoryByNormalizedFeatureName.get(normalize(screenName)) ?? "Uncategorized";
@@ -160,16 +218,25 @@ const App = (): JSX.Element => {
         id: `feature-${feature.id}`,
         category: resolveCategory(feature.screenId, feature.screenName),
         title: feature.title,
-        meta: `Feature Request • ${feature.screenName}`,
+        sourceType: "Feature Request",
+        screenLabel: feature.screenName,
       });
     }
 
     for (const quote of kudosQuotes) {
+      const inferredScreen = !quote.screenName ? inferScreenFromText(quote.text) : null;
+      const screenName = quote.screenName ?? inferredScreen?.name ?? "Unspecified";
+      const category = resolveCategory(
+        quote.screenId,
+        screenName,
+      );
       allResponses.push({
         id: `kudos-${quote.id}`,
-        category: resolveCategory(quote.screenId, quote.screenName),
+        category,
         title: quote.text,
-        meta: `Kudos • ${quote.role.toUpperCase()}`,
+        sourceType: "Kudos",
+        screenLabel: screenName,
+        roleLabel: quote.role.toUpperCase(),
       });
     }
 
@@ -182,7 +249,9 @@ const App = (): JSX.Element => {
         id: `screen-${feedback.id}`,
         category: resolveCategory(feedback.screenId, feedback.screenName),
         title: feedback.text?.trim() || feedbackTypeLabel,
-        meta: `Screen Feedback • ${feedbackTypeLabel} • ${feedback.screenName}`,
+        sourceType: "Screen Feedback",
+        feedbackType: feedbackTypeLabel as LiveResponseItem["feedbackType"],
+        screenLabel: feedback.screenName,
       });
     }
 
@@ -194,17 +263,39 @@ const App = (): JSX.Element => {
     }
 
     return [...grouped.entries()]
-      .map(([category, responses]) => ({
-        category,
-        responses: responses.slice().sort((a, b) => a.title.localeCompare(b.title)),
-      }))
-      .sort((a, b) => a.category.localeCompare(b.category));
-  }, [categoryByNormalizedFeatureName, featureCategoryLabelByFeatureId, featureRequests, kudosQuotes, screenFeedback]);
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([category, responses]): LiveResponseCategoryGroup => {
+        const byType = new Map<LiveResponseItem["sourceType"], LiveResponseItem[]>();
+        for (const item of responses) {
+          const list = byType.get(item.sourceType) ?? [];
+          list.push(item);
+          byType.set(item.sourceType, list);
+        }
+        const typeGroups = [...byType.entries()]
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([type, items]) => ({
+            type,
+            items: items.slice().sort((a, b) => {
+              const screenCompare = a.screenLabel.localeCompare(b.screenLabel);
+              if (screenCompare !== 0) {
+                return screenCompare;
+              }
+              return a.title.localeCompare(b.title);
+            }),
+          }));
+        return {
+          category,
+          totalCount: responses.length,
+          typeGroups,
+        };
+      });
+  }, [allProductScreens, categoryByNormalizedFeatureName, featureRequests, kudosQuotes, screenFeedback]);
 
   const groupedAllResponses = useMemo(() => {
-    const resolveCategory = (screenId?: string, screenName?: string): string => {
-      if (screenId && featureCategoryLabelByFeatureId[screenId]) {
-        return featureCategoryLabelByFeatureId[screenId];
+    const categoryByScreenId = new Map(allProductScreens.map((screen) => [Number(screen.id), screen.categoryLabel ?? screen.app]));
+    const resolveCategory = (screenId?: number, screenName?: string): string => {
+      if (screenId != null && categoryByScreenId.has(screenId)) {
+        return categoryByScreenId.get(screenId) ?? "Uncategorized";
       }
       if (screenName) {
         const normalized = screenName.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -225,7 +316,7 @@ const App = (): JSX.Element => {
       if (initialFeatureRequestIds.has(item.id)) {
         continue;
       }
-      const category = resolveCategory(item.screenId, item.screenName);
+      const category = resolveCategory(item.screenId == null ? undefined : Number(item.screenId), item.screenName);
       const list = grouped.get(category) ?? [];
       list.push({
         id: `feature-${item.id}`,
@@ -241,7 +332,7 @@ const App = (): JSX.Element => {
         .split("-")
         .map((segment) => `${segment.slice(0, 1).toUpperCase()}${segment.slice(1)}`)
         .join(" ");
-      const category = resolveCategory(item.screenId, item.screenName);
+      const category = resolveCategory(item.screenId == null ? undefined : Number(item.screenId), item.screenName);
       const list = grouped.get(category) ?? [];
       list.push({
         id: `feedback-${item.id}`,
@@ -253,7 +344,7 @@ const App = (): JSX.Element => {
     }
 
     for (const item of kudosQuotes) {
-      const category = resolveCategory(item.screenId, item.screenName);
+      const category = resolveCategory(item.screenId == null ? undefined : Number(item.screenId), item.screenName);
       const list = grouped.get(category) ?? [];
       list.push({
         id: `kudos-${item.id}`,
@@ -288,8 +379,8 @@ const App = (): JSX.Element => {
         };
       });
   }, [
+    allProductScreens,
     categoryByNormalizedFeatureName,
-    featureCategoryLabelByFeatureId,
     featureRequests,
     initialFeatureRequestIds,
     kudosQuotes,
@@ -305,32 +396,32 @@ const App = (): JSX.Element => {
   );
 
   const handleScreenChange = useCallback(
-    (id: string) => {
+    (id: number) => {
       setSelectedScreenId(id);
       setActiveDrawerTab("features");
       setShowAllResponsesPage(false);
+      setShowSystemAdminPage(false);
     },
     [setSelectedScreenId, setActiveDrawerTab],
   );
 
   const handleSelectProduct = useCallback(
-    (productId: string) => {
-      const product = PRODUCTS.find((item) => item.id === productId);
+    (productId: number) => {
+      const product = products.find((item) => Number(item.id) === productId);
       if (!product) return;
-      const firstScreenId = firstFeatureScreenIdByProduct[product.id];
-      const firstScreenApp = firstScreenId
-        ? (productScreensByProduct[product.id] ?? []).find((screen) => screen.id === firstScreenId)?.app
-        : undefined;
+      const firstScreenId = firstFeatureScreenIdByProduct[Number(product.id)];
+      const firstScreenApp = firstScreenId ? screens.find((screen) => Number(screen.id) === firstScreenId)?.app : undefined;
       setActiveApp(firstScreenApp ?? product.app);
       if (firstScreenId) {
         setSelectedScreenId(firstScreenId);
       }
-      setSelectedProductId(product.id);
+      setSelectedProductId(Number(product.id));
       setActiveDrawerTab("features");
       setDrawerOpen(true);
       setShowAllResponsesPage(false);
+      setShowSystemAdminPage(false);
     },
-    [firstFeatureScreenIdByProduct, productScreensByProduct, setActiveApp, setActiveDrawerTab, setDrawerOpen, setSelectedScreenId],
+    [firstFeatureScreenIdByProduct, products, screens, setActiveApp, setActiveDrawerTab, setDrawerOpen, setSelectedScreenId],
   );
 
   const drawerContent = useMemo((): JSX.Element => {
@@ -354,8 +445,10 @@ const App = (): JSX.Element => {
           onAdd={(quote) =>
             addKudosQuote({
               ...quote,
+              productId: selectedScreen.productId ?? selectedProductId ?? 0,
+              featureId: selectedScreen.featureId,
               app: activeApp,
-              screenId: selectedScreen.id,
+              screenId: Number(selectedScreen.id),
               screenName: selectedScreen.name,
             })
           }
@@ -366,7 +459,6 @@ const App = (): JSX.Element => {
     return (
       <SynthesisPanel
         summary={signalSummary}
-        activeApp={activeApp}
         conflicts={conflicts}
         readinessThreshold={readinessThreshold}
         onReadinessThresholdChange={setReadinessThreshold}
@@ -441,7 +533,7 @@ const App = (): JSX.Element => {
     return () => window.clearInterval(timer);
   }, [publicQuotes]);
 
-  const idleActive = nowTick - lastInteractionAt > 45_000 && publicQuotes.length >= 3;
+  const idleActive = nowTick - lastInteractionAt > 480_000 && publicQuotes.length >= 3;
   const idleQuote = publicQuotes[idleQuoteIndex % Math.max(publicQuotes.length, 1)];
 
   if (showSplash) {
@@ -462,14 +554,45 @@ const App = (): JSX.Element => {
         compactMode={inProductLanding}
         selectedProductName={selectedProductName}
         onOpenLiveResponses={() => setShowLiveResponses(true)}
-        onOpenViewAll={() => setShowAllResponsesPage((current) => !current)}
+        onOpenViewAll={() => {
+          setShowSystemAdminPage(false);
+          setShowAllResponsesPage((current) => !current);
+        }}
+        onOpenSystemAdmin={() => {
+          setShowAllResponsesPage(false);
+          setShowSystemAdminPage((current) => {
+            const next = !current;
+            if (next) {
+              void refreshAdminTables();
+            }
+            return next;
+          });
+        }}
         viewAllActive={showAllResponsesPage}
+        systemAdminActive={showSystemAdminPage}
       />
-      <main className={`content-shell ${showAllResponsesPage ? "is-admin-mode" : inProductLanding ? "is-product-landing" : drawerOpen ? "" : "is-drawer-collapsed"}`}>
+      <main className={`content-shell ${showAllResponsesPage || showSystemAdminPage ? "is-admin-mode" : inProductLanding ? "is-product-landing" : drawerOpen ? "" : "is-drawer-collapsed"}`}>
         {showAllResponsesPage ? (
           <ViewAllResponsesPage groups={groupedAllResponses} />
+        ) : showSystemAdminPage ? (
+          <SystemAdministratorPage
+            tables={adminTables}
+            onReseed={reseedData}
+            reseeding={reseeding}
+            dataSource={useDbDataSource ? "db" : "flat"}
+            onBackToDashboard={() => setShowSystemAdminPage(false)}
+          />
         ) : inProductLanding ? (
-          <ProductLanding onSelectProduct={handleSelectProduct} />
+          <ProductLanding
+            products={products}
+            featureCountByProductId={featureCountByProductId}
+            onSelectProduct={handleSelectProduct}
+            onOpenSystemAdmin={() => {
+              setShowAllResponsesPage(false);
+              void refreshAdminTables();
+              setShowSystemAdminPage(true);
+            }}
+          />
         ) : (
           <>
             <Drawer
@@ -481,17 +604,16 @@ const App = (): JSX.Element => {
             </Drawer>
 
             <Hero
-              selectedProductId={selectedProductId ?? ""}
+              productScreens={productScreens}
               onAppChange={handleAppChange}
               selectedScreenId={selectedScreenId}
-              screenSubmissionCounts={screenSubmissionCounts}
+              screenSubmissionCounts={screenBadgeCounts}
               featureRequests={featureRequests}
               kudosQuotes={kudosQuotes}
               allScreenFeedback={screenFeedback}
               screenFeedbackItems={selectedScreenFeedback}
               onScreenChange={handleScreenChange}
               onSubmitFeedback={addScreenFeedback}
-              onSaveFollowUp={appendFollowUpResponse}
             />
           </>
         )}
@@ -504,7 +626,7 @@ const App = (): JSX.Element => {
           </div>
         </button>
       )}
-      {showLiveResponses && !inProductLanding && !showAllResponsesPage && (
+      {showLiveResponses && !inProductLanding && !showAllResponsesPage && !showSystemAdminPage && (
         <>
           <button
             type="button"
@@ -517,31 +639,52 @@ const App = (): JSX.Element => {
               <h2>Live Responses</h2>
               <button
                 type="button"
-                className="secondary-btn"
+                className="secondary-btn live-close-btn"
                 onClick={() => setShowLiveResponses(false)}
               >
                 Close
               </button>
             </div>
             <p className="live-responses-context">
-              {signalSummary.totalResponses} total responses across all categories
+              {signalSummary.totalResponses.toLocaleString()} total responses across all categories
             </p>
             <div className="live-responses-scroll">
               {liveResponsesByCategory.length === 0 ? (
                 <p className="live-empty">No responses submitted yet.</p>
               ) : (
                 liveResponsesByCategory.map((group) => (
-                  <div key={group.category} className="live-responses-group">
-                    <h3>{group.category}</h3>
-                    <ul className="list-reset live-responses-list">
-                      {group.responses.map((item) => (
-                        <li key={item.id}>
-                          <p className="live-title">{item.title}</p>
-                          <p className="live-meta">{item.meta}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  <details key={group.category} className="live-responses-group">
+                    <summary className="live-responses-group-summary">
+                      <span>{group.category}</span>
+                      <span className="live-responses-group-count">({group.totalCount.toLocaleString()})</span>
+                    </summary>
+                    {group.typeGroups.map((typeGroup) => (
+                      <details key={typeGroup.type} className="live-type-group">
+                        <summary className="live-type-group-summary">
+                          <span className="live-type-group-title">{typeGroup.type}</span>
+                          <span className="live-type-group-count">({typeGroup.items.length.toLocaleString()})</span>
+                        </summary>
+                        <ul className="list-reset live-responses-list">
+                          {typeGroup.items.map((item) => (
+                            <li key={item.id} className="live-response-card">
+                              <p className="live-title">{item.title}</p>
+                              <div className="live-meta-row">
+                                <p className="live-meta">
+                                  {item.feedbackType && (
+                                    <span className={`live-chip live-chip--${item.feedbackType.toLowerCase().replaceAll(" ", "-")}`}>
+                                      {item.feedbackType}
+                                    </span>
+                                  )}
+                                  <span className="live-chip">{item.screenLabel}</span>
+                                </p>
+                                {item.roleLabel && <span className="live-chip live-role-chip">{item.roleLabel}</span>}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    ))}
+                  </details>
                 ))
               )}
             </div>

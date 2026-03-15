@@ -1,13 +1,12 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { type SeedTableDefinition } from "./adminSeedData";
 import {
   APP_AREAS,
   CARD_SORT_CONCEPTS,
-  FIRST_SCREEN_ID_BY_APP,
-  INITIAL_FEATURE_REQUESTS,
-  INITIAL_KUDOS,
   SCREEN_COUNT_BY_APP,
-  SCREENS_BY_APP,
 } from "./seedData";
+import { ADMIN_SEED_TABLES } from "./adminSeedData";
+import { buildDbSeedPayload } from "./dbSeedPayload";
 import type {
   AppArea,
   CardSortConcept,
@@ -24,13 +23,20 @@ import type {
   SessionRole,
   SignalSummary,
   SynthesisMode,
+  ProductDefinition,
+  AppScreen,
 } from "../types/domain";
-import { makeId } from "../utils/id";
+import { dataApi } from "../services/dataApi";
+import { useDbDataSource } from "../config/runtimeConfig";
 
 const DEFAULT_SYNTHESIS_PIN = "2468";
 const SYNTHESIS_PIN_LENGTH_RANGE = { min: 4, max: 6 } as const;
 const POSITIVE_TYPES = new Set<FeedbackType>(["works-well", "suggestion"]);
 const NEGATIVE_TYPES = new Set<FeedbackType>(["issue", "missing"]);
+const SEEDED_KUDOS_MIN = 784;
+const APP_AREA_LABEL_BY_ID: Record<AppArea, string> = Object.fromEntries(
+  APP_AREAS.map((area) => [area.id, area.label]),
+) as Record<AppArea, string>;
 
 export interface ExportRecord {
   submission_type: "feature" | "screen_feedback" | "kudos" | "card_sort";
@@ -51,37 +57,43 @@ export interface WallState {
   setActiveDrawerTab: (tab: DrawerTab) => void;
   activeApp: AppArea;
   setActiveApp: (app: AppArea) => void;
-  selectedScreenId: string;
-  setSelectedScreenId: (screenId: string) => void;
+  selectedScreenId: number;
+  setSelectedScreenId: (screenId: number) => void;
   featureRequests: FeatureRequest[];
   addFeatureRequest: (input: {
     title: string;
     workflowContext?: string;
     app: AppArea;
-    screenId: string;
+    productId: number;
+    featureId?: number;
+    screenId?: number;
     screenName: string;
     origin?: "kiosk" | "mobile";
   }) => void;
-  upvoteFeatureRequest: (featureId: string) => void;
+  upvoteFeatureRequest: (featureId: number) => void;
   kudosQuotes: KudosQuote[];
   publicQuotes: KudosQuote[];
   addKudosQuote: (quote: {
     text: string;
     role: KudosRole;
     consentPublic: boolean;
+    productId: number;
+    featureId?: number;
     app?: AppArea;
-    screenId?: string;
+    screenId?: number;
     screenName?: string;
   }) => void;
   screenFeedback: ScreenFeedback[];
   addScreenFeedback: (input: {
     app: AppArea;
-    screenId: string;
+    productId: number;
+    featureId?: number;
+    screenId?: number;
     screenName: string;
     type: FeedbackType;
     text?: string;
-  }) => string;
-  appendFollowUpResponse: (feedbackId: string, question: string, response?: string) => void;
+  }) => number;
+  appendFollowUpResponse: (feedbackId: number, question: string, response?: string) => void;
   synthesisMode: SynthesisMode;
   setSynthesisMode: (mode: SynthesisMode) => void;
   synthesisOutput: string;
@@ -94,8 +106,8 @@ export interface WallState {
   synthesisPinLengthRange: { min: number; max: number };
   buildSynthesisPromptBody: (macros?: MacroState) => string;
   clearSynthesisOutput: () => void;
-  getNextScreenInActiveApp: () => string | null;
-  screenSubmissionCounts: Record<string, number>;
+  getNextScreenInActiveApp: () => number | null;
+  screenSubmissionCounts: Record<number, number>;
   appHeatmapIntensity: Record<AppArea, number>;
   readinessThreshold: number;
   setReadinessThreshold: (next: number) => void;
@@ -108,10 +120,50 @@ export interface WallState {
   buildExportRecords: () => ExportRecord[];
   revealNarrative: string;
   setRevealNarrative: (next: string) => void;
+  adminTables: SeedTableDefinition[];
+  reseeding: boolean;
+  reseedData: () => Promise<void>;
+  refreshAdminTables: () => Promise<void>;
+  products: ProductDefinition[];
+  screens: AppScreen[];
 }
 
 const nowIso = (): string => new Date().toISOString();
 const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
+const stripLegacyDuplicateSuffix = (value: string | undefined): string =>
+  (value ?? "").replace(/\s*\[\d+\]\s*$/u, "").trim();
+const normalizeTextKey = (value: string | undefined): string =>
+  stripLegacyDuplicateSuffix(value).toLowerCase();
+
+const dedupeByText = <T,>(items: T[], getText: (item: T) => string | undefined): T[] => {
+  const seen = new Set<string>();
+  const result: T[] = [];
+  for (const item of items) {
+    const key = normalizeTextKey(getText(item));
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    result.push(item);
+  }
+  return result;
+};
+
+const dedupeSnapshot = (snapshot: WallSeedSnapshot): WallSeedSnapshot => ({
+  ...snapshot,
+  featureRequests: dedupeByText(
+    snapshot.featureRequests.map((item) => ({ ...item, title: stripLegacyDuplicateSuffix(item.title) })),
+    (item) => item.title,
+  ),
+  kudosQuotes: dedupeByText(
+    snapshot.kudosQuotes.map((item) => ({ ...item, text: stripLegacyDuplicateSuffix(item.text) })),
+    (item) => item.text,
+  ),
+  screenFeedback: dedupeByText(
+    snapshot.screenFeedback.map((item) => ({ ...item, text: stripLegacyDuplicateSuffix(item.text) })),
+    (item) => item.text ?? `__id:${item.id}`,
+  ),
+});
 
 const pTierByRank = (index: number): "P0" | "P1" | "P2" => {
   if (index < 2) {
@@ -123,17 +175,60 @@ const pTierByRank = (index: number): "P0" | "P1" | "P2" => {
   return "P2";
 };
 
+interface WallSeedSnapshot {
+  featureRequests: FeatureRequest[];
+  kudosQuotes: KudosQuote[];
+  screenFeedback: ScreenFeedback[];
+  products: ProductDefinition[];
+  screens: AppScreen[];
+  cardSortConcepts: CardSortConcept[];
+  adminTables: SeedTableDefinition[];
+  selectedScreenId: number;
+}
+
+const mapBootstrapToSnapshot = (bootstrap: Awaited<ReturnType<typeof dataApi.getBootstrap>>): WallSeedSnapshot => ({
+  featureRequests: bootstrap.featureRequests,
+  kudosQuotes: bootstrap.kudosQuotes,
+  screenFeedback: bootstrap.screenFeedback,
+  products: bootstrap.products.map((item) => ({
+    id: item.id,
+    legacyProductCode: item.legacyProductCode,
+    category: item.category,
+    subcategory: item.subcategory,
+    name: item.name,
+    app: "servicing",
+    icon: "◉",
+  })),
+  screens: bootstrap.screens.map((screen) => ({
+    id: screen.id,
+    productId: screen.productId,
+    legacyScreenCode: screen.legacyScreenCode,
+    app: (screen.screenCategory as AppArea) ?? "servicing",
+    name: screen.name,
+    wireframeLabel: "Feature detail · working prototype taxonomy",
+    description: screen.description ?? "",
+    categoryId: (screen.screenCategory as AppArea) ?? "servicing",
+    categoryLabel: APP_AREA_LABEL_BY_ID[((screen.screenCategory as AppArea) ?? "servicing") as AppArea] ?? "Servicing",
+  })),
+  cardSortConcepts: bootstrap.cardSortConcepts,
+  adminTables: bootstrap.adminTables.length > 0 ? bootstrap.adminTables : ADMIN_SEED_TABLES,
+  selectedScreenId: Number(bootstrap.screens[0]?.id ?? 0),
+});
+
 export const useWallState = (): WallState => {
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [activeDrawerTab, setActiveDrawerTab] = useState<DrawerTab>("features");
   const [activeApp, setActiveApp] = useState<AppArea>(APP_AREAS[0].id);
-  const [selectedScreenId, setSelectedScreenId] = useState(
-    FIRST_SCREEN_ID_BY_APP[APP_AREAS[0].id] ?? "",
-  );
-  const [featureRequests, setFeatureRequests] = useState<FeatureRequest[]>(INITIAL_FEATURE_REQUESTS);
-  const [freshFeatureIds, setFreshFeatureIds] = useState<string[]>([]);
-  const [kudosQuotes, setKudosQuotes] = useState<KudosQuote[]>(INITIAL_KUDOS);
+  const [selectedScreenId, setSelectedScreenId] = useState(0);
+  const [featureRequests, setFeatureRequests] = useState<FeatureRequest[]>([]);
+  const [freshFeatureIds, setFreshFeatureIds] = useState<number[]>([]);
+  const [kudosQuotes, setKudosQuotes] = useState<KudosQuote[]>([]);
   const [screenFeedback, setScreenFeedback] = useState<ScreenFeedback[]>([]);
+  const [products, setProducts] = useState<ProductDefinition[]>([]);
+  const [screens, setScreens] = useState<AppScreen[]>([]);
+  const [cardSortConcepts, setCardSortConcepts] = useState<CardSortConcept[]>(CARD_SORT_CONCEPTS);
+  const [adminTables, setAdminTables] = useState<SeedTableDefinition[]>([]);
+  const [reseeding, setReseeding] = useState(false);
   const [cardSortResponses, setCardSortResponses] = useState<CardSortResponse[]>([]);
   const [synthesisMode, setSynthesisMode] = useState<SynthesisMode>("roadmap");
   const [synthesisOutput, setSynthesisOutput] = useState("");
@@ -147,10 +242,97 @@ export const useWallState = (): WallState => {
 
   const synthesisCountdownTarget = "2026-03-12T22:00:00-04:00";
 
-  const screenSubmissionCounts = useMemo<Record<string, number>>(() => {
-    const counts: Record<string, number> = {};
+  const applySnapshot = useCallback((snapshot: WallSeedSnapshot): void => {
+    const deduped = dedupeSnapshot(snapshot);
+    setFeatureRequests(deduped.featureRequests);
+    setFreshFeatureIds([]);
+    setKudosQuotes(deduped.kudosQuotes);
+    setScreenFeedback(deduped.screenFeedback);
+    setProducts(deduped.products);
+    setScreens(deduped.screens);
+    setCardSortConcepts(deduped.cardSortConcepts.length > 0 ? deduped.cardSortConcepts : CARD_SORT_CONCEPTS);
+    setAdminTables(deduped.adminTables);
+    if (deduped.selectedScreenId > 0) {
+      setSelectedScreenId(deduped.selectedScreenId);
+    }
+  }, []);
+
+  const refreshAdminTables = useCallback(async (): Promise<void> => {
+    try {
+      const tables = await dataApi.getAdminTables();
+      setAdminTables(tables);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("[wall-state] failed to load admin tables", error);
+      setAdminTables([]);
+    }
+  }, []);
+
+  const reloadFromStore = useCallback(async (): Promise<void> => {
+    try {
+      const bootstrap = await dataApi.getBootstrap();
+      applySnapshot(mapBootstrapToSnapshot(bootstrap));
+      if (bootstrap.adminTables.length === 0) {
+        await refreshAdminTables();
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("[wall-state] reloadFromStore failed", error);
+      setAdminTables([]);
+    }
+  }, [applySnapshot, refreshAdminTables]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const init = async (): Promise<void> => {
+      try {
+        const bootstrap = await dataApi.getBootstrap();
+        if (useDbDataSource) {
+          const tableRowCount = Object.fromEntries(
+            bootstrap.adminTables.map((table) => [table.id, table.rows.length]),
+          );
+          const hasCanonicalSeed =
+            (tableRowCount.categories ?? 0) > 0 &&
+            (tableRowCount.subcategories ?? 0) > 0 &&
+            (tableRowCount.products ?? 0) > 0 &&
+            (tableRowCount.features ?? 0) > 0 &&
+            (tableRowCount.screens ?? 0) > 0;
+          const hasKudosSeedVolume = (tableRowCount.kudos ?? 0) >= SEEDED_KUDOS_MIN;
+
+          if (!hasCanonicalSeed || !hasKudosSeedVolume) {
+            await dataApi.reseed(buildDbSeedPayload());
+            if (!cancelled) {
+              await reloadFromStore();
+            }
+            return;
+          }
+        }
+        if (!cancelled) {
+          applySnapshot(mapBootstrapToSnapshot(bootstrap));
+          if (bootstrap.adminTables.length === 0) {
+            await refreshAdminTables();
+          }
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("[wall-state] init failed", error);
+        setAdminTables([]);
+      }
+    };
+
+    void init();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshAdminTables, reloadFromStore]);
+
+  const screenSubmissionCounts = useMemo<Record<number, number>>(() => {
+    const counts: Record<number, number> = {};
     for (const item of screenFeedback) {
-      counts[item.screenId] = (counts[item.screenId] ?? 0) + 1;
+      if (item.screenId == null) continue;
+      const key = Number(item.screenId);
+      counts[key] = (counts[key] ?? 0) + 1;
     }
     return counts;
   }, [screenFeedback]);
@@ -186,13 +368,13 @@ export const useWallState = (): WallState => {
   }, [appSubmissionCounts]);
 
   const conflicts = useMemo<ConflictEntry[]>(() => {
-    const grouped = new Map<string, { app: AppArea; screenId: string; screenName: string; positive: number; negative: number }>();
+    const grouped = new Map<string, { app: AppArea; screenId: number | string; screenName: string; positive: number; negative: number }>();
 
     for (const item of screenFeedback) {
       const key = `${item.app}::${item.screenId}`;
       const current = grouped.get(key) ?? {
         app: item.app,
-        screenId: item.screenId,
+        screenId: item.screenId ?? 0,
         screenName: item.screenName,
         positive: 0,
         negative: 0,
@@ -235,17 +417,19 @@ export const useWallState = (): WallState => {
 
   const setActiveAppAndResetSelectedScreen = useCallback((app: AppArea): void => {
     setActiveApp(app);
-    const firstScreenId = FIRST_SCREEN_ID_BY_APP[app];
+    const firstScreenId = screens.find((screen) => screen.app === app)?.id;
     if (firstScreenId) {
-      setSelectedScreenId(firstScreenId);
+      setSelectedScreenId(Number(firstScreenId));
     }
-  }, []);
+  }, [screens]);
 
   const addFeatureRequest = useCallback((input: {
     title: string;
     workflowContext?: string;
     app: AppArea;
-    screenId: string;
+    productId: number;
+    featureId?: number;
+    screenId?: number;
     screenName: string;
     origin?: "kiosk" | "mobile";
   }): void => {
@@ -254,81 +438,106 @@ export const useWallState = (): WallState => {
     if (!trimmedTitle) {
       return;
     }
+    if (featureRequests.some((item) => normalizeTextKey(item.title) === normalizeTextKey(trimmedTitle))) {
+      return;
+    }
 
     const next: FeatureRequest = {
-      id: makeId(),
-      app: input.app,
+      id: -Date.now(),
+      productId: input.productId,
+      featureId: input.featureId,
       screenId: input.screenId,
+      app: input.app,
       screenName: input.screenName,
       title: trimmedTitle,
+      description: trimmedTitle,
       workflowContext: trimmedContext || undefined,
       votes: 1,
       createdAt: nowIso(),
+      status: "open",
       origin: input.origin ?? "kiosk",
     };
 
     setFeatureRequests((current) => [next, ...current]);
-    setFreshFeatureIds((current) => [next.id, ...current]);
-  }, []);
+    setFreshFeatureIds((current) => [Number(next.id), ...current]);
+    void dataApi.addFeatureRequest(next);
+  }, [featureRequests]);
 
-  const upvoteFeatureRequest = useCallback((featureId: string): void => {
+  const upvoteFeatureRequest = useCallback((featureId: number): void => {
     setFeatureRequests((current) =>
       current.map((item) => (item.id === featureId ? { ...item, votes: item.votes + 1 } : item)),
     );
     setFreshFeatureIds((current) => current.filter((id) => id !== featureId));
+    void dataApi.upvoteFeatureRequest(featureId);
   }, []);
 
   const addKudosQuote = useCallback((quote: {
     text: string;
     role: KudosRole;
     consentPublic: boolean;
+    productId: number;
+    featureId?: number;
     app?: AppArea;
-    screenId?: string;
+    screenId?: number;
     screenName?: string;
   }): void => {
     const trimmed = quote.text.trim();
     if (!trimmed) {
       return;
     }
+    if (kudosQuotes.some((item) => normalizeTextKey(item.text) === normalizeTextKey(trimmed))) {
+      return;
+    }
 
-    setKudosQuotes((current) => [
-      {
-        id: makeId(),
-        text: trimmed,
-        role: quote.role,
-        consentPublic: quote.consentPublic,
-        app: quote.app,
-        screenId: quote.screenId,
-        screenName: quote.screenName,
-        createdAt: nowIso(),
-      },
-      ...current,
-    ]);
-  }, []);
+    const next: KudosQuote = {
+      id: -Date.now(),
+      productId: quote.productId,
+      featureId: quote.featureId,
+      screenId: quote.screenId,
+      text: trimmed,
+      role: quote.role,
+      consentPublic: quote.consentPublic,
+      app: quote.app,
+      screenName: quote.screenName,
+      createdAt: nowIso(),
+    };
+
+    setKudosQuotes((current) => [next, ...current]);
+    void dataApi.addKudos(next);
+  }, [kudosQuotes]);
 
   const addScreenFeedback = useCallback((input: {
     app: AppArea;
-    screenId: string;
+    productId: number;
+    featureId?: number;
+    screenId?: number;
     screenName: string;
     type: FeedbackType;
     text?: string;
-  }): string => {
-    const id = makeId();
+  }): number => {
+    const id = -Date.now();
+    const trimmedText = input.text?.trim();
+    if (screenFeedback.some((item) => normalizeTextKey(item.text) === normalizeTextKey(trimmedText))) {
+      return id;
+    }
     const next: ScreenFeedback = {
       id,
-      app: input.app,
+      productId: input.productId,
+      featureId: input.featureId,
       screenId: input.screenId,
+      app: input.app,
       screenName: input.screenName,
       type: input.type,
-      text: input.text?.trim() || undefined,
+      text: trimmedText || undefined,
       createdAt: nowIso(),
     };
 
     setScreenFeedback((current) => [next, ...current]);
+    void dataApi.addScreenFeedback(next);
     return id;
-  }, []);
+  }, [screenFeedback]);
 
-  const appendFollowUpResponse = useCallback((feedbackId: string, question: string, response?: string): void => {
+  const appendFollowUpResponse = useCallback((feedbackId: number, question: string, response?: string): void => {
     setScreenFeedback((current) =>
       current.map((item) =>
         item.id === feedbackId
@@ -365,7 +574,7 @@ export const useWallState = (): WallState => {
     const filteredFeedback =
       typeof lowSignalThreshold === "number"
         ? screenFeedback.filter(
-            (item) => (screenSubmissionCounts[item.screenId] ?? 0) >= lowSignalThreshold,
+            (item) => item.screenId != null && (screenSubmissionCounts[Number(item.screenId)] ?? 0) >= lowSignalThreshold,
           )
         : screenFeedback;
 
@@ -393,7 +602,7 @@ export const useWallState = (): WallState => {
       )
       .join("\n");
 
-    const cardSortTotals = CARD_SORT_CONCEPTS.map((concept) => {
+    const cardSortTotals = cardSortConcepts.map((concept) => {
       const votes = cardSortResponses.filter((response) => response.conceptId === concept.id);
       const total = Math.max(votes.length, 1);
       const high = votes.filter((vote) => vote.tier === "high").length;
@@ -444,26 +653,36 @@ export const useWallState = (): WallState => {
       "Prompt Modifiers",
       activeMacroLines.length ? activeMacroLines.map((line, index) => `${index + 1}. ${line}`).join("\n") : "No macros active.",
     ].join("\n");
-  }, [cardSortResponses, conflicts, featureRequests, kudosQuotes, screenFeedback, screenSubmissionCounts, sessionRole]);
+  }, [cardSortConcepts, cardSortResponses, conflicts, featureRequests, kudosQuotes, screenFeedback, screenSubmissionCounts, sessionRole]);
 
   const clearSynthesisOutput = useCallback((): void => {
     setSynthesisOutput("");
   }, []);
 
-  const getNextScreenInActiveApp = useCallback((): string | null => {
-    const appScreens = SCREENS_BY_APP[activeApp];
+  const reseedData = useCallback(async (): Promise<void> => {
+    setReseeding(true);
+    try {
+      await dataApi.reseed(buildDbSeedPayload());
+      await reloadFromStore();
+    } finally {
+      setReseeding(false);
+    }
+  }, [reloadFromStore]);
+
+  const getNextScreenInActiveApp = useCallback((): number | null => {
+    const appScreens = screens.filter((screen) => screen.app === activeApp);
     if (appScreens.length < 2) {
       return null;
     }
 
-    const currentIndex = appScreens.findIndex((screen) => screen.id === selectedScreenId);
+    const currentIndex = appScreens.findIndex((screen) => Number(screen.id) === selectedScreenId);
     if (currentIndex === -1) {
-      return appScreens[0].id;
+      return Number(appScreens[0].id);
     }
 
     const nextIndex = (currentIndex + 1) % appScreens.length;
-    return appScreens[nextIndex].id;
-  }, [activeApp, selectedScreenId]);
+    return Number(appScreens[nextIndex].id);
+  }, [activeApp, screens, selectedScreenId]);
 
   const setCardSortTier = useCallback((conceptId: string, tier: CardSortTier): void => {
     setCardSortResponses((current) => {
@@ -475,13 +694,17 @@ export const useWallState = (): WallState => {
       }
       return [...current, { conceptId, tier, updatedAt: nowIso() }];
     });
-  }, []);
+    const conceptTitle = cardSortConcepts.find((item) => item.id === conceptId)?.title;
+    if (conceptTitle) {
+      void dataApi.setCardSortTier({ conceptTitle, tier, role: sessionRole });
+    }
+  }, [cardSortConcepts, sessionRole]);
 
   const sortedFeatureRequests = useMemo(() => {
     const freshIds = new Set(freshFeatureIds);
     return [...featureRequests].sort((a, b) => {
-      const aFresh = freshIds.has(a.id);
-      const bFresh = freshIds.has(b.id);
+      const aFresh = freshIds.has(Number(a.id));
+      const bFresh = freshIds.has(Number(b.id));
       if (aFresh !== bFresh) {
         return aFresh ? -1 : 1;
       }
@@ -538,7 +761,7 @@ export const useWallState = (): WallState => {
     }));
 
     const cardSortRows: ExportRecord[] = cardSortResponses.map((response) => {
-      const concept = CARD_SORT_CONCEPTS.find((item) => item.id === response.conceptId);
+      const concept = cardSortConcepts.find((item) => item.id === response.conceptId);
       return {
         submission_type: "card_sort",
         app_section: "ai-concepts",
@@ -553,7 +776,7 @@ export const useWallState = (): WallState => {
     });
 
     return [...featureRows, ...screenRows, ...kudosRows, ...cardSortRows];
-  }, [cardSortResponses, kudosQuotes, screenFeedback, sessionRole, sortedFeatureRequests]);
+  }, [cardSortConcepts, cardSortResponses, kudosQuotes, screenFeedback, sessionRole, sortedFeatureRequests]);
 
   return {
     drawerOpen,
@@ -593,11 +816,17 @@ export const useWallState = (): WallState => {
     conflicts,
     sessionRole,
     setSessionRole,
-    cardSortConcepts: CARD_SORT_CONCEPTS,
+    cardSortConcepts,
     cardSortResponses,
     setCardSortTier,
     buildExportRecords,
     revealNarrative,
     setRevealNarrative,
+    adminTables,
+    reseeding,
+    reseedData,
+    refreshAdminTables,
+    products,
+    screens,
   };
 };

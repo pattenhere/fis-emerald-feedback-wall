@@ -6,7 +6,7 @@ import { makeId } from "./utils/id";
 interface MobileFeature {
   id: string;
   app: AppArea;
-  screenId: string;
+  screenId: number;
   title: string;
   votes: number;
 }
@@ -51,7 +51,7 @@ export const MobileApp = (): JSX.Element => {
     if (!title.trim()) {
       return;
     }
-    const screenId = SCREENS_BY_APP[app][0]?.id ?? "";
+    const screenId = Number(SCREENS_BY_APP[app][0]?.id ?? 0);
     const next = [{ id: makeId(), app, screenId, title: title.trim(), votes: 1 }, ...features];
     setFeatures(next);
     persist(next, kudos);
