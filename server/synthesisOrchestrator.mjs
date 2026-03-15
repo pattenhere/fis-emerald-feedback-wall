@@ -1447,6 +1447,43 @@ const localFallbackMarkdown = (mode, aggregates) => {
   ].join("\n");
 };
 
+const buildDeterministicPhase1Fallback = ({ aggregates, quoteSets, conflicts, macros, featureThemeLimit }) => {
+  const topFallbackFeatures = aggregates.topFeatureRequests.slice(0, Math.max(6, featureThemeLimit ?? 5));
+  return {
+    p0Items: topFallbackFeatures.slice(0, 2).map((item) => ({
+      title: item.text,
+      why: "Derived from highest composite score",
+      evidenceSources: ["feature_requests"],
+      rolesAffected: null,
+      effortEstimate: "medium",
+      conflictLevel: "low",
+      signalCount: item.voteCount,
+      screenNames: [],
+    })),
+    p1Items: topFallbackFeatures.slice(2, 6).map((item) => ({
+      title: item.text,
+      why: "Lower composite score",
+      evidenceSources: ["feature_requests"],
+      rolesAffected: null,
+      effortEstimate: "medium",
+      conflictLevel: "low",
+      signalCount: item.voteCount,
+      screenNames: [],
+    })),
+    p2Themes: [],
+    crossCuttingInsights: [],
+    selectedQuotes: quoteSets.publicSafe.slice(0, macros.emphasiseQuotes ? 6 : 3).map((k) => ({ text: k.text, role: k.roleLabel ?? null })),
+    competingPerspectives: conflicts.slice(0, 3).map((c) => ({
+      screenName: c.screenName,
+      conflictLevel: "high",
+      positiveCount: c.positiveCount,
+      negativeCount: c.negativeCount,
+      recommendation: "Address highest-volume pain while preserving positive path",
+    })),
+    macroApplicationLog: ["Fallback mode: phase 1 output normalization was applied."],
+  };
+};
+
 export const runSynthesis = async ({ requestBody, signals, sendEvent, config, log }) => {
   const outputMode = sanitizeMode(requestBody?.outputMode ?? requestBody?.mode);
   const macros = normalizeMacros(requestBody?.macros ?? {});
@@ -1569,47 +1606,20 @@ export const runSynthesis = async ({ requestBody, signals, sendEvent, config, lo
   }
 
   let phase1Analysis;
-  const topFallbackFeatures = aggregates.topFeatureRequests.slice(0, Math.max(6, config.FEATURE_THEME_LIMIT));
-
   if (!config.provider) {
     if (!config.enableLocalFallback) {
       const err = new Error("No configured AI provider key is available. Set SYNTHESIS_AI_PROVIDER and matching OPENAI_API_KEY or ANTHROPIC_API_KEY.");
       err.code = "ERR-02";
       throw err;
     }
-    phase1Analysis = {
-      p0Items: topFallbackFeatures.slice(0, 2).map((item) => ({
-        title: item.text,
-        why: "Derived from highest composite score",
-        evidenceSources: ["feature_requests"],
-        rolesAffected: null,
-        effortEstimate: "medium",
-        conflictLevel: "low",
-        signalCount: item.voteCount,
-        screenNames: [],
-      })),
-      p1Items: topFallbackFeatures.slice(2, 6).map((item) => ({
-        title: item.text,
-        why: "Lower composite score",
-        evidenceSources: ["feature_requests"],
-        rolesAffected: null,
-        effortEstimate: "medium",
-        conflictLevel: "low",
-        signalCount: item.voteCount,
-        screenNames: [],
-      })),
-      p2Themes: [],
-      crossCuttingInsights: [],
-      selectedQuotes: quoteSets.publicSafe.slice(0, macros.emphasiseQuotes ? 6 : 3).map((k) => ({ text: k.text, role: k.roleLabel ?? null })),
-      competingPerspectives: conflicts.slice(0, 3).map((c) => ({
-        screenName: c.screenName,
-        conflictLevel: "high",
-        positiveCount: c.positiveCount,
-        negativeCount: c.negativeCount,
-        recommendation: "Address highest-volume pain while preserving positive path",
-      })),
-      macroApplicationLog: ["Fallback mode: no provider configured."],
-    };
+    phase1Analysis = buildDeterministicPhase1Fallback({
+      aggregates,
+      quoteSets,
+      conflicts,
+      macros,
+      featureThemeLimit: config.FEATURE_THEME_LIMIT,
+    });
+    phase1Analysis.macroApplicationLog = ["Fallback mode: no provider configured."];
   } else {
     let phase1Result;
     try {
@@ -1644,9 +1654,21 @@ export const runSynthesis = async ({ requestBody, signals, sendEvent, config, lo
       const parsed = typeof phase1Result === "string" ? parseJsonPayloadFromText(phase1Result) : phase1Result;
       phase1Analysis = ensurePhase1Shape(parsed);
     } catch (error) {
-      const err = new Error("Analysis returned an unexpected format. Try generating again — if this repeats, export the raw data.");
-      err.code = "ERR-03";
-      throw err;
+      if (typeof log === "function") {
+        log(`[synthesis] phase1 normalization failed; falling back to deterministic synthesis: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      sendEvent({
+        type: "warning",
+        code: "ERR-03",
+        message: "Analysis returned an unexpected format. Applied deterministic fallback analysis.",
+      });
+      phase1Analysis = buildDeterministicPhase1Fallback({
+        aggregates,
+        quoteSets,
+        conflicts,
+        macros,
+        featureThemeLimit: config.FEATURE_THEME_LIMIT,
+      });
     }
   }
 
