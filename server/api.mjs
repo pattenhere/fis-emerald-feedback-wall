@@ -1358,7 +1358,14 @@ export const handleApiRequest = async (request, response) => {
     }
 
     if (method === "GET" && pathname === "/health") {
-      sendJson(response, 200, { ok: true, dbPath, dbEngine, dataSourceMode, synthesisProvider: synthesisConfig.provider ?? null });
+      sendJson(response, 200, {
+        ok: true,
+        dbPath,
+        dbEngine,
+        dataSourceMode,
+        synthesisProvider: synthesisConfig.provider ?? null,
+        synthesisPhase1TimeoutMs: Number(synthesisConfig.PHASE1_TIMEOUT_MS ?? 0),
+      });
       return;
     }
 

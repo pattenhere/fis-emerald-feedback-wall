@@ -12,7 +12,7 @@ const DEFAULTS = {
   PHASE1_MAX_TOKENS: 1300,
   PHASE2_MAX_TOKENS_ROADMAP: 1600,
   PHASE2_MAX_TOKENS_PRD: 1900,
-  PHASE1_TIMEOUT_MS: 30000,
+  PHASE1_TIMEOUT_MS: 60000,
   PHASE2_STALL_WARNING_MS: 10000,
   PHASE2_STALL_TERMINATE_MS: 60000,
   MAX_PUBLIC_QUOTES_DEFAULT: 3,
@@ -1633,7 +1633,7 @@ export const runSynthesis = async ({ requestBody, signals, sendEvent, config, lo
         }),
         config.PHASE1_TIMEOUT_MS,
         "ERR-02",
-        "Analysis timed out. The API did not respond within 30 seconds. Your data is safe — try again, or export the raw data for manual analysis.",
+        `Analysis timed out. The API did not respond within ${Math.round(Number(config.PHASE1_TIMEOUT_MS) / 1000)} seconds. Your data is safe — try again, or export the raw data for manual analysis.`,
       );
     } catch (error) {
       if (!error.code) error.code = "ERR-02";
