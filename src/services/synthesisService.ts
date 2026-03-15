@@ -4,11 +4,17 @@ const SYNTHESIS_API_BASE = import.meta.env.VITE_SYNTHESIS_API_BASE_URL;
 const SYNTHESIS_STREAM_PATH = "/api/synthesis/stream";
 const AI_DEBUG_LOGS = String(import.meta.env.VITE_AI_DEBUG_LOGS ?? "false").toLowerCase() === "true";
 
+const normalizeSynthesisBase = (value: string): string => String(value).replace(/\/+$/u, "");
+
 const resolveSynthesisUrl = (): string => {
   if (!SYNTHESIS_API_BASE) {
     return SYNTHESIS_STREAM_PATH;
   }
-  return `${String(SYNTHESIS_API_BASE).replace(/\/$/, "")}${SYNTHESIS_STREAM_PATH}`;
+  const base = normalizeSynthesisBase(String(SYNTHESIS_API_BASE));
+  if (base.endsWith("/api")) {
+    return `${base}/synthesis/stream`;
+  }
+  return `${base}${SYNTHESIS_STREAM_PATH}`;
 };
 
 const fallbackSynthesisUrl = (): string => SYNTHESIS_STREAM_PATH;
@@ -42,6 +48,7 @@ export const streamSynthesis = async function* (
 ): AsyncGenerator<SynthesisStreamChunk, SynthesisResponse> {
   let response: Response;
   const primaryUrl = resolveSynthesisUrl();
+  const fallbackUrl = fallbackSynthesisUrl();
   try {
     response = await fetch(primaryUrl, {
       method: "POST",
@@ -51,7 +58,6 @@ export const streamSynthesis = async function* (
   } catch {
     // Fallback to same-origin API path if configured base URL is unreachable.
     try {
-      const fallbackUrl = fallbackSynthesisUrl();
       if (AI_DEBUG_LOGS) {
         console.warn(`[AI][Synthesis] Primary endpoint unreachable (${primaryUrl}); retrying ${fallbackUrl}`);
       }
@@ -62,6 +68,21 @@ export const streamSynthesis = async function* (
       });
     } catch {
       throw new Error("Unable to reach synthesis service. Check server/API connectivity and try again.");
+    }
+  }
+
+  if ((!response.ok || !response.body) && primaryUrl !== fallbackUrl) {
+    if (AI_DEBUG_LOGS) {
+      console.warn(`[AI][Synthesis] Primary endpoint returned ${response.status}; retrying ${fallbackUrl}`);
+    }
+    try {
+      response = await fetch(fallbackUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(request),
+      });
+    } catch {
+      // keep primary response for downstream error handling
     }
   }
 

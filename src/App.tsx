@@ -91,6 +91,8 @@ const App = (): JSX.Element => {
     adminDataSource,
     adminDbEngine,
     isDataLoaded,
+    dataLoadError,
+    retryDataLoad,
     signalSummary,
     synthesisCountdownTarget,
     synthesisCountdownRunning,
@@ -552,6 +554,8 @@ const App = (): JSX.Element => {
       <SplashPage
         imageSrc="/assets/splash-wall-hero.png"
         isDataLoaded={isDataLoaded}
+        loadError={dataLoadError}
+        onRetryLoad={() => void retryDataLoad()}
         onContinue={() => setShowSplash(false)}
       />
     );

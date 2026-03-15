@@ -659,8 +659,7 @@ const bootstrapPayloadPostgres = async () =>
       `)
     ).rows;
 
-    const adminTables = await buildAdminTablesPostgres();
-    return { products, features, screens, featureRequests, screenFeedback, kudosQuotes, appAreas: [], cardSortConcepts: [], adminTables };
+    return { products, features, screens, featureRequests, screenFeedback, kudosQuotes, appAreas: [], cardSortConcepts: [], adminTables: [] };
   });
 
 const toFlatBootstrap = () => {
@@ -779,18 +778,6 @@ const toFlatBootstrap = () => {
     };
   }).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 
-  const adminTables = [
-    { id: "categories", label: "categories", columns: Object.keys(core.categories[0] ?? {}), rows: core.categories },
-    { id: "subcategories", label: "subcategories", columns: Object.keys(core.subcategories[0] ?? {}), rows: core.subcategories },
-    { id: "products", label: "products", columns: Object.keys(core.products[0] ?? {}), rows: core.products },
-    { id: "institution_profiles", label: "institution_profiles", columns: Object.keys(core.institutionProfiles[0] ?? {}), rows: core.institutionProfiles },
-    { id: "product_feature_categories", label: "product_feature_categories", columns: Object.keys(core.productFeatureCategories[0] ?? {}), rows: core.productFeatureCategories },
-    { id: "product_features", label: "product_features", columns: Object.keys(core.productFeatures[0] ?? {}), rows: core.productFeatures },
-    { id: "feature_requests", label: "feature_requests", columns: Object.keys(featureRequests[0] ?? {}), rows: featureRequests },
-    { id: "kudos", label: "kudos", columns: Object.keys(kudosQuotes[0] ?? {}), rows: kudosQuotes },
-    { id: "screen_feedback", label: "screen_feedback", columns: Object.keys(screenFeedback[0] ?? {}), rows: screenFeedback },
-  ];
-
   return {
     appAreas: core.appAreas,
     cardSortConcepts: core.cardSortConcepts,
@@ -800,7 +787,7 @@ const toFlatBootstrap = () => {
     featureRequests,
     screenFeedback,
     kudosQuotes,
-    adminTables,
+    adminTables: [],
   };
 };
 

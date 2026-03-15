@@ -139,6 +139,8 @@ export interface WallState {
   adminDataSource: "db" | "flat";
   adminDbEngine: "sqlite" | "postgres" | null;
   isDataLoaded: boolean;
+  dataLoadError: string | null;
+  retryDataLoad: () => Promise<void>;
 }
 
 const nowIso = (): string => new Date().toISOString();
@@ -294,6 +296,7 @@ export const useWallState = (): WallState => {
   const [adminDataSource, setAdminDataSource] = useState<"db" | "flat">(useDbDataSource ? "db" : "flat");
   const [adminDbEngine, setAdminDbEngine] = useState<"sqlite" | "postgres" | null>(null);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [dataLoadError, setDataLoadError] = useState<string | null>(null);
   const [reseeding, setReseeding] = useState(false);
   const [cardSortResponses, setCardSortResponses] = useState<CardSortResponse[]>([]);
   const [synthesisMode, setSynthesisMode] = useState<SynthesisMode>("roadmap");
@@ -337,6 +340,7 @@ export const useWallState = (): WallState => {
       setSelectedScreenId(deduped.selectedScreenId);
     }
     setIsDataLoaded(true);
+    setDataLoadError(null);
   }, []);
 
   const refreshAdminTables = useCallback(async (): Promise<void> => {
@@ -370,56 +374,51 @@ export const useWallState = (): WallState => {
       await refreshHealth();
       const bootstrap = await dataApi.getBootstrap();
       applySnapshot(mapBootstrapToSnapshot(bootstrap));
-      if (bootstrap.adminTables.length === 0) {
-        await refreshAdminTables();
-      }
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("[wall-state] reloadFromStore failed", error);
       setAdminTables([]);
+      setDataLoadError("Unable to load application data. Please retry.");
+      setIsDataLoaded(false);
     }
-  }, [applySnapshot, refreshAdminTables, refreshHealth]);
+  }, [applySnapshot, refreshHealth]);
+
+  const initializeData = useCallback(async (): Promise<void> => {
+    setIsDataLoaded(false);
+    setDataLoadError(null);
+    const health = await refreshHealth();
+    const bootstrap = await dataApi.getBootstrap();
+    const backendUsesDb = (health?.dataSourceMode ?? (useDbDataSource ? "db" : "flat")) === "db";
+    if (backendUsesDb) {
+      const hasCanonicalSeed =
+        bootstrap.products.length > 0 &&
+        bootstrap.features.length > 0 &&
+        bootstrap.screens.length > 0;
+      const hasKudosSeedVolume = bootstrap.kudosQuotes.length >= SEEDED_KUDOS_MIN;
+
+      if (!hasCanonicalSeed || !hasKudosSeedVolume) {
+        await dataApi.reseed(buildDbSeedPayload());
+        await reloadFromStore();
+        return;
+      }
+    }
+    applySnapshot(mapBootstrapToSnapshot(bootstrap));
+  }, [applySnapshot, refreshHealth, reloadFromStore]);
 
   useEffect(() => {
     let cancelled = false;
 
     const init = async (): Promise<void> => {
-      setIsDataLoaded(false);
       try {
-        const health = await refreshHealth();
-        const bootstrap = await dataApi.getBootstrap();
-        const backendUsesDb = (health?.dataSourceMode ?? (useDbDataSource ? "db" : "flat")) === "db";
-        if (backendUsesDb) {
-          const tableRowCount = Object.fromEntries(
-            bootstrap.adminTables.map((table) => [table.id, table.rows.length]),
-          );
-          const hasCanonicalSeed =
-            (tableRowCount.categories ?? 0) > 0 &&
-            (tableRowCount.subcategories ?? 0) > 0 &&
-            (tableRowCount.products ?? 0) > 0 &&
-            (tableRowCount.features ?? 0) > 0 &&
-            (tableRowCount.screens ?? 0) > 0;
-          const hasKudosSeedVolume = (tableRowCount.kudos ?? 0) >= SEEDED_KUDOS_MIN;
-
-          if (!hasCanonicalSeed || !hasKudosSeedVolume) {
-            await dataApi.reseed(buildDbSeedPayload());
-            if (!cancelled) {
-              await reloadFromStore();
-            }
-            return;
-          }
-        }
-        if (!cancelled) {
-          applySnapshot(mapBootstrapToSnapshot(bootstrap));
-          if (bootstrap.adminTables.length === 0) {
-            await refreshAdminTables();
-          }
-        }
+        await initializeData();
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error("[wall-state] init failed", error);
-        setAdminTables([]);
-        setIsDataLoaded(false);
+        if (!cancelled) {
+          setAdminTables([]);
+          setDataLoadError("Unable to load application data. Please retry.");
+          setIsDataLoaded(false);
+        }
       }
     };
 
@@ -427,7 +426,18 @@ export const useWallState = (): WallState => {
     return () => {
       cancelled = true;
     };
-  }, [refreshAdminTables, refreshHealth, reloadFromStore]);
+  }, [initializeData]);
+
+  const retryDataLoad = useCallback(async (): Promise<void> => {
+    try {
+      await initializeData();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("[wall-state] retryDataLoad failed", error);
+      setDataLoadError("Unable to load application data. Please retry.");
+      setIsDataLoaded(false);
+    }
+  }, [initializeData]);
 
   const screenSubmissionCounts = useMemo<Record<number, number>>(() => {
     const counts: Record<number, number> = {};
@@ -952,5 +962,7 @@ export const useWallState = (): WallState => {
     adminDataSource,
     adminDbEngine,
     isDataLoaded,
+    dataLoadError,
+    retryDataLoad,
   };
 };

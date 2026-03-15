@@ -4,12 +4,16 @@ interface SplashPageProps {
   imageSrc: string;
   onContinue: () => void;
   isDataLoaded: boolean;
+  loadError?: string | null;
+  onRetryLoad?: () => void;
 }
 
 export const SplashPage = memo(({
   imageSrc,
   onContinue,
   isDataLoaded,
+  loadError = null,
+  onRetryLoad,
 }: SplashPageProps): JSX.Element => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
@@ -48,6 +52,13 @@ export const SplashPage = memo(({
             <button type="button" className="primary-btn splash-continue-btn" onClick={onContinue}>
               Enter Feedback Wall
             </button>
+          ) : loadError ? (
+            <div className="splash-load-error">
+              <p>{loadError}</p>
+              <button type="button" className="secondary-btn" onClick={onRetryLoad}>
+                Retry Loading
+              </button>
+            </div>
           ) : (
             <p className="splash-loading-note">Loading data...</p>
           )}
