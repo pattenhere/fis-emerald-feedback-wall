@@ -1,16 +1,20 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { KudosQuote, SignalSummary } from "../types/domain";
-import { formatCountdown } from "../utils/time";
+import { formatCountdown, formatDurationMmSs } from "../utils/time";
 
 interface TopBarProps {
   summary: SignalSummary;
   countdownTarget: string;
+  countdownRunning: boolean;
+  countdownHasStarted: boolean;
+  countdownInitialSeconds: number;
   publicQuotes: KudosQuote[];
   compactMode?: boolean;
   selectedProductName?: string | null;
   onOpenLiveResponses?: () => void;
   onOpenViewAll?: () => void;
   onOpenSystemAdmin?: () => void;
+  onOpenSplash?: () => void;
   viewAllActive?: boolean;
   systemAdminActive?: boolean;
 }
@@ -18,28 +22,43 @@ interface TopBarProps {
 export const TopBar = memo(({
   summary,
   countdownTarget,
+  countdownRunning,
+  countdownHasStarted,
+  countdownInitialSeconds,
   publicQuotes,
   compactMode = false,
   selectedProductName = null,
   onOpenLiveResponses,
   onOpenViewAll,
   onOpenSystemAdmin,
+  onOpenSplash,
   viewAllActive = false,
   systemAdminActive = false,
 }: TopBarProps): JSX.Element => {
-  const [countdown, setCountdown] = useState(formatCountdown(countdownTarget));
+  const [countdown, setCountdown] = useState(() =>
+    countdownHasStarted ? formatCountdown(countdownTarget) : formatDurationMmSs(countdownInitialSeconds),
+  );
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [showQr, setShowQr] = useState(false);
   const [titleWidthPx, setTitleWidthPx] = useState<number | null>(null);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
 
   useEffect(() => {
+    if (!countdownRunning) {
+      return;
+    }
+    setCountdown(formatCountdown(countdownTarget));
     const timer = window.setInterval(() => {
       setCountdown(formatCountdown(countdownTarget));
     }, 1000);
-
     return () => window.clearInterval(timer);
-  }, [countdownTarget]);
+  }, [countdownRunning, countdownTarget]);
+
+  useEffect(() => {
+    if (!countdownHasStarted) {
+      setCountdown(formatDurationMmSs(countdownInitialSeconds));
+    }
+  }, [countdownHasStarted, countdownInitialSeconds]);
 
   useEffect(() => {
     if (publicQuotes.length < 3) {
@@ -85,7 +104,14 @@ export const TopBar = memo(({
       <header className="top-bar">
         <div className="top-bar-title">
           <div className="top-bar-brand">
-            <h1 ref={titleRef}>Emerald Feedback Wall</h1>
+            <button
+              type="button"
+              className="top-bar-home-button"
+              onClick={onOpenSplash}
+              aria-label="Return to splash screen"
+            >
+              <h1 ref={titleRef}>Emerald Feedback Wall</h1>
+            </button>
             {selectedProductName && !compactMode && (
               <p
                 className="top-bar-product-name"
@@ -141,7 +167,7 @@ export const TopBar = memo(({
             <div className="top-bar-metrics">
               <button type="button" className="metric-card metric-card-button" onClick={onOpenLiveResponses}>
                 <span className="metric-label">Live Responses</span>
-                <strong>{summary.totalResponses}</strong>
+                <strong>{summary.totalResponses.toLocaleString()}</strong>
               </button>
               <div className="metric-card">
                 <span className="metric-label">Synthesis Countdown</span>

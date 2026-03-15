@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import http from "node:http";
 import Database from "better-sqlite3";
+import { getPostgresPool, isPostgresConfigured } from "./db/postgres/client.mjs";
 import { buildSynthesisConfig, runSynthesis, toSynthesisSignals } from "./synthesisOrchestrator.mjs";
 import { initRuntimeStore, readRuntimeStore, resetRuntimeStore, writeRuntimeStore } from "./runtimeStore.mjs";
 
@@ -47,6 +48,11 @@ const defaultRuntimeStorePath = isVercelRuntime ? "/tmp/flat-runtime-store.json"
 const dbPath = path.resolve(rootDir, process.env.FEEDBACK_DB_PATH ?? defaultDbPath);
 const serverSeedDir = path.resolve(rootDir, "src/state/seeds");
 const runtimeStorePath = path.resolve(rootDir, process.env.FLAT_RUNTIME_STORE_PATH ?? defaultRuntimeStorePath);
+const parseDbEngine = (value) => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return normalized === "postgres" ? "postgres" : "sqlite";
+};
+const dbEngine = parseDbEngine(process.env.FEEDBACK_DB_ENGINE);
 const parseDataSourceMode = (value) => {
   const normalized = String(value ?? "").trim().toLowerCase();
   return normalized === "db" || normalized === "database" ? "db" : "flat";
@@ -55,7 +61,28 @@ const dataSourceMode = parseDataSourceMode(
   process.env.FEEDBACK_DATA_SOURCE ?? process.env.DATA_SOURCE ?? process.env.VITE_DATA_SOURCE,
 );
 const useDbDataSource = dataSourceMode === "db";
+const usePostgresDb = useDbDataSource && dbEngine === "postgres";
 const synthesisConfig = buildSynthesisConfig(process.env);
+
+if (dbEngine === "postgres") {
+  if (!isPostgresConfigured()) {
+    // eslint-disable-next-line no-console
+    console.warn("[api] FEEDBACK_DB_ENGINE=postgres but POSTGRES_URL is not configured yet.");
+  } else {
+    // eslint-disable-next-line no-console
+    console.info("[api] FEEDBACK_DB_ENGINE=postgres detected. Postgres-backed handlers enabled for DB mode.");
+  }
+}
+
+const withPostgresClient = async (work) => {
+  const pool = await getPostgresPool();
+  const client = await pool.connect();
+  try {
+    return await work(client);
+  } finally {
+    client.release();
+  }
+};
 
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 initRuntimeStore(runtimeStorePath);
@@ -139,6 +166,13 @@ const buildFlatMergedSignals = () => {
     kudos: [...signalSeeds.kudos, ...(Array.isArray(runtimeStore.kudos) ? runtimeStore.kudos : [])],
     cardSortResults: Array.isArray(runtimeStore.cardSortResults) ? runtimeStore.cardSortResults : [],
   };
+};
+
+const getFlatFeatureRequestVoteCount = (featureRequestId) => {
+  const idAsString = String(featureRequestId ?? "");
+  const mergedSignals = buildFlatMergedSignals();
+  const row = mergedSignals.featureRequests.find((request) => String(request.id) === idAsString);
+  return Math.max(0, Number(row?.votes ?? 0));
 };
 const CATEGORY_DESCRIPTIONS = {
   Lending: "Lending Product Ecosystem",
@@ -529,6 +563,106 @@ const bootstrapPayloadDb = () => {
   return { products, features, screens, featureRequests, screenFeedback: feedback, kudosQuotes: kudos, appAreas: [], cardSortConcepts: [], adminTables: tables };
 };
 
+const buildAdminTablesPostgres = async () =>
+  withPostgresClient(async (client) => {
+    const names = (
+      await client.query(
+        `SELECT table_name
+         FROM information_schema.tables
+         WHERE table_schema = 'public'
+         ORDER BY table_name`,
+      )
+    ).rows
+      .map((row) => String(row.table_name))
+      .filter((name) => ERD_TABLES.includes(name.toLowerCase()));
+
+    const tables = [];
+    for (const tableName of names) {
+      const columnRows = await client.query(
+        `SELECT column_name
+         FROM information_schema.columns
+         WHERE table_schema = 'public'
+           AND table_name = $1
+         ORDER BY ordinal_position`,
+        [tableName],
+      );
+      const rowData = await client.query(`SELECT * FROM ${tableName}`);
+      tables.push({
+        id: tableName,
+        label: tableName,
+        columns: columnRows.rows.map((row) => String(row.column_name)),
+        rows: rowData.rows,
+      });
+    }
+    return tables;
+  });
+
+const bootstrapPayloadPostgres = async () =>
+  withPostgresClient(async (client) => {
+    const products = (
+      await client.query(`
+        SELECT p.product_id AS id, p.product_name AS name, p.product_status AS status, p.description AS description,
+          p.legacy_product_code AS "legacyProductCode", s.subcategory_name AS subcategory, c.category_name AS category
+        FROM products p
+        JOIN subcategories s ON s.subcategory_id = p.subcategory_id
+        JOIN categories c ON c.category_id = s.category_id
+        ORDER BY p.product_id
+      `)
+    ).rows;
+
+    const features = (
+      await client.query(`
+        SELECT f.feature_id AS id, f.product_id AS "productId", f.feature_name AS name, f.feature_description AS description,
+          f.feature_status AS status, f.module_name AS "moduleName", f.legacy_feature_code AS "legacyFeatureCode"
+        FROM features f
+        ORDER BY f.feature_id
+      `)
+    ).rows;
+
+    const screens = (
+      await client.query(`
+        SELECT s.screen_id AS id, s.product_id AS "productId", s.screen_name AS name, s.screen_category AS "screenCategory",
+          s.screen_description AS description, s.legacy_screen_code AS "legacyScreenCode"
+        FROM screens s
+        ORDER BY s.screen_id
+      `)
+    ).rows;
+
+    const featureRequests = (
+      await client.query(`
+        SELECT fr.feature_request_id AS id, fr.product_id AS "productId", fr.converted_feature_id AS "convertedFeatureId",
+          fr.screen_id AS "screenId", fr.screen_name AS "screenName", fr.app_area AS app, fr.title AS title, fr.description AS description,
+          fr.workflow_context AS "workflowContext", fr.status AS status, fr.created_at AS "createdAt", fr.legacy_request_code AS "legacyRequestCode",
+          fr.origin AS origin, COALESCE(SUM(frv.vote_value), 0) AS votes
+        FROM feature_requests fr
+        LEFT JOIN feature_request_votes frv ON frv.feature_request_id = fr.feature_request_id
+        GROUP BY fr.feature_request_id
+        ORDER BY fr.created_at DESC
+      `)
+    ).rows;
+
+    const screenFeedback = (
+      await client.query(`
+        SELECT feedback_id AS id, product_id AS "productId", feature_id AS "featureId", screen_id AS "screenId", app_area AS app,
+          screen_name AS "screenName", feedback_type AS type, feedback_text AS text, role AS role, created_at AS "createdAt"
+        FROM feedback
+        ORDER BY created_at DESC
+      `)
+    ).rows;
+
+    const kudosQuotes = (
+      await client.query(`
+        SELECT kudos_id AS id, product_id AS "productId", feature_id AS "featureId", screen_id AS "screenId", app_area AS app,
+          screen_name AS "screenName", quote_text AS text, role AS role, consent_public AS "consentPublic", created_at AS "createdAt"
+        FROM kudos
+        ORDER BY created_at DESC
+      `)
+    ).rows;
+
+    const adminTables = await buildAdminTablesPostgres();
+    return { products, features, screens, featureRequests, screenFeedback, kudosQuotes, appAreas: [], cardSortConcepts: [], adminTables };
+  });
+
 const toFlatBootstrap = () => {
   const core = getFlatCoreSeeds();
   const merged = buildFlatMergedSignals();
@@ -670,8 +804,16 @@ const toFlatBootstrap = () => {
   };
 };
 
-const buildAdminTables = () => (useDbDataSource ? buildAdminTablesDb() : toFlatBootstrap().adminTables);
-const bootstrapPayload = () => (useDbDataSource ? bootstrapPayloadDb() : toFlatBootstrap());
+const buildAdminTables = async () => {
+  if (!useDbDataSource) return toFlatBootstrap().adminTables;
+  if (usePostgresDb) return buildAdminTablesPostgres();
+  return buildAdminTablesDb();
+};
+const bootstrapPayload = async () => {
+  if (!useDbDataSource) return toFlatBootstrap();
+  if (usePostgresDb) return bootstrapPayloadPostgres();
+  return bootstrapPayloadDb();
+};
 
 const reseed = (payload) => {
   const tables = Array.isArray(payload.tables) ? payload.tables : [];
@@ -865,6 +1007,193 @@ const reseed = (payload) => {
   tx();
 };
 
+export const reseedPostgres = async () => {
+  const flat = toFlatBootstrap();
+  await withPostgresClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      await client.query(`
+        TRUNCATE TABLE
+          feature_request_votes,
+          feature_requests,
+          feature_areas,
+          feedback,
+          kudos,
+          screens,
+          features,
+          products,
+          subcategories,
+          categories
+        RESTART IDENTITY CASCADE;
+      `);
+
+      const categoryIdByName = new Map();
+      const subcategoryIdByKey = new Map();
+      const productDbIdByLocalId = new Map();
+      const featureDbIdByLocalId = new Map();
+      const screenDbIdByLocalId = new Map();
+
+      for (const row of flat.products) {
+        const categoryName = String(row.category ?? "Lending");
+        let categoryId = categoryIdByName.get(categoryName);
+        if (!categoryId) {
+          const categoryInsert = await client.query(
+            "INSERT INTO categories (category_name, description) VALUES ($1, $2) RETURNING category_id",
+            [categoryName, CATEGORY_DESCRIPTIONS[categoryName] ?? `${categoryName} category`],
+          );
+          categoryId = Number(categoryInsert.rows[0]?.category_id);
+          categoryIdByName.set(categoryName, categoryId);
+        }
+
+        const rawSubcategory = String(row.subcategory ?? "Servicing");
+        const subcategoryName = SUBCATEGORY_NAME_OVERRIDES[rawSubcategory] ?? rawSubcategory;
+        const subKey = `${categoryId}::${subcategoryName}`;
+        let subcategoryId = subcategoryIdByKey.get(subKey);
+        if (!subcategoryId) {
+          const subcategoryInsert = await client.query(
+            "INSERT INTO subcategories (category_id, subcategory_name, description) VALUES ($1, $2, $3) RETURNING subcategory_id",
+            [categoryId, subcategoryName, `${subcategoryName} subcategory`],
+          );
+          subcategoryId = Number(subcategoryInsert.rows[0]?.subcategory_id);
+          subcategoryIdByKey.set(subKey, subcategoryId);
+        }
+
+        const productInsert = await client.query(
+          `INSERT INTO products (subcategory_id, product_name, description, product_status, legacy_product_code)
+           VALUES ($1, $2, $3, $4, $5) RETURNING product_id`,
+          [
+            subcategoryId,
+            String(row.name ?? ""),
+            String(row.description ?? row.name ?? ""),
+            String(row.status ?? "active"),
+            String(row.legacyProductCode ?? ""),
+          ],
+        );
+        productDbIdByLocalId.set(Number(row.id), Number(productInsert.rows[0]?.product_id));
+      }
+
+      for (const row of flat.features) {
+        const productId = productDbIdByLocalId.get(Number(row.productId));
+        if (!productId) continue;
+        const featureInsert = await client.query(
+          `INSERT INTO features (product_id, feature_name, feature_description, feature_status, module_name, legacy_feature_code)
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING feature_id`,
+          [
+            productId,
+            String(row.name ?? ""),
+            String(row.description ?? ""),
+            String(row.status ?? "planned"),
+            String(row.moduleName ?? "Platform Services"),
+            String(row.legacyFeatureCode ?? ""),
+          ],
+        );
+        featureDbIdByLocalId.set(Number(row.id), Number(featureInsert.rows[0]?.feature_id));
+        await client.query(
+          "INSERT INTO feature_areas (feature_area_name, product_id) VALUES ($1, $2) ON CONFLICT (product_id, feature_area_name) DO NOTHING",
+          [String(row.moduleName ?? "Platform Services"), productId],
+        );
+      }
+
+      for (const row of flat.screens) {
+        const productId = productDbIdByLocalId.get(Number(row.productId));
+        if (!productId) continue;
+        const screenInsert = await client.query(
+          `INSERT INTO screens (product_id, screen_name, screen_category, screen_description, legacy_screen_code)
+           VALUES ($1, $2, $3, $4, $5) RETURNING screen_id`,
+          [
+            productId,
+            String(row.name ?? ""),
+            String(row.screenCategory ?? "servicing"),
+            String(row.description ?? ""),
+            String(row.legacyScreenCode ?? ""),
+          ],
+        );
+        screenDbIdByLocalId.set(Number(row.id), Number(screenInsert.rows[0]?.screen_id));
+      }
+
+      for (const row of flat.featureRequests) {
+        const productId = productDbIdByLocalId.get(Number(row.productId));
+        if (!productId) continue;
+        const featureRequestInsert = await client.query(
+          `INSERT INTO feature_requests
+           (product_id, converted_feature_id, title, description, workflow_context, status, created_at, legacy_request_code, app_area, screen_id, screen_name, origin)
+           VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8, $9, $10, $11, $12)
+           RETURNING feature_request_id`,
+          [
+            productId,
+            row.convertedFeatureId == null ? null : featureDbIdByLocalId.get(Number(row.convertedFeatureId)) ?? null,
+            String(row.title ?? ""),
+            String(row.description ?? ""),
+            row.workflowContext == null ? null : String(row.workflowContext),
+            String(row.status ?? "open"),
+            String(row.createdAt ?? nowIso()),
+            String(row.legacyRequestCode ?? row.id ?? ""),
+            String(row.app ?? "servicing"),
+            row.screenId == null ? null : screenDbIdByLocalId.get(Number(row.screenId)) ?? null,
+            row.screenName == null ? null : String(row.screenName),
+            row.origin == null ? null : String(row.origin),
+          ],
+        );
+        const requestId = Number(featureRequestInsert.rows[0]?.feature_request_id);
+        const voteCount = Math.max(0, Number(row.votes ?? 0));
+        for (let i = 0; i < voteCount; i += 1) {
+          await client.query(
+            "INSERT INTO feature_request_votes (feature_request_id, session_id, vote_value, created_at) VALUES ($1, $2, 1, $3::timestamptz)",
+            [requestId, `seed-${requestId}-${i + 1}`, String(row.createdAt ?? nowIso())],
+          );
+        }
+      }
+
+      for (const row of flat.screenFeedback) {
+        const productId = productDbIdByLocalId.get(Number(row.productId));
+        if (!productId) continue;
+        await client.query(
+          `INSERT INTO feedback
+           (product_id, feature_id, screen_id, feedback_type, feedback_text, role, created_at, app_area, screen_name)
+           VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8, $9)`,
+          [
+            productId,
+            row.featureId == null ? null : featureDbIdByLocalId.get(Number(row.featureId)) ?? null,
+            row.screenId == null ? null : screenDbIdByLocalId.get(Number(row.screenId)) ?? null,
+            String(row.type ?? "issue"),
+            row.text == null ? null : String(row.text),
+            String(row.role ?? "unspecified"),
+            String(row.createdAt ?? nowIso()),
+            String(row.app ?? "servicing"),
+            row.screenName == null ? null : String(row.screenName),
+          ],
+        );
+      }
+
+      for (const row of flat.kudosQuotes) {
+        const productId = productDbIdByLocalId.get(Number(row.productId));
+        if (!productId) continue;
+        await client.query(
+          `INSERT INTO kudos
+           (product_id, feature_id, screen_id, quote_text, role, consent_public, created_at, app_area, screen_name)
+           VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8, $9)`,
+          [
+            productId,
+            row.featureId == null ? null : featureDbIdByLocalId.get(Number(row.featureId)) ?? null,
+            row.screenId == null ? null : screenDbIdByLocalId.get(Number(row.screenId)) ?? null,
+            String(row.text ?? ""),
+            String(row.role ?? "unspecified"),
+            Boolean(row.consentPublic),
+            String(row.createdAt ?? nowIso()),
+            String(row.app ?? "servicing"),
+            row.screenName == null ? null : String(row.screenName),
+          ],
+        );
+      }
+
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+};
+
 const appendFlatRuntimeFeatureRequest = (body) => {
   const runtime = readRuntimeStore(runtimeStorePath);
   const id = String(body.id ?? body.legacyRequestCode ?? `fr-runtime-${Date.now()}`);
@@ -951,7 +1280,7 @@ const upsertFlatRuntimeCardSort = (body) => {
   writeRuntimeStore(runtimeStorePath, runtime);
 };
 
-const loadSignalsForSynthesis = () => {
+const loadSignalsForSynthesis = async () => {
   if (!useDbDataSource) {
     const flat = toFlatBootstrap();
     return toSynthesisSignals({
@@ -959,6 +1288,43 @@ const loadSignalsForSynthesis = () => {
       screenFeedback: flat.screenFeedback.map((item) => ({ ...item, appLabel: appLabelFromId(item.app) })),
       kudos: flat.kudosQuotes,
       cardSortResults: readRuntimeStore(runtimeStorePath).cardSortResults ?? [],
+    });
+  }
+
+  if (usePostgresDb) {
+    const signalRows = await withPostgresClient(async (client) => {
+      const featureRequests = (
+        await client.query(`
+          SELECT fr.feature_request_id AS id, fr.title AS title, fr.workflow_context AS "workflowContext", fr.app_area AS app,
+            fr.screen_name AS "screenName", fr.origin AS origin, COALESCE(SUM(frv.vote_value), 0) AS votes
+          FROM feature_requests fr
+          LEFT JOIN feature_request_votes frv ON frv.feature_request_id = fr.feature_request_id
+          GROUP BY fr.feature_request_id
+        `)
+      ).rows;
+
+      const screenFeedback = (
+        await client.query(`
+          SELECT feedback_id AS id, app_area AS app, screen_name AS "screenName", feedback_type AS type,
+            feedback_text AS text, role AS role
+          FROM feedback
+        `)
+      ).rows.map((row) => ({ ...row, appLabel: appLabelFromId(row.app) }));
+
+      const kudos = (
+        await client.query(`
+          SELECT kudos_id AS id, quote_text AS text, role AS role, consent_public AS "consentPublic"
+          FROM kudos
+        `)
+      ).rows;
+      return { featureRequests, screenFeedback, kudos };
+    });
+
+    return toSynthesisSignals({
+      featureRequests: signalRows.featureRequests,
+      screenFeedback: signalRows.screenFeedback,
+      kudos: signalRows.kudos,
+      cardSortResults: [],
     });
   }
 
@@ -1005,24 +1371,28 @@ export const handleApiRequest = async (request, response) => {
     }
 
     if (method === "GET" && pathname === "/health") {
-      sendJson(response, 200, { ok: true, dbPath, dataSourceMode, synthesisProvider: synthesisConfig.provider ?? null });
+      sendJson(response, 200, { ok: true, dbPath, dbEngine, dataSourceMode, synthesisProvider: synthesisConfig.provider ?? null });
       return;
     }
 
     if (method === "GET" && pathname === "/api/bootstrap") {
-      sendJson(response, 200, bootstrapPayload());
+      sendJson(response, 200, await bootstrapPayload());
       return;
     }
 
     if (method === "GET" && pathname === "/api/admin/tables") {
-      sendJson(response, 200, { tables: buildAdminTables() });
+      sendJson(response, 200, { tables: await buildAdminTables() });
       return;
     }
 
     if (method === "POST" && pathname === "/api/admin/reseed") {
       const payload = await readBody(request);
       if (useDbDataSource) {
-        reseed(payload);
+        if (usePostgresDb) {
+          await reseedPostgres();
+        } else {
+          reseed(payload);
+        }
       } else {
         resetRuntimeStore(runtimeStorePath);
       }
@@ -1034,7 +1404,38 @@ export const handleApiRequest = async (request, response) => {
       const body = await readBody(request);
       let id;
       if (useDbDataSource) {
-        const result = db.prepare(`
+        if (usePostgresDb) {
+          id = await withPostgresClient(async (client) => {
+            const insertResult = await client.query(
+              `
+              INSERT INTO feature_requests (product_id, converted_feature_id, title, description, workflow_context, status, created_at, legacy_request_code, app_area, screen_id, screen_name, origin)
+              VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8, $9, $10, $11, $12)
+              RETURNING feature_request_id
+              `,
+              [
+                Number(body.productId),
+                body.convertedFeatureId == null ? null : Number(body.convertedFeatureId),
+                String(body.title ?? ""),
+                body.description == null ? null : String(body.description),
+                body.workflowContext == null ? null : String(body.workflowContext),
+                String(body.status ?? "open"),
+                String(body.createdAt ?? nowIso()),
+                body.legacyRequestCode == null ? null : String(body.legacyRequestCode),
+                String(body.app ?? "servicing"),
+                body.screenId == null ? null : Number(body.screenId),
+                body.screenName == null ? null : String(body.screenName),
+                body.origin == null ? null : String(body.origin),
+              ],
+            );
+            const requestId = Number(insertResult.rows[0]?.feature_request_id);
+            await client.query(
+              "INSERT INTO feature_request_votes (feature_request_id, session_id, vote_value, created_at) VALUES ($1, $2, 1, $3::timestamptz)",
+              [requestId, String(body.sessionId ?? "web"), String(body.createdAt ?? nowIso())],
+            );
+            return requestId;
+          });
+        } else {
+          const result = db.prepare(`
           INSERT INTO feature_requests (PRODUCT_ID, CONVERTED_FEATURE_ID, TITLE, DESCRIPTION, WORKFLOW_CONTEXT, STATUS, CREATED_AT, LEGACY_REQUEST_CODE, APP_AREA, SCREEN_ID, SCREEN_NAME, ORIGIN)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
@@ -1057,6 +1458,7 @@ export const handleApiRequest = async (request, response) => {
           String(body.sessionId ?? "web"),
           String(body.createdAt ?? nowIso()),
         );
+        }
       } else {
         id = appendFlatRuntimeFeatureRequest(body);
       }
@@ -1068,28 +1470,85 @@ export const handleApiRequest = async (request, response) => {
       const parts = pathname.split("/");
       const idParam = String(parts[3] ?? "");
       const body = await readBody(request);
+      let votes = 0;
       if (useDbDataSource) {
         const id = Number(idParam);
         if (!Number.isFinite(id)) {
           sendJson(response, 400, { error: "Invalid feature request id" });
           return;
         }
-        db.prepare("INSERT INTO feature_request_votes (FEATURE_REQUEST_ID, SESSION_ID, VOTE_VALUE, CREATED_AT) VALUES (?, ?, 1, ?)").run(
-          id,
-          String(body.sessionId ?? `web-${Date.now()}`),
-          nowIso(),
-        );
+        if (usePostgresDb) {
+          votes = await withPostgresClient(async (client) => {
+            const existsResult = await client.query(
+              "SELECT 1 FROM feature_requests WHERE feature_request_id = $1 LIMIT 1",
+              [id],
+            );
+            if (existsResult.rowCount === 0) {
+              sendJson(response, 404, { error: `Feature request ${id} was not found` });
+              return 0;
+            }
+            await client.query(
+              "INSERT INTO feature_request_votes (feature_request_id, session_id, vote_value, created_at) VALUES ($1, $2, 1, $3::timestamptz)",
+              [id, String(body.sessionId ?? `web-${Date.now()}`), nowIso()],
+            );
+            const votesResult = await client.query(
+              "SELECT COALESCE(SUM(vote_value), 0)::int AS votes FROM feature_request_votes WHERE feature_request_id = $1",
+              [id],
+            );
+            return Number(votesResult.rows[0]?.votes ?? 0);
+          });
+          if (response.writableEnded) return;
+        } else {
+          const requestExists = db.prepare("SELECT 1 FROM feature_requests WHERE FEATURE_REQUEST_ID = ? LIMIT 1").get(id);
+          if (!requestExists) {
+            sendJson(response, 404, { error: `Feature request ${id} was not found` });
+            return;
+          }
+          db.prepare("INSERT INTO feature_request_votes (FEATURE_REQUEST_ID, SESSION_ID, VOTE_VALUE, CREATED_AT) VALUES (?, ?, 1, ?)").run(
+            id,
+            String(body.sessionId ?? `web-${Date.now()}`),
+            nowIso(),
+          );
+          const votesRow = db.prepare(
+            "SELECT COALESCE(SUM(VOTE_VALUE), 0) AS votes FROM feature_request_votes WHERE FEATURE_REQUEST_ID = ?",
+          ).get(id);
+          votes = Number(votesRow?.votes ?? 0);
+        }
       } else {
         incrementFlatRuntimeVote(idParam);
+        votes = getFlatFeatureRequestVoteCount(idParam);
       }
-      sendJson(response, 200, { ok: true });
+      sendJson(response, 200, { ok: true, votes });
       return;
     }
 
     if (method === "POST" && pathname === "/api/kudos") {
       const body = await readBody(request);
       if (useDbDataSource) {
-        const result = db.prepare(`
+        if (usePostgresDb) {
+          const result = await withPostgresClient((client) =>
+            client.query(
+              `
+              INSERT INTO kudos (product_id, feature_id, screen_id, quote_text, role, consent_public, created_at, app_area, screen_name)
+              VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8, $9)
+              RETURNING kudos_id
+              `,
+              [
+                Number(body.productId),
+                body.featureId == null ? null : Number(body.featureId),
+                body.screenId == null ? null : Number(body.screenId),
+                String(body.text ?? ""),
+                String(body.role ?? "unspecified"),
+                Boolean(body.consentPublic),
+                String(body.createdAt ?? nowIso()),
+                String(body.app ?? "servicing"),
+                body.screenName == null ? null : String(body.screenName),
+              ],
+            ),
+          );
+          sendJson(response, 200, { ok: true, id: Number(result.rows[0]?.kudos_id) });
+        } else {
+          const result = db.prepare(`
           INSERT INTO kudos (PRODUCT_ID, FEATURE_ID, SCREEN_ID, QUOTE_TEXT, ROLE, CONSENT_PUBLIC, CREATED_AT, APP_AREA, SCREEN_NAME)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
@@ -1104,6 +1563,7 @@ export const handleApiRequest = async (request, response) => {
           body.screenName == null ? null : String(body.screenName),
         );
         sendJson(response, 200, { ok: true, id: Number(result.lastInsertRowid) });
+        }
       } else {
         sendJson(response, 200, { ok: true, id: appendFlatRuntimeKudos(body) });
       }
@@ -1113,7 +1573,30 @@ export const handleApiRequest = async (request, response) => {
     if (method === "POST" && pathname === "/api/screen-feedback") {
       const body = await readBody(request);
       if (useDbDataSource) {
-        const result = db.prepare(`
+        if (usePostgresDb) {
+          const result = await withPostgresClient((client) =>
+            client.query(
+              `
+              INSERT INTO feedback (product_id, feature_id, screen_id, feedback_type, feedback_text, role, created_at, app_area, screen_name)
+              VALUES ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8, $9)
+              RETURNING feedback_id
+              `,
+              [
+                Number(body.productId),
+                body.featureId == null ? null : Number(body.featureId),
+                body.screenId == null ? null : Number(body.screenId),
+                String(body.type ?? "issue"),
+                body.text == null ? null : String(body.text),
+                String(body.role ?? "unspecified"),
+                String(body.createdAt ?? nowIso()),
+                String(body.app ?? "servicing"),
+                body.screenName == null ? null : String(body.screenName),
+              ],
+            ),
+          );
+          sendJson(response, 200, { ok: true, id: Number(result.rows[0]?.feedback_id) });
+        } else {
+          const result = db.prepare(`
           INSERT INTO feedback (PRODUCT_ID, FEATURE_ID, SCREEN_ID, FEEDBACK_TYPE, FEEDBACK_TEXT, ROLE, CREATED_AT, APP_AREA, SCREEN_NAME)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
@@ -1128,6 +1611,7 @@ export const handleApiRequest = async (request, response) => {
           body.screenName == null ? null : String(body.screenName),
         );
         sendJson(response, 200, { ok: true, id: Number(result.lastInsertRowid) });
+        }
       } else {
         sendJson(response, 200, { ok: true, id: appendFlatRuntimeScreenFeedback(body) });
       }
@@ -1145,7 +1629,7 @@ export const handleApiRequest = async (request, response) => {
 
     if (method === "POST" && pathname === "/api/synthesis/stream") {
       const body = await readBody(request);
-      const signals = loadSignalsForSynthesis();
+      const signals = await loadSignalsForSynthesis();
       response.writeHead(200, {
         "content-type": "text/event-stream; charset=utf-8",
         "cache-control": "no-cache, no-transform",
@@ -1185,6 +1669,6 @@ if (isDirectExecution) {
   const server = http.createServer(handleApiRequest);
   server.listen(port, "127.0.0.1", () => {
     // eslint-disable-next-line no-console
-    console.log(`[api] running on http://localhost:${port} · mode=${dataSourceMode} · db=${dbPath} · synthesisProvider=${synthesisConfig.provider ?? "none"}`);
+    console.log(`[api] running on http://localhost:${port} · mode=${dataSourceMode} · dbEngine=${dbEngine} · db=${dbPath} · synthesisProvider=${synthesisConfig.provider ?? "none"}`);
   });
 }

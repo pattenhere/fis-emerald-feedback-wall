@@ -42,7 +42,37 @@ interface AdminTablesResponse {
   tables: SeedTableDefinition[];
 }
 
+interface HealthResponse {
+  ok: boolean;
+  dataSourceMode?: "db" | "flat";
+  dbEngine?: "sqlite" | "postgres";
+}
+
 const jsonHeaders = { "content-type": "application/json" };
+const SESSION_STORAGE_KEY = "emerald.feedback.session_id";
+
+let inMemorySessionId: string | null = null;
+const getSessionId = (): string => {
+  if (inMemorySessionId) return inMemorySessionId;
+  const generated = `web-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  if (typeof window === "undefined") {
+    inMemorySessionId = generated;
+    return inMemorySessionId;
+  }
+  try {
+    const existing = window.localStorage.getItem(SESSION_STORAGE_KEY);
+    if (existing && existing.trim().length > 0) {
+      inMemorySessionId = existing;
+      return inMemorySessionId;
+    }
+    window.localStorage.setItem(SESSION_STORAGE_KEY, generated);
+    inMemorySessionId = generated;
+    return inMemorySessionId;
+  } catch {
+    inMemorySessionId = generated;
+    return inMemorySessionId;
+  }
+};
 
 const readJson = async <T>(response: Response): Promise<T> => {
   if (!response.ok) {
@@ -52,6 +82,11 @@ const readJson = async <T>(response: Response): Promise<T> => {
 };
 
 export const dataApi = {
+  getHealth: async (): Promise<HealthResponse> => {
+    const response = await fetch("/health");
+    return readJson<HealthResponse>(response);
+  },
+
   getBootstrap: async (): Promise<BootstrapResponse> => {
     const response = await fetch("/api/bootstrap");
     return readJson<BootstrapResponse>(response);
@@ -76,18 +111,19 @@ export const dataApi = {
     const response = await fetch("/api/feature-requests", {
       method: "POST",
       headers: jsonHeaders,
-      body: JSON.stringify({ ...feature, sessionId: "web" }),
+      body: JSON.stringify({ ...feature, sessionId: getSessionId() }),
     });
     await readJson<{ ok: boolean }>(response);
   },
 
-  upvoteFeatureRequest: async (featureId: number): Promise<void> => {
+  upvoteFeatureRequest: async (featureId: number): Promise<{ votes: number }> => {
     const response = await fetch(`/api/feature-requests/${featureId}/upvote`, {
       method: "POST",
       headers: jsonHeaders,
-      body: JSON.stringify({ sessionId: "web" }),
+      body: JSON.stringify({ sessionId: getSessionId() }),
     });
-    await readJson<{ ok: boolean }>(response);
+    const payload = await readJson<{ ok: boolean; votes?: number }>(response);
+    return { votes: Number(payload.votes ?? 0) };
   },
 
   addKudos: async (kudos: KudosQuote): Promise<void> => {

@@ -3,11 +3,13 @@ import { memo, useState } from "react";
 interface SplashPageProps {
   imageSrc: string;
   onContinue: () => void;
+  isDataLoaded: boolean;
 }
 
 export const SplashPage = memo(({
   imageSrc,
   onContinue,
+  isDataLoaded,
 }: SplashPageProps): JSX.Element => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
@@ -42,9 +44,13 @@ export const SplashPage = memo(({
           <p className="splash-copy">
             Review products, capture feedback, and monitor responses in one place.
           </p>
-          <button type="button" className="primary-btn splash-continue-btn" onClick={onContinue}>
-            Enter Feedback Wall
-          </button>
+          {isDataLoaded ? (
+            <button type="button" className="primary-btn splash-continue-btn" onClick={onContinue}>
+              Enter Feedback Wall
+            </button>
+          ) : (
+            <p className="splash-loading-note">Loading data...</p>
+          )}
         </div>
       </div>
     </section>

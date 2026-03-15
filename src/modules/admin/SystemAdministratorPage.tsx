@@ -10,6 +10,7 @@ interface SystemAdministratorPageProps {
   onReseed: () => Promise<void>;
   reseeding: boolean;
   dataSource: "db" | "flat";
+  dbEngine?: "sqlite" | "postgres" | null;
   onBackToDashboard: () => void;
 }
 
@@ -18,6 +19,7 @@ export const SystemAdministratorPage = memo(({
   onReseed,
   reseeding,
   dataSource,
+  dbEngine = null,
   onBackToDashboard,
 }: SystemAdministratorPageProps): JSX.Element => {
   const [tableId, setTableId] = useState(tables[0]?.id ?? "");
@@ -45,6 +47,13 @@ export const SystemAdministratorPage = memo(({
     setTableId(id);
     setPage(1);
   };
+
+  const sourceLabel =
+    dataSource === "flat"
+      ? "Flat Files"
+      : dbEngine === "postgres"
+        ? "Postgres DB"
+        : "SQLite DB";
 
   return (
     <section className="sysadmin-shell">
@@ -81,7 +90,7 @@ export const SystemAdministratorPage = memo(({
                 <p className="sysadmin-block-title">Seed Data</p>
                 <h2>{selectedTable.label}</h2>
                 <p>{selectedTable.rows.length} rows in canonical seed snapshot.</p>
-                <p className="sysadmin-source">Source: {dataSource === "db" ? "SQLite DB" : "Flat Files"}</p>
+                <p className="sysadmin-source">Source: {sourceLabel}</p>
               </div>
               <div className="sysadmin-head-actions">
                 <button type="button" className="secondary-btn" onClick={onBackToDashboard}>

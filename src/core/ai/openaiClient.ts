@@ -32,7 +32,7 @@ const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const OPENAI_MODEL = import.meta.env.VITE_OPENAI_MODEL ?? "gpt-5-mini";
 const OPENAI_PROJECT = import.meta.env.VITE_OPENAI_PROJECT;
 const OPENAI_ORGANIZATION = import.meta.env.VITE_OPENAI_ORGANIZATION;
-const AI_DEBUG_LOGS = import.meta.env.DEV;
+const AI_DEBUG_LOGS = String(import.meta.env.VITE_AI_DEBUG_LOGS ?? "false").toLowerCase() === "true";
 const isOpenAIOrgId = (value: string | undefined): boolean => /^org_[A-Za-z0-9]+$/u.test(String(value ?? "").trim());
 const isOpenAIProjectId = (value: string | undefined): boolean => /^proj_[A-Za-z0-9]+$/u.test(String(value ?? "").trim());
 

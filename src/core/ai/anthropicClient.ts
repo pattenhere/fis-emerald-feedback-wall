@@ -26,7 +26,7 @@ const ANTHROPIC_BASE_URL = (import.meta.env.VITE_ANTHROPIC_BASE_URL ?? "https://
 const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
 const ANTHROPIC_MODEL = import.meta.env.VITE_ANTHROPIC_MODEL ?? "claude-3-5-sonnet-latest";
 const ANTHROPIC_VERSION = import.meta.env.VITE_ANTHROPIC_VERSION ?? "2023-06-01";
-const AI_DEBUG_LOGS = import.meta.env.DEV;
+const AI_DEBUG_LOGS = String(import.meta.env.VITE_AI_DEBUG_LOGS ?? "false").toLowerCase() === "true";
 
 const ensureConfigured = (): void => {
   if (!ANTHROPIC_API_KEY) {

@@ -31,6 +31,11 @@ import { useDbDataSource } from "../config/runtimeConfig";
 
 const DEFAULT_SYNTHESIS_PIN = "2468";
 const SYNTHESIS_PIN_LENGTH_RANGE = { min: 4, max: 6 } as const;
+const DEFAULT_SYNTHESIS_COUNTDOWN_SECONDS = 1800;
+const ENV_SYNTHESIS_COUNTDOWN_SECONDS = Number(import.meta.env.VITE_SYNTHESIS_COUNTDOWN_SECONDS ?? DEFAULT_SYNTHESIS_COUNTDOWN_SECONDS);
+const SYNTHESIS_COUNTDOWN_SECONDS = Number.isFinite(ENV_SYNTHESIS_COUNTDOWN_SECONDS) && ENV_SYNTHESIS_COUNTDOWN_SECONDS > 0
+  ? ENV_SYNTHESIS_COUNTDOWN_SECONDS
+  : DEFAULT_SYNTHESIS_COUNTDOWN_SECONDS;
 const POSITIVE_TYPES = new Set<FeedbackType>(["works-well", "suggestion"]);
 const NEGATIVE_TYPES = new Set<FeedbackType>(["issue", "missing"]);
 const SEEDED_KUDOS_MIN = 784;
@@ -103,6 +108,11 @@ export interface WallState {
   resetSynthesisLock: () => void;
   signalSummary: SignalSummary;
   synthesisCountdownTarget: string;
+  synthesisCountdownRunning: boolean;
+  synthesisCountdownHasStarted: boolean;
+  synthesisCountdownInitialSeconds: number;
+  startSynthesisCountdown: (durationSeconds?: number) => void;
+  stopSynthesisCountdown: () => void;
   synthesisPinLengthRange: { min: number; max: number };
   buildSynthesisPromptBody: (macros?: MacroState) => string;
   clearSynthesisOutput: () => void;
@@ -126,6 +136,9 @@ export interface WallState {
   refreshAdminTables: () => Promise<void>;
   products: ProductDefinition[];
   screens: AppScreen[];
+  adminDataSource: "db" | "flat";
+  adminDbEngine: "sqlite" | "postgres" | null;
+  isDataLoaded: boolean;
 }
 
 const nowIso = (): string => new Date().toISOString();
@@ -186,12 +199,62 @@ interface WallSeedSnapshot {
   selectedScreenId: number;
 }
 
+const toNumericId = (value: unknown): number | undefined => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+};
+
+const toAppAreaValue = (value: unknown): AppArea => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (
+    normalized === "digital-experience" ||
+    normalized === "origination" ||
+    normalized === "credit-risk" ||
+    normalized === "servicing" ||
+    normalized === "monitoring-controls" ||
+    normalized === "syndication-complex-lending" ||
+    normalized === "analytics-inquiry" ||
+    normalized === "platform-services"
+  ) {
+    return normalized;
+  }
+  if (normalized === "digital experience") return "digital-experience";
+  if (normalized === "credit & risk" || normalized === "customer risk & credit") return "credit-risk";
+  if (normalized === "monitoring & controls") return "monitoring-controls";
+  if (normalized === "syndication / complex lending" || normalized === "syndication") return "syndication-complex-lending";
+  if (normalized === "analytics & inquiry") return "analytics-inquiry";
+  if (normalized === "platform services") return "platform-services";
+  return "servicing";
+};
+
 const mapBootstrapToSnapshot = (bootstrap: Awaited<ReturnType<typeof dataApi.getBootstrap>>): WallSeedSnapshot => ({
-  featureRequests: bootstrap.featureRequests,
-  kudosQuotes: bootstrap.kudosQuotes,
-  screenFeedback: bootstrap.screenFeedback,
+  featureRequests: bootstrap.featureRequests.map((item) => ({
+    ...item,
+    id: toNumericId(item.id) ?? item.id,
+    productId: toNumericId(item.productId),
+    featureId: toNumericId(item.featureId),
+    screenId: toNumericId(item.screenId) ?? item.screenId,
+    app: toAppAreaValue(item.app),
+    votes: Number(item.votes ?? 0),
+  })),
+  kudosQuotes: bootstrap.kudosQuotes.map((item) => ({
+    ...item,
+    id: toNumericId(item.id) ?? item.id,
+    productId: toNumericId(item.productId),
+    featureId: toNumericId(item.featureId),
+    screenId: toNumericId(item.screenId) ?? item.screenId,
+    app: item.app ? toAppAreaValue(item.app) : undefined,
+  })),
+  screenFeedback: bootstrap.screenFeedback.map((item) => ({
+    ...item,
+    id: toNumericId(item.id) ?? item.id,
+    productId: toNumericId(item.productId),
+    featureId: toNumericId(item.featureId),
+    screenId: toNumericId(item.screenId) ?? item.screenId,
+    app: toAppAreaValue(item.app),
+  })),
   products: bootstrap.products.map((item) => ({
-    id: item.id,
+    id: toNumericId(item.id) ?? item.id,
     legacyProductCode: item.legacyProductCode,
     category: item.category,
     subcategory: item.subcategory,
@@ -200,15 +263,15 @@ const mapBootstrapToSnapshot = (bootstrap: Awaited<ReturnType<typeof dataApi.get
     icon: "◉",
   })),
   screens: bootstrap.screens.map((screen) => ({
-    id: screen.id,
-    productId: screen.productId,
+    id: toNumericId(screen.id) ?? screen.id,
+    productId: toNumericId(screen.productId),
     legacyScreenCode: screen.legacyScreenCode,
-    app: (screen.screenCategory as AppArea) ?? "servicing",
+    app: toAppAreaValue(screen.screenCategory),
     name: screen.name,
     wireframeLabel: "Feature detail · working prototype taxonomy",
     description: screen.description ?? "",
-    categoryId: (screen.screenCategory as AppArea) ?? "servicing",
-    categoryLabel: APP_AREA_LABEL_BY_ID[((screen.screenCategory as AppArea) ?? "servicing") as AppArea] ?? "Servicing",
+    categoryId: toAppAreaValue(screen.screenCategory),
+    categoryLabel: APP_AREA_LABEL_BY_ID[toAppAreaValue(screen.screenCategory)] ?? "Servicing",
   })),
   cardSortConcepts: bootstrap.cardSortConcepts,
   adminTables: bootstrap.adminTables.length > 0 ? bootstrap.adminTables : ADMIN_SEED_TABLES,
@@ -228,6 +291,9 @@ export const useWallState = (): WallState => {
   const [screens, setScreens] = useState<AppScreen[]>([]);
   const [cardSortConcepts, setCardSortConcepts] = useState<CardSortConcept[]>(CARD_SORT_CONCEPTS);
   const [adminTables, setAdminTables] = useState<SeedTableDefinition[]>([]);
+  const [adminDataSource, setAdminDataSource] = useState<"db" | "flat">(useDbDataSource ? "db" : "flat");
+  const [adminDbEngine, setAdminDbEngine] = useState<"sqlite" | "postgres" | null>(null);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [reseeding, setReseeding] = useState(false);
   const [cardSortResponses, setCardSortResponses] = useState<CardSortResponse[]>([]);
   const [synthesisMode, setSynthesisMode] = useState<SynthesisMode>("roadmap");
@@ -238,9 +304,24 @@ export const useWallState = (): WallState => {
   const [revealNarrative, setRevealNarrative] = useState(
     "Yesterday you told us where the workflow broke down. Overnight, we focused on your highest-priority requests and built a working Day 2 prototype.",
   );
+  const [synthesisCountdownTarget, setSynthesisCountdownTarget] = useState(
+    () => new Date(Date.now() + SYNTHESIS_COUNTDOWN_SECONDS * 1_000).toISOString(),
+  );
+  const [synthesisCountdownRunning, setSynthesisCountdownRunning] = useState(false);
+  const [synthesisCountdownHasStarted, setSynthesisCountdownHasStarted] = useState(false);
   const synthesisPinLengthRange = SYNTHESIS_PIN_LENGTH_RANGE;
-
-  const synthesisCountdownTarget = "2026-03-12T22:00:00-04:00";
+  const startSynthesisCountdown = useCallback((durationSeconds: number = SYNTHESIS_COUNTDOWN_SECONDS): void => {
+    const safeSeconds = Number.isFinite(durationSeconds) && durationSeconds > 0
+      ? durationSeconds
+      : SYNTHESIS_COUNTDOWN_SECONDS;
+    const nextTarget = new Date(Date.now() + safeSeconds * 1_000).toISOString();
+    setSynthesisCountdownTarget(nextTarget);
+    setSynthesisCountdownHasStarted(true);
+    setSynthesisCountdownRunning(true);
+  }, []);
+  const stopSynthesisCountdown = useCallback((): void => {
+    setSynthesisCountdownRunning(false);
+  }, []);
 
   const applySnapshot = useCallback((snapshot: WallSeedSnapshot): void => {
     const deduped = dedupeSnapshot(snapshot);
@@ -255,6 +336,7 @@ export const useWallState = (): WallState => {
     if (deduped.selectedScreenId > 0) {
       setSelectedScreenId(deduped.selectedScreenId);
     }
+    setIsDataLoaded(true);
   }, []);
 
   const refreshAdminTables = useCallback(async (): Promise<void> => {
@@ -268,8 +350,24 @@ export const useWallState = (): WallState => {
     }
   }, []);
 
+  const refreshHealth = useCallback(async (): Promise<{ dataSourceMode: "db" | "flat"; dbEngine: "sqlite" | "postgres" | null } | null> => {
+    try {
+      const health = await dataApi.getHealth();
+      const dataSourceMode = health.dataSourceMode === "db" ? "db" : "flat";
+      const dbEngine = health.dbEngine === "postgres" ? "postgres" : health.dbEngine === "sqlite" ? "sqlite" : null;
+      setAdminDataSource(dataSourceMode);
+      setAdminDbEngine(dbEngine);
+      return { dataSourceMode, dbEngine };
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("[wall-state] failed to load health", error);
+      return null;
+    }
+  }, []);
+
   const reloadFromStore = useCallback(async (): Promise<void> => {
     try {
+      await refreshHealth();
       const bootstrap = await dataApi.getBootstrap();
       applySnapshot(mapBootstrapToSnapshot(bootstrap));
       if (bootstrap.adminTables.length === 0) {
@@ -280,15 +378,18 @@ export const useWallState = (): WallState => {
       console.error("[wall-state] reloadFromStore failed", error);
       setAdminTables([]);
     }
-  }, [applySnapshot, refreshAdminTables]);
+  }, [applySnapshot, refreshAdminTables, refreshHealth]);
 
   useEffect(() => {
     let cancelled = false;
 
     const init = async (): Promise<void> => {
+      setIsDataLoaded(false);
       try {
+        const health = await refreshHealth();
         const bootstrap = await dataApi.getBootstrap();
-        if (useDbDataSource) {
+        const backendUsesDb = (health?.dataSourceMode ?? (useDbDataSource ? "db" : "flat")) === "db";
+        if (backendUsesDb) {
           const tableRowCount = Object.fromEntries(
             bootstrap.adminTables.map((table) => [table.id, table.rows.length]),
           );
@@ -318,6 +419,7 @@ export const useWallState = (): WallState => {
         // eslint-disable-next-line no-console
         console.error("[wall-state] init failed", error);
         setAdminTables([]);
+        setIsDataLoaded(false);
       }
     };
 
@@ -325,7 +427,7 @@ export const useWallState = (): WallState => {
     return () => {
       cancelled = true;
     };
-  }, [refreshAdminTables, reloadFromStore]);
+  }, [refreshAdminTables, refreshHealth, reloadFromStore]);
 
   const screenSubmissionCounts = useMemo<Record<number, number>>(() => {
     const counts: Record<number, number> = {};
@@ -465,10 +567,24 @@ export const useWallState = (): WallState => {
 
   const upvoteFeatureRequest = useCallback((featureId: number): void => {
     setFeatureRequests((current) =>
-      current.map((item) => (item.id === featureId ? { ...item, votes: item.votes + 1 } : item)),
+      current.map((item) => (Number(item.id) === featureId ? { ...item, votes: item.votes + 1 } : item)),
     );
     setFreshFeatureIds((current) => current.filter((id) => id !== featureId));
-    void dataApi.upvoteFeatureRequest(featureId);
+    void dataApi.upvoteFeatureRequest(featureId)
+      .then(({ votes }) => {
+        setFeatureRequests((current) =>
+          current.map((item) => (Number(item.id) === featureId ? { ...item, votes: Math.max(0, votes) } : item)),
+        );
+      })
+      .catch((error) => {
+        // eslint-disable-next-line no-console
+        console.error("[wall-state] failed to persist feature request upvote", error);
+        setFeatureRequests((current) =>
+          current.map((item) =>
+            Number(item.id) === featureId ? { ...item, votes: Math.max(0, item.votes - 1) } : item,
+          ),
+        );
+      });
   }, []);
 
   const addKudosQuote = useCallback((quote: {
@@ -805,6 +921,11 @@ export const useWallState = (): WallState => {
     resetSynthesisLock,
     signalSummary,
     synthesisCountdownTarget,
+    synthesisCountdownRunning,
+    synthesisCountdownHasStarted,
+    synthesisCountdownInitialSeconds: SYNTHESIS_COUNTDOWN_SECONDS,
+    startSynthesisCountdown,
+    stopSynthesisCountdown,
     synthesisPinLengthRange,
     buildSynthesisPromptBody,
     clearSynthesisOutput,
@@ -828,5 +949,8 @@ export const useWallState = (): WallState => {
     refreshAdminTables,
     products,
     screens,
+    adminDataSource,
+    adminDbEngine,
+    isDataLoaded,
   };
 };

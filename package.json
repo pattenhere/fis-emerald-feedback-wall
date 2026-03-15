@@ -7,6 +7,10 @@
     "dev": "concurrently -k \"npm:dev:api\" \"npm:dev:web\"",
     "dev:web": "vite --mode config",
     "dev:api": "node server/api.mjs",
+    "db:pg:migrate": "node server/db/postgres/migrate.mjs",
+    "db:pg:status": "node server/db/postgres/migrate.mjs --status",
+    "db:pg:seed": "node server/db/postgres/seed.mjs",
+    "db:pg:verify": "node server/db/postgres/verify.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
@@ -15,6 +19,7 @@
   "dependencies": {
     "better-sqlite3": "^12.8.0",
     "concurrently": "^9.2.1",
+    "pg": "^8.16.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

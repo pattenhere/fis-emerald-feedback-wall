@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from "react";
-import { getSynthesisEndpointInfo, streamSynthesis } from "../../services/synthesisService";
+import { streamSynthesis } from "../../services/synthesisService";
 import type {
   ConflictEntry,
   FeatureRequest,
@@ -30,6 +30,8 @@ interface SynthesisPanelProps {
   revealNarrative: string;
   onRevealNarrativeChange: (next: string) => void;
   featureRequests: FeatureRequest[];
+  onSynthesisStart: () => void;
+  onSynthesisComplete: () => void;
 }
 
 const serializeCsv = (rows: ExportRecord[]): string => {
@@ -92,6 +94,8 @@ export const SynthesisPanel = memo(({
   revealNarrative,
   onRevealNarrativeChange,
   featureRequests,
+  onSynthesisStart,
+  onSynthesisComplete,
 }: SynthesisPanelProps): JSX.Element => {
   const [pinAttempt, setPinAttempt] = useState("");
   const [pinError, setPinError] = useState("");
@@ -155,6 +159,7 @@ export const SynthesisPanel = memo(({
   };
 
   const handleGenerate = async (nextMode: SynthesisMode = mode): Promise<void> => {
+    onSynthesisStart();
     setIsGenerating(true);
     setPhaseStatus("analyzing");
     setStreamWarnings([]);
@@ -214,6 +219,7 @@ export const SynthesisPanel = memo(({
         streamedOutput += chunk.token;
         onOutputChange(streamedOutput);
       }
+      onSynthesisComplete();
       if (!streamedOutput) {
         setPhaseStatus("idle");
       }
@@ -336,7 +342,6 @@ export const SynthesisPanel = memo(({
     <section className="panel-stack">
       <header>
         <h2>Synthesis</h2>
-        <p className="synthesis-endpoint">{getSynthesisEndpointInfo()}</p>
       </header>
       <p className="helper-copy">
         {phaseStatus === "analyzing" && "Analyzing signals..."}
@@ -490,7 +495,7 @@ export const SynthesisPanel = memo(({
           onClick={() => void handleGenerate("roadmap")}
           disabled={isGenerating}
         >
-          {isGenerating && mode === "roadmap" ? "Generating Roadmap..." : "Generate Roadmap"}
+          {isGenerating && mode === "roadmap" ? "Synthesizing Roadmap..." : "Synthesize Roadmap"}
         </button>
         <button
           type="button"
@@ -498,7 +503,7 @@ export const SynthesisPanel = memo(({
           onClick={() => void handleGenerate("prd")}
           disabled={isGenerating}
         >
-          {isGenerating && mode === "prd" ? "Generating PRD..." : "Generate PRD"}
+          {isGenerating && mode === "prd" ? "Synthesizing PRD..." : "Synthesize PRD"}
         </button>
       </div>
 

@@ -9,7 +9,6 @@ import { SystemAdministratorPage } from "./modules/admin/SystemAdministratorPage
 import { FeaturesPanel } from "./modules/features/FeaturesPanel";
 import { KudosPanel } from "./modules/kudos/KudosPanel";
 import { SynthesisPanel } from "./modules/synthesis/SynthesisPanel";
-import { useDbDataSource } from "./config/runtimeConfig";
 import { INITIAL_FEATURE_REQUESTS, INITIAL_KUDOS } from "./state/seedData";
 import { useWallState } from "./state/useWallState";
 import type { AppArea, AppScreen } from "./types/domain";
@@ -89,8 +88,16 @@ const App = (): JSX.Element => {
     reseeding,
     reseedData,
     refreshAdminTables,
+    adminDataSource,
+    adminDbEngine,
+    isDataLoaded,
     signalSummary,
     synthesisCountdownTarget,
+    synthesisCountdownRunning,
+    synthesisCountdownHasStarted,
+    synthesisCountdownInitialSeconds,
+    startSynthesisCountdown,
+    stopSynthesisCountdown,
     synthesisMode,
     synthesisOutput,
     synthesisPinLengthRange,
@@ -475,6 +482,8 @@ const App = (): JSX.Element => {
         revealNarrative={revealNarrative}
         onRevealNarrativeChange={setRevealNarrative}
         featureRequests={featureRequests}
+        onSynthesisStart={() => startSynthesisCountdown()}
+        onSynthesisComplete={stopSynthesisCountdown}
       />
     );
   }, [
@@ -497,6 +506,8 @@ const App = (): JSX.Element => {
     setRevealNarrative,
     setSynthesisMode,
     setSynthesisOutput,
+    startSynthesisCountdown,
+    stopSynthesisCountdown,
     signalSummary,
     synthesisMode,
     synthesisOutput,
@@ -540,6 +551,7 @@ const App = (): JSX.Element => {
     return (
       <SplashPage
         imageSrc="/assets/splash-wall-hero.png"
+        isDataLoaded={isDataLoaded}
         onContinue={() => setShowSplash(false)}
       />
     );
@@ -550,10 +562,14 @@ const App = (): JSX.Element => {
         <TopBar
         summary={signalSummary}
         countdownTarget={synthesisCountdownTarget}
+        countdownRunning={synthesisCountdownRunning}
+        countdownHasStarted={synthesisCountdownHasStarted}
+        countdownInitialSeconds={synthesisCountdownInitialSeconds}
         publicQuotes={publicQuotes}
         compactMode={inProductLanding}
         selectedProductName={selectedProductName}
         onOpenLiveResponses={() => setShowLiveResponses(true)}
+        onOpenSplash={() => setShowSplash(true)}
         onOpenViewAll={() => {
           setShowSystemAdminPage(false);
           setShowAllResponsesPage((current) => !current);
@@ -579,7 +595,8 @@ const App = (): JSX.Element => {
             tables={adminTables}
             onReseed={reseedData}
             reseeding={reseeding}
-            dataSource={useDbDataSource ? "db" : "flat"}
+            dataSource={adminDataSource}
+            dbEngine={adminDbEngine}
             onBackToDashboard={() => setShowSystemAdminPage(false)}
           />
         ) : inProductLanding ? (
