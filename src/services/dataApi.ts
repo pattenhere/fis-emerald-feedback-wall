@@ -2,8 +2,9 @@ import type { CardSortConcept, FeatureRequest, KudosQuote, ScreenFeedback } from
 import type { SeedTableDefinition } from "../state/adminSeedData";
 import type { DbSeedPayload } from "../state/dbSeedPayload";
 import type { AppArea } from "../types/domain";
+import { buildSynthesisAuthHeaders } from "./synthesisAuth";
 
-interface BootstrapResponse {
+export interface BootstrapResponse {
   appAreas: Array<{ id: AppArea; label: string; dark?: boolean }>;
   products: Array<{
     id: number;
@@ -30,6 +31,8 @@ interface BootstrapResponse {
     screenCategory?: string;
     description?: string;
     legacyScreenCode?: string;
+    thumbnailAssetPath?: string;
+    assets?: string[];
   }>;
   cardSortConcepts: CardSortConcept[];
   featureRequests: FeatureRequest[];
@@ -93,7 +96,7 @@ export const dataApi = {
   },
 
   getAdminTables: async (): Promise<SeedTableDefinition[]> => {
-    const response = await fetch("/api/admin/tables");
+    const response = await fetch("/api/admin/tables", { headers: buildSynthesisAuthHeaders() });
     const payload = await readJson<AdminTablesResponse>(response);
     return Array.isArray(payload.tables) ? payload.tables : [];
   },
@@ -101,7 +104,7 @@ export const dataApi = {
   reseed: async (payload: DbSeedPayload): Promise<void> => {
     const response = await fetch("/api/admin/reseed", {
       method: "POST",
-      headers: jsonHeaders,
+      headers: buildSynthesisAuthHeaders(jsonHeaders),
       body: JSON.stringify(payload),
     });
     await readJson<{ ok: boolean }>(response);

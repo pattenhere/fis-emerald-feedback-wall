@@ -27,11 +27,11 @@ export interface FeatureRequest {
   productId?: number;
   featureId?: number;
   screenId?: number | string;
-  app: AppArea;
-  screenName: string;
   title: string;
   description?: string;
   workflowContext?: string;
+  impactScore?: 1 | 2 | 3 | 4 | 5 | null;
+  sessionRole?: SessionRole | null;
   status?: string;
   votes: number;
   createdAt: string;
@@ -46,9 +46,9 @@ export interface KudosQuote {
   screenId?: number | string;
   text: string;
   role: KudosRole;
+  roleLabel?: SessionRole | null;
   consentPublic: boolean;
-  app?: AppArea;
-  screenName?: string;
+  isPublicSafe?: boolean;
   createdAt: string;
 }
 
@@ -63,6 +63,8 @@ export interface AppScreen {
   name: string;
   wireframeLabel: string;
   description: string;
+  thumbnailAssetPath?: string;
+  assets?: string[];
 }
 
 export interface ScreenFeedback {

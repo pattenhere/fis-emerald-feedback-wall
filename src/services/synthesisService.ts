@@ -1,4 +1,5 @@
 import type { SynthesisRequest, SynthesisResponse, SynthesisStreamChunk, SynthesisStreamEvent } from "../types/synthesis";
+import { buildSynthesisAuthHeaders } from "./synthesisAuth";
 
 const SYNTHESIS_API_BASE = import.meta.env.VITE_SYNTHESIS_API_BASE_URL;
 const SYNTHESIS_STREAM_PATH = "/api/synthesis/stream";
@@ -52,7 +53,7 @@ export const streamSynthesis = async function* (
   try {
     response = await fetch(primaryUrl, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: buildSynthesisAuthHeaders({ "content-type": "application/json" }),
       body: JSON.stringify(request),
     });
   } catch {
@@ -63,7 +64,7 @@ export const streamSynthesis = async function* (
       }
       response = await fetch(fallbackUrl, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: buildSynthesisAuthHeaders({ "content-type": "application/json" }),
         body: JSON.stringify(request),
       });
     } catch {
@@ -78,7 +79,7 @@ export const streamSynthesis = async function* (
     try {
       response = await fetch(fallbackUrl, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: buildSynthesisAuthHeaders({ "content-type": "application/json" }),
         body: JSON.stringify(request),
       });
     } catch {

@@ -1,6 +1,5 @@
 import { type CSSProperties, useEffect, useRef, useState } from "react";
-import { createOpenAIText, isOpenAIConfigured } from "../core/ai/openaiClient";
-import { createAnthropicText, isAnthropicConfigured } from "../core/ai/anthropicClient";
+import { requestInstitutionAISearch } from "../services/institutionAiApi";
 
 type UniverseViewMode = "universe" | "cls";
 type JourneyId =
@@ -373,10 +372,7 @@ const parseSearchQueryInput = (
   return { query: trimmed, forcedQueryType: null };
 };
 const getConfiguredInstitutionProvider = (): InstitutionAIProvider | null => {
-  if (INSTITUTION_AI_PROVIDER === "anthropic") {
-    return isAnthropicConfigured() ? "anthropic" : null;
-  }
-  return isOpenAIConfigured() ? "openai" : null;
+  return INSTITUTION_AI_PROVIDER;
 };
 
 const FEATURES: Feature[] = [
@@ -656,10 +652,12 @@ const buildInstitutionAISearchResult = async (
     },
   ];
 
-  const response =
-    provider === "anthropic"
-      ? await createAnthropicText({ messages, maxOutputTokens: 700, temperature: 0.1 })
-      : await createOpenAIText({ messages, maxOutputTokens: 700, temperature: 0.1 });
+  const response = await requestInstitutionAISearch({
+    provider,
+    messages,
+    maxOutputTokens: 700,
+    temperature: 0.1,
+  });
 
   const payload = parseJsonPayload(response.text) as {
     query_type?: "company" | "capability";

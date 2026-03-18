@@ -1,64 +1,61 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { KudosQuote, SignalSummary } from "../types/domain";
-import { formatCountdown, formatDurationMmSs } from "../utils/time";
+import { formatDurationHhMmSs } from "../utils/time";
+
+const getTimeRemaining = (closeTimeLocal: string): string => {
+  const [hoursRaw, minutesRaw] = closeTimeLocal.split(":");
+  const hours = Number(hoursRaw);
+  const minutes = Number(minutesRaw);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return "00:00:00";
+  }
+
+  const now = new Date();
+  const closeTime = new Date(now);
+  closeTime.setHours(hours, minutes, 0, 0);
+  const diffMs = closeTime.getTime() - now.getTime();
+  const remainingSeconds = Math.max(0, Math.ceil(diffMs / 1000));
+  return formatDurationHhMmSs(remainingSeconds);
+};
 
 interface TopBarProps {
   summary: SignalSummary;
-  countdownTarget: string;
-  countdownRunning: boolean;
-  countdownHasStarted: boolean;
-  countdownInitialSeconds: number;
   publicQuotes: KudosQuote[];
+  closeTimeLocal: string;
   compactMode?: boolean;
   selectedProductName?: string | null;
   onOpenLiveResponses?: () => void;
-  onOpenViewAll?: () => void;
   onOpenSystemAdmin?: () => void;
   onOpenSplash?: () => void;
-  viewAllActive?: boolean;
   systemAdminActive?: boolean;
+  mobileQrEnabled?: boolean;
 }
 
 export const TopBar = memo(({
   summary,
-  countdownTarget,
-  countdownRunning,
-  countdownHasStarted,
-  countdownInitialSeconds,
   publicQuotes,
+  closeTimeLocal,
   compactMode = false,
   selectedProductName = null,
   onOpenLiveResponses,
-  onOpenViewAll,
   onOpenSystemAdmin,
   onOpenSplash,
-  viewAllActive = false,
   systemAdminActive = false,
+  mobileQrEnabled = true,
 }: TopBarProps): JSX.Element => {
-  const [countdown, setCountdown] = useState(() =>
-    countdownHasStarted ? formatCountdown(countdownTarget) : formatDurationMmSs(countdownInitialSeconds),
-  );
+  const [timeRemaining, setTimeRemaining] = useState(() => getTimeRemaining(closeTimeLocal));
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [showQr, setShowQr] = useState(false);
   const [titleWidthPx, setTitleWidthPx] = useState<number | null>(null);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
 
   useEffect(() => {
-    if (!countdownRunning) {
-      return;
-    }
-    setCountdown(formatCountdown(countdownTarget));
+    setTimeRemaining(getTimeRemaining(closeTimeLocal));
     const timer = window.setInterval(() => {
-      setCountdown(formatCountdown(countdownTarget));
+      setTimeRemaining(getTimeRemaining(closeTimeLocal));
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [countdownRunning, countdownTarget]);
-
-  useEffect(() => {
-    if (!countdownHasStarted) {
-      setCountdown(formatDurationMmSs(countdownInitialSeconds));
-    }
-  }, [countdownHasStarted, countdownInitialSeconds]);
+  }, [closeTimeLocal]);
 
   useEffect(() => {
     if (publicQuotes.length < 3) {
@@ -69,6 +66,12 @@ export const TopBar = memo(({
     }, 8000);
     return () => window.clearInterval(timer);
   }, [publicQuotes]);
+
+  useEffect(() => {
+    if (!mobileQrEnabled) {
+      setShowQr(false);
+    }
+  }, [mobileQrEnabled]);
 
   const activeQuote = publicQuotes.length >= 3 ? publicQuotes[quoteIndex % publicQuotes.length] : null;
   const mobileUrl = useMemo(() => `${window.location.origin}/mobile.html`, []);
@@ -140,14 +143,21 @@ export const TopBar = memo(({
                 </svg>
                 <span>Universe</span>
               </button>
-              <button type="button" className="universe-launch" onClick={() => setShowQr(true)}>
+              <button
+                type="button"
+                className="universe-launch"
+                onClick={() => {
+                  if (mobileQrEnabled) {
+                    setShowQr(true);
+                  }
+                }}
+                disabled={!mobileQrEnabled}
+                title={mobileQrEnabled ? "Open mobile QR" : "Mobile QR is disabled by admin"}
+              >
                 MOBILE QR
               </button>
               <button type="button" className="universe-launch" onClick={onOpenSystemAdmin}>
                 {systemAdminActive ? "BACK TO WALL" : "System Admin"}
-              </button>
-              <button type="button" className="role-chip role-chip-button" onClick={onOpenViewAll}>
-                {viewAllActive ? "BACK TO WALL" : "VIEW ALL"}
               </button>
             </>
           )}
@@ -170,18 +180,18 @@ export const TopBar = memo(({
                 <strong>{summary.totalResponses.toLocaleString()}</strong>
               </button>
               <div className="metric-card">
-                <span className="metric-label">Synthesis Countdown</span>
-                <strong>{countdown}</strong>
+                <span className="metric-label">Time Remaining</span>
+                <strong>{timeRemaining}</strong>
               </div>
             </div>
           </>
         )}
       </header>
-      {showQr && (
+      {showQr && mobileQrEnabled && (
         <div className="overlay-modal" role="dialog" aria-modal="true" aria-label="Mobile QR access">
           <div className="overlay-card">
             <h2>Mobile Participation</h2>
-            <p>Scan to open Features + Kudos mobile view.</p>
+            <p>Scan to open Features + Comments mobile view.</p>
             <img src={qrUrl} alt="QR code for mobile feedback view" width={220} height={220} />
             <a href={mobileUrl} target="_blank" rel="noreferrer">
               {mobileUrl}

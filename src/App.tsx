@@ -8,7 +8,6 @@ import { ViewAllResponsesPage } from "./layout/ViewAllResponsesPage";
 import { SystemAdministratorPage } from "./modules/admin/SystemAdministratorPage";
 import { FeaturesPanel } from "./modules/features/FeaturesPanel";
 import { KudosPanel } from "./modules/kudos/KudosPanel";
-import { SynthesisPanel } from "./modules/synthesis/SynthesisPanel";
 import { INITIAL_FEATURE_REQUESTS, INITIAL_KUDOS } from "./state/seedData";
 import { useWallState } from "./state/useWallState";
 import type { AppArea, AppScreen } from "./types/domain";
@@ -23,13 +22,13 @@ const FALLBACK_SCREEN: AppScreen = {
   description: "Capture feedback for this feature.",
 };
 
-type AllResponseType = "Feedback" | "Feature Requests" | "Kudos";
+type AllResponseType = "Feedback" | "Feature Requests" | "Comments";
 
 interface LiveResponseItem {
   id: string;
   category: string;
   title: string;
-  sourceType: "Feature Request" | "Kudos" | "Screen Feedback";
+  sourceType: "Feature Request" | "Comments" | "Screen Feedback";
   feedbackType?: "Issue" | "Suggestion" | "Missing" | "Works Well";
   screenLabel: string;
   roleLabel?: string;
@@ -56,31 +55,27 @@ const App = (): JSX.Element => {
   const [showSplash, setShowSplash] = useState(true);
   const [showAllResponsesPage, setShowAllResponsesPage] = useState(false);
   const [showSystemAdminPage, setShowSystemAdminPage] = useState(false);
+  const [wallInputOpen, setWallInputOpen] = useState(true);
+  const [mobileQrActive, setMobileQrActive] = useState(true);
+  const [themesAutoSwitch, setThemesAutoSwitch] = useState(false);
+  const [inputCloseTimeLocal, setInputCloseTimeLocal] = useState("16:30");
   const {
     activeDrawerTab,
     activeApp,
     addFeatureRequest,
     addKudosQuote,
     addScreenFeedback,
-    buildExportRecords,
-    buildSynthesisPromptBody,
-    clearSynthesisOutput,
-    conflicts,
     drawerOpen,
     featureRequests,
     kudosQuotes,
     publicQuotes,
     readinessThreshold,
-    revealNarrative,
     selectedScreenId,
     setActiveApp,
     setActiveDrawerTab,
     setDrawerOpen,
     setReadinessThreshold,
-    setRevealNarrative,
     setSelectedScreenId,
-    setSynthesisMode,
-    setSynthesisOutput,
     screenFeedback,
     products,
     screens,
@@ -98,13 +93,6 @@ const App = (): JSX.Element => {
     synthesisCountdownRunning,
     synthesisCountdownHasStarted,
     synthesisCountdownInitialSeconds,
-    startSynthesisCountdown,
-    stopSynthesisCountdown,
-    synthesisMode,
-    synthesisOutput,
-    synthesisPinLengthRange,
-    synthesisUnlocked,
-    unlockSynthesis,
     upvoteFeatureRequest,
   } = state;
   const productScreens = useMemo(
@@ -116,8 +104,14 @@ const App = (): JSX.Element => {
     [productScreens, selectedScreenId],
   );
   const areaFeatures = useMemo(
-    () => featureRequests.filter((feature) => feature.screenId === selectedScreen.id),
-    [featureRequests, selectedScreen.id],
+    () =>
+      featureRequests.filter((feature) => {
+        if (feature.screenId != null) {
+          return Number(feature.screenId) === Number(selectedScreen.id);
+        }
+        return selectedProductId != null && Number(feature.productId) === Number(selectedProductId);
+      }),
+    [featureRequests, selectedProductId, selectedScreen.id],
   );
   const selectedScreenFeedback = useMemo(
     () =>
@@ -157,9 +151,17 @@ const App = (): JSX.Element => {
   const areaKudos = useMemo(
     () =>
       kudosQuotes.filter(
-        (quote) => quote.screenId === selectedScreen.id && !initialKudosIds.has(quote.id),
+        (quote) => {
+          if (initialKudosIds.has(quote.id)) {
+            return false;
+          }
+          if (quote.screenId != null) {
+            return Number(quote.screenId) === Number(selectedScreen.id);
+          }
+          return selectedProductId != null && Number(quote.productId) === Number(selectedProductId);
+        },
       ),
-    [initialKudosIds, kudosQuotes, selectedScreen.id],
+    [initialKudosIds, kudosQuotes, selectedProductId, selectedScreen.id],
   );
   const inProductLanding = selectedProductId === null;
   const featureCountByProductId = useMemo(() => {
@@ -191,13 +193,9 @@ const App = (): JSX.Element => {
     return selectedScreen.categoryLabel ?? selectedScreen.name;
   }, [selectedProductId, selectedScreen.categoryLabel, selectedScreen.name]);
   const allProductScreens = screens;
-  const categoryByNormalizedFeatureName = useMemo(() => {
-    const normalize = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]/g, "");
-    return new Map(allProductScreens.map((screen) => [normalize(screen.name), screen.categoryLabel ?? screen.app]));
-  }, [allProductScreens]);
   const liveResponsesByCategory = useMemo(() => {
-    const normalize = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]/g, "");
     const categoryByScreenId = new Map(allProductScreens.map((screen) => [String(screen.id), screen.categoryLabel ?? screen.app]));
+    const screenNameById = new Map(allProductScreens.map((screen) => [String(screen.id), screen.name]));
     const screensByLengthDesc = allProductScreens
       .slice()
       .sort((a, b) => b.name.length - a.name.length);
@@ -210,12 +208,9 @@ const App = (): JSX.Element => {
       }
       return null;
     };
-    const resolveCategory = (screenId?: number | string, screenName?: string): string => {
+    const resolveCategory = (screenId?: number | string): string => {
       if (screenId != null && categoryByScreenId.has(String(screenId))) {
         return categoryByScreenId.get(String(screenId)) ?? "Uncategorized";
-      }
-      if (screenName) {
-        return categoryByNormalizedFeatureName.get(normalize(screenName)) ?? "Uncategorized";
       }
       return "Uncategorized";
     };
@@ -223,27 +218,28 @@ const App = (): JSX.Element => {
     const allResponses: LiveResponseItem[] = [];
 
     for (const feature of featureRequests) {
+      const screenName = feature.screenId == null ? "Unspecified" : screenNameById.get(String(feature.screenId)) ?? "Unspecified";
       allResponses.push({
         id: `feature-${feature.id}`,
-        category: resolveCategory(feature.screenId, feature.screenName),
+        category: resolveCategory(feature.screenId),
         title: feature.title,
         sourceType: "Feature Request",
-        screenLabel: feature.screenName,
+        screenLabel: screenName,
       });
     }
 
     for (const quote of kudosQuotes) {
-      const inferredScreen = !quote.screenName ? inferScreenFromText(quote.text) : null;
-      const screenName = quote.screenName ?? inferredScreen?.name ?? "Unspecified";
+      const byScreenId = quote.screenId == null ? undefined : screenNameById.get(String(quote.screenId));
+      const inferredScreen = byScreenId ? null : inferScreenFromText(quote.text);
+      const screenName = byScreenId ?? inferredScreen?.name ?? "Unspecified";
       const category = resolveCategory(
-        quote.screenId,
-        screenName,
+        quote.screenId ?? inferredScreen?.id,
       );
       allResponses.push({
         id: `kudos-${quote.id}`,
         category,
         title: quote.text,
-        sourceType: "Kudos",
+        sourceType: "Comments",
         screenLabel: screenName,
         roleLabel: quote.role.toUpperCase(),
       });
@@ -256,7 +252,7 @@ const App = (): JSX.Element => {
         .join(" ");
       allResponses.push({
         id: `screen-${feedback.id}`,
-        category: resolveCategory(feedback.screenId, feedback.screenName),
+        category: resolveCategory(feedback.screenId),
         title: feedback.text?.trim() || feedbackTypeLabel,
         sourceType: "Screen Feedback",
         feedbackType: feedbackTypeLabel as LiveResponseItem["feedbackType"],
@@ -298,17 +294,14 @@ const App = (): JSX.Element => {
           typeGroups,
         };
       });
-  }, [allProductScreens, categoryByNormalizedFeatureName, featureRequests, kudosQuotes, screenFeedback]);
+  }, [allProductScreens, featureRequests, kudosQuotes, screenFeedback]);
 
   const groupedAllResponses = useMemo(() => {
     const categoryByScreenId = new Map(allProductScreens.map((screen) => [Number(screen.id), screen.categoryLabel ?? screen.app]));
-    const resolveCategory = (screenId?: number, screenName?: string): string => {
+    const screenNameById = new Map(allProductScreens.map((screen) => [Number(screen.id), screen.name]));
+    const resolveCategory = (screenId?: number): string => {
       if (screenId != null && categoryByScreenId.has(screenId)) {
         return categoryByScreenId.get(screenId) ?? "Uncategorized";
-      }
-      if (screenName) {
-        const normalized = screenName.toLowerCase().replace(/[^a-z0-9]/g, "");
-        return categoryByNormalizedFeatureName.get(normalized) ?? "Uncategorized";
       }
       return "Uncategorized";
     };
@@ -316,7 +309,7 @@ const App = (): JSX.Element => {
     const typeOrder: Record<AllResponseType, number> = {
       Feedback: 0,
       "Feature Requests": 1,
-      Kudos: 2,
+      Comments: 2,
     };
 
     const grouped = new Map<string, Array<{ id: string; type: AllResponseType; title: string; detail: string }>>();
@@ -325,13 +318,14 @@ const App = (): JSX.Element => {
       if (initialFeatureRequestIds.has(item.id)) {
         continue;
       }
-      const category = resolveCategory(item.screenId == null ? undefined : Number(item.screenId), item.screenName);
+      const numericScreenId = item.screenId == null ? undefined : Number(item.screenId);
+      const category = resolveCategory(numericScreenId);
       const list = grouped.get(category) ?? [];
       list.push({
         id: `feature-${item.id}`,
         type: "Feature Requests",
         title: item.title,
-        detail: item.screenName,
+        detail: numericScreenId == null ? "Unspecified" : screenNameById.get(numericScreenId) ?? "Unspecified",
       });
       grouped.set(category, list);
     }
@@ -341,7 +335,7 @@ const App = (): JSX.Element => {
         .split("-")
         .map((segment) => `${segment.slice(0, 1).toUpperCase()}${segment.slice(1)}`)
         .join(" ");
-      const category = resolveCategory(item.screenId == null ? undefined : Number(item.screenId), item.screenName);
+      const category = resolveCategory(item.screenId == null ? undefined : Number(item.screenId));
       const list = grouped.get(category) ?? [];
       list.push({
         id: `feedback-${item.id}`,
@@ -353,13 +347,14 @@ const App = (): JSX.Element => {
     }
 
     for (const item of kudosQuotes) {
-      const category = resolveCategory(item.screenId == null ? undefined : Number(item.screenId), item.screenName);
+      const numericScreenId = item.screenId == null ? undefined : Number(item.screenId);
+      const category = resolveCategory(numericScreenId);
       const list = grouped.get(category) ?? [];
       list.push({
         id: `kudos-${item.id}`,
-        type: "Kudos",
+        type: "Comments",
         title: item.text,
-        detail: `${item.role.toUpperCase()}${item.screenName ? ` • ${item.screenName}` : ""}`,
+        detail: `${item.role.toUpperCase()}${numericScreenId == null ? "" : ` • ${screenNameById.get(numericScreenId) ?? "Unspecified"}`}`,
       });
       grouped.set(category, list);
     }
@@ -389,7 +384,6 @@ const App = (): JSX.Element => {
       });
   }, [
     allProductScreens,
-    categoryByNormalizedFeatureName,
     featureRequests,
     initialFeatureRequestIds,
     kudosQuotes,
@@ -438,7 +432,6 @@ const App = (): JSX.Element => {
       return (
         <FeaturesPanel
           items={sessionAreaFeatures}
-          activeApp={activeApp}
           selectedScreen={selectedScreen}
           selectedCategoryLabel={selectedCategoryLabel}
           onAdd={addFeatureRequest}
@@ -455,10 +448,6 @@ const App = (): JSX.Element => {
             addKudosQuote({
               ...quote,
               productId: selectedScreen.productId ?? selectedProductId ?? 0,
-              featureId: selectedScreen.featureId,
-              app: activeApp,
-              screenId: Number(selectedScreen.id),
-              screenName: selectedScreen.name,
             })
           }
         />
@@ -466,26 +455,12 @@ const App = (): JSX.Element => {
     }
 
     return (
-      <SynthesisPanel
-        summary={signalSummary}
-        conflicts={conflicts}
-        readinessThreshold={readinessThreshold}
-        onReadinessThresholdChange={setReadinessThreshold}
-        mode={synthesisMode}
-        onModeChange={setSynthesisMode}
-        unlocked={synthesisUnlocked}
-        onUnlock={unlockSynthesis}
-        pinLengthRange={synthesisPinLengthRange}
-        output={synthesisOutput}
-        onOutputChange={setSynthesisOutput}
-        buildPromptBody={buildSynthesisPromptBody}
-        onClearOutput={clearSynthesisOutput}
-        exportRecords={buildExportRecords}
-        revealNarrative={revealNarrative}
-        onRevealNarrativeChange={setRevealNarrative}
-        featureRequests={featureRequests}
-        onSynthesisStart={() => startSynthesisCountdown()}
-        onSynthesisComplete={stopSynthesisCountdown}
+      <FeaturesPanel
+        items={sessionAreaFeatures}
+        selectedScreen={selectedScreen}
+        selectedCategoryLabel={selectedCategoryLabel}
+        onAdd={addFeatureRequest}
+        onUpvote={upvoteFeatureRequest}
       />
     );
   }, [
@@ -497,25 +472,6 @@ const App = (): JSX.Element => {
     activeDrawerTab,
     addFeatureRequest,
     addKudosQuote,
-    buildExportRecords,
-    buildSynthesisPromptBody,
-    clearSynthesisOutput,
-    conflicts,
-    featureRequests,
-    readinessThreshold,
-    revealNarrative,
-    setReadinessThreshold,
-    setRevealNarrative,
-    setSynthesisMode,
-    setSynthesisOutput,
-    startSynthesisCountdown,
-    stopSynthesisCountdown,
-    signalSummary,
-    synthesisMode,
-    synthesisOutput,
-    synthesisPinLengthRange,
-    synthesisUnlocked,
-    unlockSynthesis,
     upvoteFeatureRequest,
   ]);
 
@@ -565,19 +521,12 @@ const App = (): JSX.Element => {
     <div className="app-shell">
         <TopBar
         summary={signalSummary}
-        countdownTarget={synthesisCountdownTarget}
-        countdownRunning={synthesisCountdownRunning}
-        countdownHasStarted={synthesisCountdownHasStarted}
-        countdownInitialSeconds={synthesisCountdownInitialSeconds}
         publicQuotes={publicQuotes}
+        closeTimeLocal={inputCloseTimeLocal}
         compactMode={inProductLanding}
         selectedProductName={selectedProductName}
         onOpenLiveResponses={() => setShowLiveResponses(true)}
         onOpenSplash={() => setShowSplash(true)}
-        onOpenViewAll={() => {
-          setShowSystemAdminPage(false);
-          setShowAllResponsesPage((current) => !current);
-        }}
         onOpenSystemAdmin={() => {
           setShowAllResponsesPage(false);
           setShowSystemAdminPage((current) => {
@@ -588,8 +537,8 @@ const App = (): JSX.Element => {
             return next;
           });
         }}
-        viewAllActive={showAllResponsesPage}
         systemAdminActive={showSystemAdminPage}
+        mobileQrEnabled={mobileQrActive}
       />
       <main className={`content-shell ${showAllResponsesPage || showSystemAdminPage ? "is-admin-mode" : inProductLanding ? "is-product-landing" : drawerOpen ? "" : "is-drawer-collapsed"}`}>
         {showAllResponsesPage ? (
@@ -597,6 +546,24 @@ const App = (): JSX.Element => {
         ) : showSystemAdminPage ? (
           <SystemAdministratorPage
             tables={adminTables}
+            featureRequestCount={featureRequests.length}
+            screenFeedbackCount={screenFeedback.length}
+            kudosCount={kudosQuotes.length}
+            totalFeatureVotes={signalSummary.totalFeatureVotes}
+            readinessThreshold={readinessThreshold}
+            onReadinessThresholdChange={setReadinessThreshold}
+            wallInputOpen={wallInputOpen}
+            onWallInputOpenChange={setWallInputOpen}
+            mobileQrActive={mobileQrActive}
+            onMobileQrActiveChange={setMobileQrActive}
+            themesAutoSwitch={themesAutoSwitch}
+            onThemesAutoSwitchChange={setThemesAutoSwitch}
+            closeTimeLocal={inputCloseTimeLocal}
+            onCloseTimeLocalChange={setInputCloseTimeLocal}
+            synthesisCountdownTarget={synthesisCountdownTarget}
+            synthesisCountdownRunning={synthesisCountdownRunning}
+            synthesisCountdownHasStarted={synthesisCountdownHasStarted}
+            synthesisCountdownInitialSeconds={synthesisCountdownInitialSeconds}
             onReseed={reseedData}
             reseeding={reseeding}
             dataSource={adminDataSource}
@@ -620,6 +587,7 @@ const App = (): JSX.Element => {
               open={drawerOpen}
               activeTab={activeDrawerTab}
               onTabChange={setActiveDrawerTab}
+              onToggle={() => setDrawerOpen(!drawerOpen)}
             >
               {drawerContent}
             </Drawer>

@@ -5,6 +5,7 @@ interface DrawerProps {
   open: boolean;
   activeTab: DrawerTab;
   onTabChange: (tab: DrawerTab) => void;
+  onToggle: () => void;
   children: JSX.Element;
 }
 
@@ -46,36 +47,65 @@ const iconForTab = (tab: DrawerTab): JSX.Element => {
 
 const TABS: Array<{ id: DrawerTab; label: string }> = [
   { id: "features", label: "Feature Requests" },
-  { id: "kudos", label: "Kudos" },
-  { id: "synthesis", label: "Synthesis" },
+  { id: "kudos", label: "Comments" },
 ];
 
 export const Drawer = memo(({
   open,
   activeTab,
   onTabChange,
+  onToggle,
   children,
 }: DrawerProps): JSX.Element => {
+  if (!open) {
+    return (
+      <aside className="drawer is-collapsed" aria-label="Feedback panel collapsed">
+        <button
+          type="button"
+          className="drawer-tab-trigger"
+          onClick={onToggle}
+          aria-label="Open feedback panel"
+          title="Open feedback panel"
+        >
+          <span aria-hidden="true">Feedback</span>
+        </button>
+      </aside>
+    );
+  }
+
   return (
-    <aside className={`drawer ${open ? "is-open" : "is-collapsed"}`}>
-      <nav className="drawer-tabs" aria-label="Feedback panel tabs">
-        {TABS.map((tab) => (
+    <aside className="drawer is-open" aria-label="Feedback panel">
+      <section className="drawer-panel">
+        <div className="drawer-head">
+          <nav className="drawer-tabs" aria-label="Feedback panel tabs">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                className={`drawer-tab ${activeTab === tab.id ? "is-active" : ""}`}
+                type="button"
+                onClick={() => onTabChange(tab.id)}
+                aria-label={tab.label}
+                title={tab.label}
+              >
+                <span className="drawer-tab-icon" aria-hidden="true">
+                  {iconForTab(tab.id)}
+                </span>
+                <span className="drawer-tab-label">{tab.label}</span>
+              </button>
+            ))}
+          </nav>
           <button
-            key={tab.id}
-            className={`drawer-tab ${activeTab === tab.id ? "is-active" : ""}`}
             type="button"
-            onClick={() => onTabChange(tab.id)}
-            aria-label={tab.label}
-            title={tab.label}
+            className="drawer-collapse-btn"
+            onClick={onToggle}
+            aria-label="Collapse feedback panel"
+            title="Collapse"
           >
-            <span className="drawer-tab-icon" aria-hidden="true">
-              {iconForTab(tab.id)}
-            </span>
-            <span className="drawer-tab-label">{tab.label}</span>
+            <span aria-hidden="true">Collapse</span>
           </button>
-        ))}
-      </nav>
-      {open && <section className="drawer-content">{children}</section>}
+        </div>
+        <section className="drawer-content">{children}</section>
+      </section>
     </aside>
   );
 });

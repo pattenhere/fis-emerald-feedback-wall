@@ -9,6 +9,10 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    define: {
+      "process.env.EMERALD_UI_VARIANT": JSON.stringify(env.EMERALD_UI_VARIANT ?? "legacy"),
+      "process.env.EMERALD_FEEDBACK_PANEL_STAY_OPEN": JSON.stringify(env.EMERALD_FEEDBACK_PANEL_STAY_OPEN ?? "false"),
+    },
     server: {
       port: 4000,
       proxy: {

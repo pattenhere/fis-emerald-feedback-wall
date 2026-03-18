@@ -1,12 +1,9 @@
 import { useMemo, useState } from "react";
-import { APP_AREAS, SCREENS_BY_APP } from "./state/seedData";
-import type { AppArea, KudosRole } from "./types/domain";
+import type { KudosRole } from "./types/domain";
 import { makeId } from "./utils/id";
 
 interface MobileFeature {
   id: string;
-  app: AppArea;
-  screenId: number;
   title: string;
   votes: number;
 }
@@ -38,7 +35,6 @@ export const MobileApp = (): JSX.Element => {
   const [features, setFeatures] = useState<MobileFeature[]>(initial.features);
   const [kudos, setKudos] = useState<MobileKudos[]>(initial.kudos);
   const [title, setTitle] = useState("");
-  const [app, setApp] = useState<AppArea>(APP_AREAS[0].id);
   const [kudosText, setKudosText] = useState("");
   const [kudosRole, setKudosRole] = useState<KudosRole>("unspecified");
   const [consent, setConsent] = useState(false);
@@ -51,8 +47,7 @@ export const MobileApp = (): JSX.Element => {
     if (!title.trim()) {
       return;
     }
-    const screenId = Number(SCREENS_BY_APP[app][0]?.id ?? 0);
-    const next = [{ id: makeId(), app, screenId, title: title.trim(), votes: 1 }, ...features];
+    const next = [{ id: makeId(), title: title.trim(), votes: 1 }, ...features];
     setFeatures(next);
     persist(next, kudos);
     setTitle("");
@@ -88,17 +83,12 @@ export const MobileApp = (): JSX.Element => {
 
       <div className="mobile-tabs">
         <button type="button" className={activeTab === "features" ? "is-active" : ""} onClick={() => setActiveTab("features")}>Features</button>
-        <button type="button" className={activeTab === "kudos" ? "is-active" : ""} onClick={() => setActiveTab("kudos")}>Kudos</button>
+        <button type="button" className={activeTab === "kudos" ? "is-active" : ""} onClick={() => setActiveTab("kudos")}>Comments</button>
       </div>
 
       {activeTab === "features" ? (
         <section className="mobile-section">
           <div className="inline-form">
-            <select value={app} onChange={(event) => setApp(event.target.value as AppArea)}>
-              {APP_AREAS.map((area) => (
-                <option key={area.id} value={area.id}>{area.label}</option>
-              ))}
-            </select>
             <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Add feature request" />
             <button type="button" className="primary-btn" onClick={handleAddFeature}>Save</button>
           </div>
@@ -120,7 +110,7 @@ export const MobileApp = (): JSX.Element => {
       ) : (
         <section className="mobile-section">
           <div className="inline-form">
-            <textarea rows={4} value={kudosText} onChange={(event) => setKudosText(event.target.value)} placeholder="Share kudos" />
+            <textarea rows={4} value={kudosText} onChange={(event) => setKudosText(event.target.value)} placeholder="Share comment" />
             <select value={kudosRole} onChange={(event) => setKudosRole(event.target.value as KudosRole)}>
               <option value="unspecified">Select role</option>
               <option value="ops">Ops</option>

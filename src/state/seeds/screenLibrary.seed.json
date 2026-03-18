@@ -4,209 +4,284 @@
     "app": "digital-experience",
     "name": "Borrower Intake",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Capture borrower information with guided intake and data quality checks."
+    "description": "Capture borrower information with guided intake and data quality checks.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "de-self-service",
     "app": "digital-experience",
     "name": "Self-Service",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Give borrowers visibility and control through a secure self-service portal."
+    "description": "Give borrowers visibility and control through a secure self-service portal.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "de-document-funding-transition",
     "app": "digital-experience",
     "name": "Document/Funding Transition",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Move from document completion to funding readiness with fewer handoffs."
+    "description": "Move from document completion to funding readiness with fewer handoffs.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "or-application-workflow",
     "app": "origination",
     "name": "Application Workflow",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Coordinate intake steps, routing, and queue ownership across originations."
+    "description": "Coordinate intake steps, routing, and queue ownership across originations.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "or-underwriting",
     "app": "origination",
     "name": "Underwriting",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Assess eligibility and risk with transparent decision support in context."
+    "description": "Assess eligibility and risk with transparent decision support in context.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "or-pricing-approval",
     "app": "origination",
     "name": "Pricing / Approval",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Price deals and approve terms with policy-aware approval controls."
+    "description": "Price deals and approve terms with policy-aware approval controls.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "or-onboarding-servicing",
     "app": "origination",
     "name": "Onboarding to Servicing",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Transition closed deals into servicing with complete and validated records."
+    "description": "Transition closed deals into servicing with complete and validated records.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "cr-credit-assessment",
     "app": "credit-risk",
     "name": "Credit Assessment",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Evaluate applicant creditworthiness using internal and external credit inputs."
+    "description": "Evaluate applicant creditworthiness using internal and external credit inputs.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "cr-risk-rating",
     "app": "credit-risk",
     "name": "Risk Rating",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Apply consistent risk scores and rationale to each facility and borrower."
+    "description": "Apply consistent risk scores and rationale to each facility and borrower.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "cr-exposure-visibility",
     "app": "credit-risk",
     "name": "Exposure Visibility",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Track portfolio, borrower, and segment exposure concentration in real time."
+    "description": "Track portfolio, borrower, and segment exposure concentration in real time.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "cr-compliance-monitoring",
     "app": "credit-risk",
     "name": "Compliance Monitoring",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Flag and monitor policy and regulatory compliance drift across loans."
+    "description": "Flag and monitor policy and regulatory compliance drift across loans.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "sv-booking-maintenance",
     "app": "servicing",
     "name": "Booking / Maintenance",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Book facilities and maintain account-level changes with full audit trails."
+    "description": "Book facilities and maintain account-level changes with full audit trails.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "sv-payments-billing-payoff",
     "app": "servicing",
     "name": "Payments / Billing / Payoff",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Handle invoicing, payment processing, and payoff execution end to end."
+    "description": "Handle invoicing, payment processing, and payoff execution end to end.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "sv-amortization-accruals",
     "app": "servicing",
     "name": "Amortization / Accruals",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Calculate accrual schedules and amortization values with transparent logic."
+    "description": "Calculate accrual schedules and amortization values with transparent logic.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "sv-transaction-processing",
     "app": "servicing",
     "name": "Transaction Processing",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Process operational loan transactions at scale with exception handling."
+    "description": "Process operational loan transactions at scale with exception handling.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
+  },
+  {
+    "id": "sv-eir-fees",
+    "app": "servicing",
+    "name": "EIR Fees",
+    "wireframeLabel": "Feature detail · working prototype taxonomy",
+    "description": "Configure effective interest rate fee treatment and recalculation controls.",
+    "thumbnailAssetPath": "screens/servicing/eir-fees/01 Overlay.png",
+    "assets": [
+      "screens/servicing/eir-fees/01 Overlay.png",
+      "screens/servicing/eir-fees/02 Full Screen.png",
+      "screens/servicing/eir-fees/03 Overlay.png",
+      "screens/servicing/eir-fees/04 Full Screen.png",
+      "screens/servicing/eir-fees/05 Overlay.png"
+    ]
   },
   {
     "id": "mc-covenants-compliance",
     "app": "monitoring-controls",
     "name": "Covenants / Compliance",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Track covenant tests and compliance obligations with proactive alerts."
+    "description": "Track covenant tests and compliance obligations with proactive alerts.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "mc-exceptions-amendments",
     "app": "monitoring-controls",
     "name": "Exceptions / Amendments",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Capture waiver and amendment workflows with governed approval trails."
+    "description": "Capture waiver and amendment workflows with governed approval trails.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "mc-policy-controls",
     "app": "monitoring-controls",
     "name": "Policy Controls",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Enforce configurable policy constraints for key lending lifecycle actions."
+    "description": "Enforce configurable policy constraints for key lending lifecycle actions.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "mc-operational-workflow",
     "app": "monitoring-controls",
     "name": "Operational Workflow",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Standardize controls-oriented operational work across teams and regions."
+    "description": "Standardize controls-oriented operational work across teams and regions.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "sy-syndicated-servicing",
     "app": "syndication-complex-lending",
     "name": "Syndicated Servicing",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Support multi-lender servicing events with participant-level transparency."
+    "description": "Support multi-lender servicing events with participant-level transparency.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "sy-agented-loan-support",
     "app": "syndication-complex-lending",
     "name": "Agented Loan Support",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Enable agent bank operations and communications for complex facilities."
+    "description": "Enable agent bank operations and communications for complex facilities.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "sy-multi-party-administration",
     "app": "syndication-complex-lending",
     "name": "Multi-Party Administration",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Manage lender, borrower, and agent interactions with clear role controls."
+    "description": "Manage lender, borrower, and agent interactions with clear role controls.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "ai-inquiry-transaction-history",
     "app": "analytics-inquiry",
     "name": "Inquiry / Transaction History",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Search historical activity and inquiry data across accounts and facilities."
+    "description": "Search historical activity and inquiry data across accounts and facilities.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "ai-reporting",
     "app": "analytics-inquiry",
     "name": "Reporting",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Generate operational and portfolio reports with reusable output templates."
+    "description": "Generate operational and portfolio reports with reusable output templates.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "ai-bi-dashboards",
     "app": "analytics-inquiry",
     "name": "BI / Dashboards",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Deliver interactive dashboards for trend, variance, and performance analysis."
+    "description": "Deliver interactive dashboards for trend, variance, and performance analysis.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "ai-portfolio-visibility",
     "app": "analytics-inquiry",
     "name": "Portfolio Visibility",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Expose cross-portfolio risk and servicing visibility for strategic decisions."
+    "description": "Expose cross-portfolio risk and servicing visibility for strategic decisions.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "ps-workflow-engine",
     "app": "platform-services",
     "name": "Workflow Engine",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Power configurable process orchestration and event-driven task management."
+    "description": "Power configurable process orchestration and event-driven task management.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "ps-apis-integrations",
     "app": "platform-services",
     "name": "APIs / Integrations",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Connect to internal and partner systems with stable integration contracts."
+    "description": "Connect to internal and partner systems with stable integration contracts.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "ps-security-permissions",
     "app": "platform-services",
     "name": "Security / Permissions",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Control access with role-aware permissions and stronger security boundaries."
+    "description": "Control access with role-aware permissions and stronger security boundaries.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   },
   {
     "id": "ps-configuration",
     "app": "platform-services",
     "name": "Configuration",
     "wireframeLabel": "Feature detail · working prototype taxonomy",
-    "description": "Enable admin configuration of rules, workflows, and platform behaviors."
+    "description": "Enable admin configuration of rules, workflows, and platform behaviors.",
+    "thumbnailAssetPath": "splash-wall-hero.png",
+    "assets": []
   }
 ]

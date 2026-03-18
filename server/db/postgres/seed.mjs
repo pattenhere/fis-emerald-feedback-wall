@@ -42,8 +42,10 @@ if (!process.env.FEEDBACK_DATA_SOURCE) {
   process.env.FEEDBACK_DATA_SOURCE = "db";
 }
 
-const hasPgUrl = Boolean(String(process.env.POSTGRES_URL_NON_POOLING ?? process.env.POSTGRES_URL ?? process.env.DATABASE_URL ?? "").trim());
-if (!hasPgUrl) {
+const resolvePostgresUrl = () =>
+  String(process.env.POSTGRES_URL_NON_POOLING || process.env.POSTGRES_URL || process.env.DATABASE_URL || "").trim();
+
+if (!resolvePostgresUrl()) {
   // eslint-disable-next-line no-console
   console.error("[postgres] missing POSTGRES_URL / POSTGRES_URL_NON_POOLING; cannot seed");
   process.exit(1);

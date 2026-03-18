@@ -828,15 +828,224 @@ body {
   font-size: 0.94rem;
 }
 
-.sysadmin-shell {
+.sysadmin-layout {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface-strong);
   min-height: calc(100vh - 190px);
   display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 0.9rem;
+  padding: 0.9rem;
+}
+
+.sysadmin-nav {
+  background: linear-gradient(185deg, #061a23 0%, #001e28 42%, #002631 100%);
+  border: 1px solid #0d3a4a;
+  border-radius: 18px;
+  color: #b8ccd8;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sysadmin-nav-brand {
+  padding: 1.35rem 1.1rem 1.15rem;
+  border-bottom: 1px solid rgba(92, 145, 164, 0.26);
+}
+
+.sysadmin-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  min-width: 64px;
+  border-radius: 8px;
+  background: linear-gradient(140deg, #11c8a7 0%, #0ea68f 100%);
+  color: #ecfffa;
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.9rem;
+  padding: 0 0.8rem;
+}
+
+.sysadmin-nav-brand h2 {
+  margin: 0;
+  color: #e6f3f8;
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.sysadmin-nav-brand p {
+  margin: 0.28rem 0 0;
+  color: #7292a2;
+  font-size: 0.88rem;
+  letter-spacing: 0.01em;
+}
+
+.sysadmin-nav-groups {
+  overflow: auto;
+  padding-bottom: 0.6rem;
+}
+
+.sysadmin-nav-section {
+  padding: 0.95rem 0 0.2rem;
+  border-top: 1px solid rgba(92, 145, 164, 0.2);
+}
+
+.sysadmin-nav-section:first-child {
+  border-top: none;
+}
+
+.sysadmin-nav-section h3 {
+  margin: 0 1.1rem 0.55rem;
+  color: #5e8598;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+}
+
+.sysadmin-nav-list {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.sysadmin-nav-item {
+  border: 0;
+  background: transparent;
+  color: #99b4c2;
+  display: flex;
+  align-items: center;
+  gap: 0.72rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.74rem 1.1rem;
+  font-size: 1.1rem;
+  line-height: 1.2;
+  cursor: pointer;
+  position: relative;
+}
+
+.sysadmin-nav-item:hover {
+  background: rgba(23, 134, 165, 0.15);
+  color: #d5e7ef;
+}
+
+.sysadmin-nav-item.is-active {
+  background: linear-gradient(90deg, rgba(46, 185, 159, 0.24) 0%, rgba(48, 132, 155, 0.16) 100%);
+  color: #eef9fd;
+}
+
+.sysadmin-nav-item.is-active::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: #15c3a5;
+}
+
+.sysadmin-nav-icon {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #62899c;
+  border-radius: 4px;
+  opacity: 0.85;
+  flex: 0 0 auto;
+}
+
+.sysadmin-nav-item.is-active .sysadmin-nav-icon {
+  border-color: #dbf4ff;
+}
+
+.sysadmin-nav-icon.is-grid {
+  border: none;
+  background:
+    linear-gradient(#62899c 0 0) 0 0 / 7px 7px no-repeat,
+    linear-gradient(#62899c 0 0) 11px 0 / 7px 7px no-repeat,
+    linear-gradient(#62899c 0 0) 0 11px / 7px 7px no-repeat,
+    linear-gradient(#62899c 0 0) 11px 11px / 7px 7px no-repeat;
+}
+
+.sysadmin-nav-icon.is-stack {
+  border: none;
+  background:
+    linear-gradient(#62899c 0 0) 0 2px / 18px 3px no-repeat,
+    linear-gradient(#62899c 0 0) 0 8px / 14px 3px no-repeat,
+    linear-gradient(#62899c 0 0) 0 14px / 10px 3px no-repeat;
+}
+
+.sysadmin-nav-icon.is-check {
+  border-radius: 999px;
+}
+
+.sysadmin-nav-icon.is-check::before {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 4px;
+  border-left: 2px solid #62899c;
+  border-bottom: 2px solid #62899c;
+  transform: translate(4px, 4px) rotate(-45deg);
+}
+
+.sysadmin-nav-icon.is-trend {
+  border: none;
+  border-bottom: 2px solid #62899c;
+  border-left: 2px solid #62899c;
+  transform: skew(-28deg);
+}
+
+.sysadmin-nav-icon.is-table {
+  border-radius: 3px;
+  box-shadow:
+    inset 0 -2px 0 0 #62899c,
+    inset -2px 0 0 0 #62899c;
+}
+
+.sysadmin-nav-icon.is-file {
+  border-radius: 3px;
+}
+
+.sysadmin-nav-icon.is-arrow {
+  border: none;
+  border-top: 2px solid #62899c;
+  border-right: 2px solid #62899c;
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  margin-left: 4px;
+}
+
+.sysadmin-nav-badge-count {
+  margin-left: auto;
+  min-width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: #f3ac2f;
+  color: #1c2328;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.93rem;
+  font-weight: 700;
+}
+
+.sysadmin-shell {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-strong);
+  display: grid;
   grid-template-columns: 340px 1fr;
   gap: 0.9rem;
   padding: 0.9rem;
+  min-height: 0;
+}
+
+.sysadmin-shell.is-single-panel {
+  grid-template-columns: 1fr;
 }
 
 .sysadmin-sidebar {
@@ -1011,6 +1220,627 @@ body {
   font-size: 0.89rem;
 }
 
+.sysadmin-overview {
+  grid-template-rows: auto auto auto;
+  gap: 0.9rem;
+}
+
+.sysadmin-overview-head {
+  margin-bottom: 0;
+}
+
+.sysadmin-overview-head h2 {
+  font-size: 2.1rem;
+  color: #071723;
+}
+
+.sysadmin-overview-head p {
+  font-size: 1rem;
+  color: #4f6774;
+}
+
+.sysadmin-overview-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.sysadmin-metric-card {
+  border: 1px solid #cfd7e2;
+  border-radius: 16px;
+  background: #f9fbfd;
+  padding: 1rem 1rem 0.95rem;
+  border-left-width: 5px;
+  display: grid;
+  gap: 0.22rem;
+}
+
+.sysadmin-metric-card p {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4e6775;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.sysadmin-metric-card strong {
+  color: #00131d;
+  font-size: 2.8rem;
+  line-height: 1;
+}
+
+.sysadmin-metric-card span {
+  color: #4c6472;
+  font-size: 0.88rem;
+}
+
+.sysadmin-metric-card.is-feature {
+  border-left-color: #18a687;
+}
+
+.sysadmin-metric-card.is-feedback {
+  border-left-color: #3a66cf;
+}
+
+.sysadmin-metric-card.is-kudos {
+  border-left-color: #ed9426;
+}
+
+.sysadmin-metric-card.is-votes {
+  border-left-color: #3e7e24;
+}
+
+.sysadmin-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.sysadmin-control-card {
+  border: 1px solid #d1d9e3;
+  border-radius: 16px;
+  background: #f9fbfd;
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sysadmin-control-card h3 {
+  margin: 0;
+  color: #041520;
+  font-size: 1.12rem;
+}
+
+.sysadmin-synthesis-countdown-card {
+  max-width: 320px;
+}
+
+.sysadmin-synthesis-countdown-value {
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #041520;
+}
+
+.sysadmin-synthesis-countdown-help {
+  color: #4e6775;
+  font-size: 0.86rem;
+}
+
+.sysadmin-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid #dbe1ea;
+}
+
+.sysadmin-toggle-row:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.sysadmin-toggle-row p {
+  margin: 0;
+  font-size: 1rem;
+  color: #0c1c28;
+  font-weight: 600;
+}
+
+.sysadmin-toggle-row span {
+  color: #4e6775;
+}
+
+.sysadmin-inline-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.sysadmin-time-pill {
+  border: 1px solid #d2dae5;
+  border-radius: 10px;
+  padding: 0.45rem 0.6rem;
+  background: #eef3f8;
+  color: #526a79;
+  font-weight: 700;
+  min-width: 72px;
+  text-align: center;
+}
+
+.sysadmin-toggle {
+  width: 74px;
+  height: 40px;
+  border: none;
+  border-radius: 999px;
+  background: #ced6de;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+}
+
+.sysadmin-toggle span {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #fff;
+  display: block;
+  transition: transform 0.18s ease;
+}
+
+.sysadmin-toggle.is-on {
+  background: #099d7c;
+}
+
+.sysadmin-toggle.is-on span {
+  transform: translateX(34px);
+}
+
+.sysadmin-session-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  padding-top: 0.1rem;
+}
+
+.sysadmin-readiness-card {
+  align-content: start;
+}
+
+.sysadmin-readiness-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.sysadmin-readiness-stat {
+  border-radius: 12px;
+  border: 1px solid #d7dfe8;
+  background: #edf2f6;
+  display: grid;
+  place-items: center;
+  padding: 0.9rem 0.7rem;
+  text-align: center;
+}
+
+.sysadmin-readiness-stat.is-current {
+  background: #d8f0e8;
+  border-color: #c0e5d8;
+}
+
+.sysadmin-readiness-stat strong {
+  color: #092130;
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.sysadmin-readiness-stat span {
+  color: #4d6674;
+}
+
+.sysadmin-readiness-bar {
+  width: 100%;
+  height: 16px;
+  border-radius: 999px;
+  background: #dbe3ea;
+  overflow: hidden;
+}
+
+.sysadmin-readiness-bar span {
+  display: block;
+  height: 100%;
+  background: #8f9cab;
+}
+
+.sysadmin-readiness-bar.is-near span {
+  background: #ef9f27;
+}
+
+.sysadmin-readiness-bar.is-ready span {
+  background: #009775;
+}
+
+.sysadmin-readiness-text {
+  margin: 0;
+  color: #5c6f81;
+}
+
+.sysadmin-readiness-text.is-near {
+  color: #8a5a14;
+}
+
+.sysadmin-readiness-text.is-ready {
+  color: #0a6f55;
+  font-weight: 600;
+}
+
+.sysadmin-config-card {
+  gap: 0.9rem;
+}
+
+.sysadmin-config-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.sysadmin-field {
+  display: grid;
+  gap: 0.42rem;
+  align-content: start;
+}
+
+.sysadmin-field > span {
+  color: #0f2636;
+  font-weight: 600;
+}
+
+.sysadmin-field input {
+  border: 1px solid #cfd8e3;
+  border-radius: 10px;
+  background: #fff;
+  color: #152a38;
+  padding: 0.48rem 0.58rem;
+  font: inherit;
+}
+
+.sysadmin-field small {
+  color: #5f7484;
+  font-size: 0.84rem;
+  line-height: 1.3;
+}
+
+.sysadmin-shell-page {
+  grid-template-rows: auto 1fr;
+}
+
+.sysadmin-shell-stack {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.sysadmin-shell-empty {
+  border: 1px dashed #c6d2df;
+  border-radius: 12px;
+  background: #f8fbff;
+  padding: 0.8rem;
+  color: #4f6778;
+}
+
+.sysadmin-moderation-item {
+  border: 1px solid #d0d9e4;
+  border-radius: 12px;
+  padding: 0.85rem;
+  background: #fff;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.sysadmin-moderation-item h3 {
+  margin: 0.4rem 0 0;
+  font-size: 1rem;
+  color: #0f2332;
+}
+
+.sysadmin-moderation-item p {
+  margin: 0.25rem 0 0;
+  color: #4f6675;
+}
+
+.sysadmin-inline-actions {
+  display: inline-flex;
+  gap: 0.5rem;
+}
+
+.sysadmin-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid #c9d4df;
+  padding: 0.16rem 0.52rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.68rem;
+  color: #4f6778;
+  background: #f2f6fa;
+  font-weight: 700;
+}
+
+.sysadmin-chip.is-high,
+.sysadmin-chip.is-warn {
+  background: #fff1ea;
+  border-color: #f1cdbb;
+  color: #8f4f26;
+}
+
+.sysadmin-chip.is-medium,
+.sysadmin-chip.is-neutral {
+  background: #eef2f7;
+  border-color: #d1d9e5;
+  color: #5c7184;
+}
+
+.sysadmin-chip.is-low,
+.sysadmin-chip.is-good {
+  background: #e8f7f1;
+  border-color: #bddfd1;
+  color: #1c6f57;
+}
+
+.sysadmin-status-note {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.sysadmin-status-note.is-warn {
+  color: #95663d;
+}
+
+.sysadmin-status-note.is-good {
+  color: #206a53;
+}
+
+.sysadmin-pipeline-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.sysadmin-pipeline-step {
+  border: 1px solid #d4dde7;
+  border-radius: 12px;
+  background: #f8fbff;
+  padding: 0.7rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.sysadmin-pipeline-index {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid #ced8e3;
+  background: #fff;
+  color: #5d7486;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.sysadmin-pipeline-step h3 {
+  margin: 0;
+  color: #0d2130;
+  font-size: 0.95rem;
+}
+
+.sysadmin-pipeline-step p {
+  margin: 0.2rem 0 0;
+  color: #586f80;
+  font-size: 0.86rem;
+}
+
+.sysadmin-pipeline-step.is-active {
+  border-color: #6fa2bb;
+  box-shadow: inset 0 0 0 1px #6fa2bb;
+}
+
+.sysadmin-pipeline-step.is-done {
+  border-color: #b8dfcf;
+  background: #eef9f4;
+}
+
+.sysadmin-pipeline-step.is-paused {
+  border-color: #efc7ae;
+  background: #fff7f2;
+}
+
+.sysadmin-sizing-table {
+  border: 1px solid #d2dbe6;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.sysadmin-sizing-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.6fr 0.8fr 1.2fr;
+  gap: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  border-top: 1px solid #e5ebf1;
+  color: #203343;
+  background: #fff;
+}
+
+.sysadmin-sizing-row.is-head {
+  border-top: none;
+  background: #ecf2f8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  color: #5b7084;
+  font-weight: 700;
+}
+
+.sysadmin-sizing-row.is-flagged {
+  background: #fff3ea;
+}
+
+.sysadmin-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.sysadmin-theme-card {
+  border: 1px solid #d2dbe6;
+  border-radius: 14px;
+  background: #fff;
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.sysadmin-theme-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sysadmin-theme-head h3 {
+  margin: 0;
+  color: #0f2534;
+  font-size: 1rem;
+}
+
+.sysadmin-theme-bar {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: #dbe4ec;
+  overflow: hidden;
+}
+
+.sysadmin-theme-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #0ca387 0%, #2f5fcc 100%);
+}
+
+.sysadmin-theme-card p {
+  margin: 0;
+  color: #5c7284;
+  font-size: 0.84rem;
+}
+
+.sysadmin-artifact-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.sysadmin-artifact-item {
+  border: 1px solid #d2dbe6;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.62rem 0.72rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sysadmin-artifact-item.is-active {
+  border-color: #77a2b7;
+  box-shadow: inset 0 0 0 1px #77a2b7;
+}
+
+.sysadmin-artifact-preview {
+  border: 1px solid #d2dbe6;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.sysadmin-artifact-preview h3,
+.sysadmin-roadmap-list h3,
+.sysadmin-preview-cards h4 {
+  margin: 0;
+}
+
+.sysadmin-preview-cards {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.sysadmin-preview-cards article {
+  border: 1px solid #dde5ee;
+  border-radius: 10px;
+  padding: 0.65rem;
+  background: #f9fbfd;
+}
+
+.sysadmin-preview-cards p {
+  margin: 0.3rem 0 0;
+  color: #4e6676;
+}
+
+.sysadmin-roadmap-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.sysadmin-roadmap-list li {
+  border: 1px solid #d1dae5;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.25rem;
+  grid-template-columns: auto 1fr;
+}
+
+.sysadmin-roadmap-rank {
+  border-radius: 999px;
+  background: #eef3f8;
+  color: #4f6677;
+  padding: 0.2rem 0.52rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  align-self: start;
+}
+
+.sysadmin-roadmap-list p {
+  margin: 0.2rem 0 0;
+  color: #5c7284;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sysadmin-roadmap-signoff {
+  margin: 0.7rem 0 0;
+  color: #3b5568;
+  font-style: italic;
+}
+
 .pagination-controls {
   display: inline-flex;
   align-items: center;
@@ -1041,50 +1871,78 @@ body {
 
 .drawer {
   position: relative;
+  min-height: 0;
+}
+
+.drawer.is-open {
+  height: 100%;
+}
+
+.drawer-panel {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface-strong);
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto 1fr;
   min-height: 0;
-  padding-bottom: 52px;
+  height: 100%;
   overflow: hidden;
 }
 
+.drawer-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem;
+  padding: 0.92rem 0.9rem 0.8rem;
+  border-bottom: 1px solid var(--line);
+}
+
 .drawer.is-collapsed {
-  grid-template-rows: auto;
+  border: none;
+  background: transparent;
+  overflow: visible;
 }
 
-.drawer-toggle {
-  position: absolute;
-  right: 0.5rem;
-  bottom: 0.5rem;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border-radius: 7px;
+.drawer-tab-trigger {
+  pointer-events: auto;
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
   border: 1px solid var(--line);
-  background: var(--surface);
-  cursor: pointer;
-  font-size: 0.95rem;
+  border-left: 0;
+  border-radius: 0 10px 10px 0;
+  background: var(--surface-strong);
+  color: #51647a;
+  padding: 0.65rem 0.35rem;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 0.64rem;
   font-weight: 700;
-  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(8, 18, 31, 0.15);
 }
 
-.drawer-toggle-desktop {
-  display: inline;
-}
-
-.drawer-toggle-mobile {
-  display: none;
+.drawer-collapse-btn {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: #556a81;
+  padding: 0.34rem 0.45rem;
+  min-height: 36px;
+  cursor: pointer;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
 }
 
 .drawer-tabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.4rem;
-  padding: 1rem 1rem 0.95rem;
-  align-content: start;
 }
 
 .drawer-tab {
@@ -1124,46 +1982,8 @@ body {
   border-color: var(--accent);
 }
 
-.drawer.is-collapsed .drawer-tabs {
-  grid-template-columns: 1fr;
-  gap: 0.35rem;
-  padding: 0.55rem 0.35rem;
-  align-content: start;
-  justify-items: center;
-}
-
-.drawer.is-collapsed .drawer-tab {
-  width: 34px;
-  height: 34px;
-  min-height: 34px;
-  margin: 0;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  padding: 0;
-}
-
-.drawer.is-collapsed .drawer-tab:hover {
-  background: var(--surface);
-}
-
-.drawer.is-collapsed .drawer-tab-label {
-  display: none;
-}
-
-.drawer.is-collapsed .drawer-tab-icon {
-  width: 0.88rem;
-  height: 0.88rem;
-}
-
-.drawer.is-collapsed .drawer-tab.is-active {
-  color: var(--accent);
-  border-color: transparent;
-  background: var(--accent-soft);
-}
-
 .drawer-content {
-  padding: 0 1rem 1.1rem;
+  padding: 0.9rem 1rem 1.1rem;
   overflow-y: auto;
 }
 
@@ -2060,6 +2880,49 @@ select {
     grid-template-rows: auto 1fr;
   }
 
+  .drawer {
+    min-height: auto;
+  }
+
+  .drawer-panel {
+    height: auto;
+    min-height: 0;
+  }
+
+  .drawer-head {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .drawer-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .drawer-collapse-btn {
+    justify-self: end;
+  }
+
+  .drawer-tab {
+    justify-content: flex-start;
+    padding: 0.58rem 0.65rem;
+  }
+
+  .drawer-tab-label {
+    font-size: 0.76rem;
+  }
+
+  .drawer-tab-trigger {
+    top: auto;
+    bottom: 1.2rem;
+    transform: none;
+    writing-mode: horizontal-tb;
+    left: 0.85rem;
+    border-left: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 0.62rem;
+    padding: 0.42rem 0.7rem;
+  }
+
   .content-shell.is-product-landing {
     display: block;
   }
@@ -2078,27 +2941,59 @@ select {
     max-width: 520px;
   }
 
-  .sysadmin-shell {
+  .sysadmin-layout {
     min-height: auto;
     grid-template-columns: 1fr;
+  }
+
+  .sysadmin-nav {
+    min-height: auto;
+  }
+
+  .sysadmin-nav-brand h2 {
+    font-size: 1.5rem;
+  }
+
+  .sysadmin-nav-item {
+    font-size: 1rem;
+  }
+
+  .sysadmin-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sysadmin-overview-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sysadmin-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sysadmin-session-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .sysadmin-config-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sysadmin-theme-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sysadmin-sizing-row {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  .sysadmin-inline-actions {
+    width: 100%;
   }
 
   .sysadmin-footer {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .drawer {
-    border-right: none;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .drawer-toggle-desktop {
-    display: none;
-  }
-
-  .drawer-toggle-mobile {
-    display: inline;
   }
 
   .hero-grid {

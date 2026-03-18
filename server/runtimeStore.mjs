@@ -7,6 +7,7 @@ const emptyStore = () => ({
   screenFeedback: [],
   kudos: [],
   cardSortResults: [],
+  moderationInputStates: {},
 });
 
 export const initRuntimeStore = (storePath) => {
@@ -34,6 +35,10 @@ export const readRuntimeStore = (storePath) => {
       featureRequestVoteIncrements:
         parsed && typeof parsed.featureRequestVoteIncrements === "object" && parsed.featureRequestVoteIncrements
           ? parsed.featureRequestVoteIncrements
+          : {},
+      moderationInputStates:
+        parsed && typeof parsed.moderationInputStates === "object" && parsed.moderationInputStates
+          ? parsed.moderationInputStates
           : {},
     };
   } catch {

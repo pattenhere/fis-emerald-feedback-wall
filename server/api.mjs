@@ -2,10 +2,23 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import http from "node:http";
+import crypto from "node:crypto";
 import Database from "better-sqlite3";
 import { getPostgresPool, isPostgresConfigured } from "./db/postgres/client.mjs";
 import { buildSynthesisConfig, runSynthesis, toSynthesisSignals } from "./synthesisOrchestrator.mjs";
 import { initRuntimeStore, readRuntimeStore, resetRuntimeStore, writeRuntimeStore } from "./runtimeStore.mjs";
+import { runServerTextCompletion } from "./ai/providerClients.mjs";
+import {
+  HttpError,
+  createHttpError,
+  createJsonBodyReader,
+  createRateLimiter,
+  toOptionalInt,
+  toOptionalIso,
+  toOptionalString,
+  toRequiredString,
+  toTrimmedString,
+} from "./http/requestGuards.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,7 +60,9 @@ const defaultDbPath = isVercelRuntime ? "/tmp/app.db" : "db/app.db";
 const defaultRuntimeStorePath = isVercelRuntime ? "/tmp/flat-runtime-store.json" : "db/flat-runtime-store.json";
 const dbPath = path.resolve(rootDir, process.env.FEEDBACK_DB_PATH ?? defaultDbPath);
 const serverSeedDir = path.resolve(rootDir, "src/state/seeds");
+const publicAssetsDir = path.resolve(rootDir, "public/assets");
 const runtimeStorePath = path.resolve(rootDir, process.env.FLAT_RUNTIME_STORE_PATH ?? defaultRuntimeStorePath);
+const corsAllowedOrigin = String(process.env.API_ALLOWED_ORIGIN ?? "http://localhost:4000").trim() || "http://localhost:4000";
 const parseDbEngine = (value) => {
   const normalized = String(value ?? "").trim().toLowerCase();
   return normalized === "postgres" ? "postgres" : "sqlite";
@@ -63,6 +78,103 @@ const dataSourceMode = parseDataSourceMode(
 const useDbDataSource = dataSourceMode === "db";
 const usePostgresDb = useDbDataSource && dbEngine === "postgres";
 const synthesisConfig = buildSynthesisConfig(process.env);
+const synthesisPin = String(process.env.SYNTHESIS_PIN ?? "").trim();
+const DEFAULT_SYNTHESIS_SESSION_COUNTDOWN_SECONDS = 1800;
+const DEFAULT_SYNTHESIS_MIN_SIGNALS = 30;
+const toBoolEnv = (value, fallback) => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "on") return true;
+  if (normalized === "false" || normalized === "0" || normalized === "no" || normalized === "off") return false;
+  return fallback;
+};
+const configuredSessionCountdownSeconds = Number(
+  process.env.SYNTHESIS_INPUT_WINDOW_SECONDS ??
+  process.env.SYNTHESIS_COUNTDOWN_SECONDS ??
+  process.env.VITE_SYNTHESIS_COUNTDOWN_SECONDS ??
+  DEFAULT_SYNTHESIS_SESSION_COUNTDOWN_SECONDS,
+);
+const synthesisSessionCountdownSeconds = Number.isFinite(configuredSessionCountdownSeconds) && configuredSessionCountdownSeconds > 0
+  ? configuredSessionCountdownSeconds
+  : DEFAULT_SYNTHESIS_SESSION_COUNTDOWN_SECONDS;
+const configuredInputCutoffRaw = String(
+  process.env.SYNTHESIS_INPUT_CUTOFF_AT ??
+  process.env.INPUT_WINDOW_CUTOFF_AT ??
+  "",
+).trim();
+const configuredInputCutoffDate = new Date(configuredInputCutoffRaw);
+const hasConfiguredInputCutoff = configuredInputCutoffRaw.length > 0 && Number.isFinite(configuredInputCutoffDate.getTime());
+const fallbackInputCutoffAt = new Date(Date.now() + synthesisSessionCountdownSeconds * 1_000).toISOString();
+const synthesisInputCutoffAt = hasConfiguredInputCutoff
+  ? configuredInputCutoffDate.toISOString()
+  : fallbackInputCutoffAt;
+const configuredSynthesisMinSignals = Number(
+  process.env.SYNTHESIS_MIN_SIGNALS ??
+  process.env.SYNTHESIS_RECOMMENDED_MIN_SIGNALS ??
+  DEFAULT_SYNTHESIS_MIN_SIGNALS,
+);
+const synthesisMinSignals = Number.isFinite(configuredSynthesisMinSignals) && configuredSynthesisMinSignals > 0
+  ? Math.floor(configuredSynthesisMinSignals)
+  : DEFAULT_SYNTHESIS_MIN_SIGNALS;
+const synthesisSessionState = {
+  inputCutoffAt: synthesisInputCutoffAt,
+  wallWindowOpen: toBoolEnv(process.env.SYNTHESIS_WALL_WINDOW_OPEN, true),
+  mobileWindowOpen: toBoolEnv(process.env.SYNTHESIS_MOBILE_WINDOW_OPEN, true),
+  themesViewActive: toBoolEnv(process.env.SYNTHESIS_THEMES_VIEW_ACTIVE, false),
+  synthesisMinSignals,
+};
+const DEFAULT_AUTH_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+const configuredAuthSessionTtlMs = Number(process.env.SYNTHESIS_AUTH_SESSION_TTL_MS ?? DEFAULT_AUTH_SESSION_TTL_MS);
+const synthesisAuthSessionTtlMs =
+  Number.isFinite(configuredAuthSessionTtlMs) && configuredAuthSessionTtlMs > 0
+    ? Math.floor(configuredAuthSessionTtlMs)
+    : DEFAULT_AUTH_SESSION_TTL_MS;
+const synthesisAuthSessions = new Map();
+
+const cleanupExpiredSynthesisAuthSessions = () => {
+  const now = Date.now();
+  for (const [token, expiresAt] of synthesisAuthSessions.entries()) {
+    if (expiresAt <= now) {
+      synthesisAuthSessions.delete(token);
+    }
+  }
+};
+
+const issueSynthesisAuthToken = () => {
+  cleanupExpiredSynthesisAuthSessions();
+  const token = crypto.randomBytes(32).toString("hex");
+  const expiresAt = Date.now() + synthesisAuthSessionTtlMs;
+  synthesisAuthSessions.set(token, expiresAt);
+  return { token, expiresAt };
+};
+
+const parseBearerToken = (request) => {
+  const authorization = String(request.headers?.authorization ?? "");
+  const match = authorization.match(/^Bearer\s+(.+)$/iu);
+  return match ? match[1].trim() : "";
+};
+
+const isSynthesisAuthRequest = (pathname) => pathname === "/api/synthesis/auth";
+
+const isProtectedAdminRoute = (pathname) => {
+  if (pathname.startsWith("/api/admin/")) return true;
+  if (pathname.startsWith("/api/inputs/")) return true;
+  if (pathname === "/api/session/config") return true;
+  if (pathname.startsWith("/api/synthesis/")) return !isSynthesisAuthRequest(pathname);
+  return false;
+};
+
+const hasValidSynthesisAuthToken = (request) => {
+  cleanupExpiredSynthesisAuthSessions();
+  const token = parseBearerToken(request);
+  if (!token) return false;
+  const expiresAt = synthesisAuthSessions.get(token);
+  if (!expiresAt) return false;
+  if (expiresAt <= Date.now()) {
+    synthesisAuthSessions.delete(token);
+    return false;
+  }
+  return true;
+};
 
 if (dbEngine === "postgres") {
   if (!isPostgresConfigured()) {
@@ -124,17 +236,299 @@ const normalizeRole = (value) => {
   return "unspecified";
 };
 
-const getFlatCoreSeeds = () => ({
-  appAreas: loadJsonSeed("appAreas.seed.json"),
-  products: loadJsonSeed("products.seed.json"),
-  productFeatures: loadJsonSeed("productFeatures.seed.json"),
-  screenLibrary: loadJsonSeed("screenLibrary.seed.json"),
-  cardSortConcepts: loadJsonSeed("cardSortConcepts.seed.json"),
-  categories: loadJsonSeed("categories.seed.json"),
-  subcategories: loadJsonSeed("subcategories.seed.json"),
-  institutionProfiles: loadJsonSeed("institutionProfiles.seed.json"),
-  productFeatureCategories: loadJsonSeed("productFeatureCategories.seed.json"),
+const normalizeFeedbackType = (value) => {
+  const normalized = String(value ?? "issue").toLowerCase().replaceAll("_", "-").trim();
+  if (normalized === "workswell" || normalized === "works-well") return "works-well";
+  if (normalized === "missingelement" || normalized === "missing-element") return "missing";
+  if (normalized === "pain-point") return "issue";
+  if (["issue", "suggestion", "missing", "works-well"].includes(normalized)) return normalized;
+  throw createHttpError(400, "feedback type must be one of: issue, suggestion, missing, works-well.");
+};
+
+const VALID_APP_AREAS = new Set([
+  "digital-experience",
+  "origination",
+  "credit-risk",
+  "servicing",
+  "monitoring-controls",
+  "syndication-complex-lending",
+  "analytics-inquiry",
+  "platform-services",
+]);
+
+const normalizeAppAreaInput = (value) => {
+  const candidate = toTrimmedString(value, "servicing");
+  if (VALID_APP_AREAS.has(candidate)) return candidate;
+  return toAppArea(candidate);
+};
+
+const validateFeatureRequestPayload = (body) => {
+  return {
+    productId: toOptionalInt(body.productId, { field: "productId", min: 0, max: 1_000_000 }) ?? 0,
+    title: toRequiredString(body.title, { field: "title", maxLength: 240 }),
+    description: toOptionalString(body.description, 2_000),
+    workflowContext: toOptionalString(body.workflowContext, 2_000),
+    status: toOptionalString(body.status, 40) ?? "open",
+    createdAt: toOptionalIso(body.createdAt, "createdAt") ?? nowIso(),
+    legacyRequestCode: toOptionalString(body.legacyRequestCode, 120),
+    origin: (toOptionalString(body.origin, 20) ?? "kiosk").toLowerCase() === "mobile" ? "mobile" : "kiosk",
+    sessionId: toOptionalString(body.sessionId, 120) ?? "web",
+  };
+};
+
+const validateFeatureUpvotePayload = (body) => ({
+  sessionId: toOptionalString(body.sessionId, 120) ?? `web-${Date.now()}`,
 });
+
+const validateKudosPayload = (body) => ({
+  productId: toOptionalInt(body.productId, { field: "productId", min: 0, max: 1_000_000 }) ?? 0,
+  text: toRequiredString(body.text, { field: "text", maxLength: 2_000 }),
+  role: normalizeRole(body.role),
+  consentPublic: Boolean(body.consentPublic),
+  createdAt: toOptionalIso(body.createdAt, "createdAt") ?? nowIso(),
+});
+
+const validateScreenFeedbackPayload = (body) => ({
+  productId: toOptionalInt(body.productId, { field: "productId", min: 0, max: 1_000_000 }) ?? 0,
+  featureId: toOptionalInt(body.featureId, { field: "featureId", min: 0, max: 1_000_000 }),
+  screenId: toOptionalInt(body.screenId, { field: "screenId", min: 0, max: 1_000_000 }),
+  type: normalizeFeedbackType(body.type),
+  text: toOptionalString(body.text, 2_000),
+  role: normalizeRole(body.role),
+  createdAt: toOptionalIso(body.createdAt, "createdAt") ?? nowIso(),
+  app: normalizeAppAreaInput(body.app),
+  screenName: toOptionalString(body.screenName, 200),
+});
+
+const validateCardSortPayload = (body) => {
+  const conceptTitle = toRequiredString(body.conceptTitle, { field: "conceptTitle", maxLength: 200 });
+  const tier = toRequiredString(body.tier, { field: "tier", maxLength: 20 }).toLowerCase();
+  if (!["high", "medium", "low"].includes(tier)) {
+    throw createHttpError(400, "tier must be one of: high, medium, low.");
+  }
+  return {
+    conceptTitle,
+    tier,
+    role: toOptionalString(body.role, 40) ?? "unspecified",
+  };
+};
+
+const validateSessionConfigPatchPayload = (body) => {
+  const allowedKeys = new Set(["wallWindowOpen", "mobileWindowOpen", "themesViewActive", "synthesisMinSignals", "inputCutoffAt"]);
+  for (const key of Object.keys(body ?? {})) {
+    if (!allowedKeys.has(key)) {
+      throw createHttpError(400, `Unsupported session config field: ${key}`);
+    }
+  }
+  const payload = {};
+  if ("wallWindowOpen" in body) payload.wallWindowOpen = Boolean(body.wallWindowOpen);
+  if ("mobileWindowOpen" in body) payload.mobileWindowOpen = Boolean(body.mobileWindowOpen);
+  if ("themesViewActive" in body) payload.themesViewActive = Boolean(body.themesViewActive);
+  if ("synthesisMinSignals" in body) {
+    payload.synthesisMinSignals = toOptionalInt(body.synthesisMinSignals, {
+      field: "synthesisMinSignals",
+      min: 1,
+      max: 10_000,
+    });
+  }
+  if ("inputCutoffAt" in body) {
+    payload.inputCutoffAt = toOptionalIso(body.inputCutoffAt, "inputCutoffAt");
+  }
+  return payload;
+};
+
+const stripLocationFieldsFromRecord = (record) => {
+  if (!record || typeof record !== "object") {
+    return false;
+  }
+  let modified = false;
+  if ("appSection" in record) {
+    delete record.appSection;
+    modified = true;
+  }
+  if ("screenName" in record) {
+    delete record.screenName;
+    modified = true;
+  }
+  if ("app" in record) {
+    delete record.app;
+    modified = true;
+  }
+  return modified;
+};
+
+const migrateRuntimeStoreLocationFields = () => {
+  const runtime = readRuntimeStore(runtimeStorePath);
+  let featureModified = 0;
+  let kudosModified = 0;
+
+  if (Array.isArray(runtime.featureRequests)) {
+    for (const row of runtime.featureRequests) {
+      if (stripLocationFieldsFromRecord(row)) {
+        featureModified += 1;
+      }
+    }
+  }
+  if (Array.isArray(runtime.kudos)) {
+    for (const row of runtime.kudos) {
+      if (stripLocationFieldsFromRecord(row)) {
+        kudosModified += 1;
+      }
+    }
+  }
+
+  if (featureModified > 0 || kudosModified > 0) {
+    writeRuntimeStore(runtimeStorePath, runtime);
+  }
+
+  // eslint-disable-next-line no-console
+  console.info(`[Migration] Stripped location fields from ${featureModified} FR records, ${kudosModified} Kudos records.`);
+  return { featureModified, kudosModified };
+};
+
+const migrateDbLocationFields = async () => {
+  if (!useDbDataSource) {
+    return { featureModified: 0, kudosModified: 0 };
+  }
+
+  if (usePostgresDb) {
+    const counts = await withPostgresClient(async (client) => {
+      const featureResult = await client.query(
+        "UPDATE feature_requests SET app_area = NULL, screen_name = NULL WHERE app_area IS NOT NULL OR screen_name IS NOT NULL",
+      );
+      const kudosResult = await client.query(
+        "UPDATE kudos SET app_area = NULL, screen_name = NULL WHERE app_area IS NOT NULL OR screen_name IS NOT NULL",
+      );
+      return {
+        featureModified: Number(featureResult.rowCount ?? 0),
+        kudosModified: Number(kudosResult.rowCount ?? 0),
+      };
+    });
+    // eslint-disable-next-line no-console
+    console.info(`[Migration] Stripped location fields from ${counts.featureModified} FR records, ${counts.kudosModified} Kudos records.`);
+    return counts;
+  }
+
+  const featureResult = db.prepare(
+    "UPDATE feature_requests SET APP_AREA = NULL, SCREEN_NAME = NULL WHERE APP_AREA IS NOT NULL OR SCREEN_NAME IS NOT NULL",
+  ).run();
+  const kudosResult = db.prepare(
+    "UPDATE kudos SET APP_AREA = NULL, SCREEN_NAME = NULL WHERE APP_AREA IS NOT NULL OR SCREEN_NAME IS NOT NULL",
+  ).run();
+  const counts = {
+    featureModified: Number(featureResult.changes ?? 0),
+    kudosModified: Number(kudosResult.changes ?? 0),
+  };
+  // eslint-disable-next-line no-console
+  console.info(`[Migration] Stripped location fields from ${counts.featureModified} FR records, ${counts.kudosModified} Kudos records.`);
+  return counts;
+};
+
+const getFlatCoreSeeds = () => {
+  const screenLibrary = loadJsonSeed("screenLibrary.seed.json");
+  validateScreenLibraryAssetPaths(screenLibrary);
+  return {
+    appAreas: loadJsonSeed("appAreas.seed.json"),
+    products: loadJsonSeed("products.seed.json"),
+    productFeatures: loadJsonSeed("productFeatures.seed.json"),
+    screenLibrary,
+    cardSortConcepts: loadJsonSeed("cardSortConcepts.seed.json"),
+    categories: loadJsonSeed("categories.seed.json"),
+    subcategories: loadJsonSeed("subcategories.seed.json"),
+    institutionProfiles: loadJsonSeed("institutionProfiles.seed.json"),
+    productFeatureCategories: loadJsonSeed("productFeatureCategories.seed.json"),
+  };
+};
+
+const withSeedScreenAssets = (screensRows) => {
+  const core = getFlatCoreSeeds();
+  const byLegacyCode = new Map(core.screenLibrary.map((screen) => [String(screen.id ?? ""), screen]));
+  const byName = new Map(core.screenLibrary.map((screen) => [String(screen.name ?? "").toLowerCase(), screen]));
+
+  return screensRows.map((screen) => {
+    const matchedScreen =
+      byLegacyCode.get(String(screen.legacyScreenCode ?? "")) ??
+      byName.get(String(screen.name ?? "").toLowerCase());
+    const assets = Array.isArray(matchedScreen?.assets)
+      ? matchedScreen.assets
+          .filter((asset) => typeof asset === "string" && asset.trim().length > 0)
+          .map((asset) => String(asset))
+      : Array.isArray(screen.assets)
+        ? screen.assets
+            .filter((asset) => typeof asset === "string" && asset.trim().length > 0)
+            .map((asset) => String(asset))
+        : [];
+    return {
+      ...screen,
+      thumbnailAssetPath: String(matchedScreen?.thumbnailAssetPath ?? screen.thumbnailAssetPath ?? "splash-wall-hero.png"),
+      assets,
+    };
+  });
+};
+
+const ASSET_PATH_PATTERN = /^[a-z0-9-_/]+\/\d{2}-[a-z0-9-]+\.(png|jpg)$/i;
+const SCREEN_FILE_EXTENSIONS = new Set([".png", ".jpg"]);
+let hasLoggedScreenAssetValidation = false;
+
+const toRelativeAssetPath = (value) => String(value ?? "").replace(/^\/+/u, "").replace(/^assets\//u, "").trim();
+
+const validateScreenLibraryAssetPaths = (screenLibraryRows) => {
+  if (hasLoggedScreenAssetValidation) return;
+  hasLoggedScreenAssetValidation = true;
+
+  for (const row of screenLibraryRows) {
+    const screenName = String(row.name ?? row.id ?? "unknown-screen");
+    const thumbnail = String(row.thumbnailAssetPath ?? "").trim();
+    if (!thumbnail) {
+      // eslint-disable-next-line no-console
+      console.warn(`[seed-validator] screen "${screenName}" is missing thumbnailAssetPath`);
+    } else {
+      const thumbnailRelative = toRelativeAssetPath(thumbnail);
+      const thumbnailPath = path.resolve(publicAssetsDir, thumbnailRelative);
+      if (!fs.existsSync(thumbnailPath)) {
+        // eslint-disable-next-line no-console
+        console.warn(`[seed-validator] missing thumbnail asset for "${screenName}": ${thumbnail}`);
+      }
+    }
+
+    const assets = row.assets;
+    if (!Array.isArray(assets)) {
+      // eslint-disable-next-line no-console
+      console.warn(`[seed-validator] screen "${screenName}" has invalid assets field (expected array)`);
+      continue;
+    }
+    if (assets.length === 0) {
+      continue;
+    }
+    if (assets.length > 20) {
+      // eslint-disable-next-line no-console
+      console.warn(`[seed-validator] screen "${screenName}" has ${assets.length} assets (max 20)`);
+    }
+    for (const assetPathRaw of assets) {
+      const assetPath = String(assetPathRaw ?? "").trim();
+      if (!ASSET_PATH_PATTERN.test(assetPath)) {
+        // eslint-disable-next-line no-console
+        console.warn(`[seed-validator] screen "${screenName}" asset path violates naming convention: ${assetPath}`);
+      }
+      const filename = path.basename(assetPath);
+      if (filename.length > 64) {
+        // eslint-disable-next-line no-console
+        console.warn(`[seed-validator] screen "${screenName}" asset filename exceeds 64 chars: ${filename}`);
+      }
+      const extension = path.extname(filename).toLowerCase();
+      if (!SCREEN_FILE_EXTENSIONS.has(extension)) {
+        // eslint-disable-next-line no-console
+        console.warn(`[seed-validator] screen "${screenName}" asset extension must be .png or .jpg: ${assetPath}`);
+      }
+      const assetRelative = toRelativeAssetPath(assetPath);
+      const absolutePath = path.resolve(publicAssetsDir, assetRelative);
+      if (!fs.existsSync(absolutePath)) {
+        // eslint-disable-next-line no-console
+        console.warn(`[seed-validator] missing asset for "${screenName}": ${assetPath}`);
+      }
+    }
+  }
+};
 
 const getFlatSignalSeeds = () => ({
   featureRequests: loadJsonSeed("featureRequests.seed.json"),
@@ -148,11 +542,13 @@ const mergeFeatureRequestsWithVoteIncrements = (seedRows, runtimeStore) => {
     .map((row, index) => {
       const id = String(row.id ?? `fr-runtime-${index + 1}`);
       const addedVotes = Number(increments[id] ?? 0);
-      return {
+      const nextRow = {
         ...row,
         id,
         votes: Math.max(0, Number(row.votes ?? 0) + Math.max(0, addedVotes)),
       };
+      stripLocationFieldsFromRecord(nextRow);
+      return nextRow;
     });
   return merged;
 };
@@ -160,10 +556,16 @@ const mergeFeatureRequestsWithVoteIncrements = (seedRows, runtimeStore) => {
 const buildFlatMergedSignals = () => {
   const runtimeStore = readRuntimeStore(runtimeStorePath);
   const signalSeeds = getFlatSignalSeeds();
+  const mergedKudos = [...signalSeeds.kudos, ...(Array.isArray(runtimeStore.kudos) ? runtimeStore.kudos : [])]
+    .map((row) => {
+      const nextRow = { ...row };
+      stripLocationFieldsFromRecord(nextRow);
+      return nextRow;
+    });
   return {
     featureRequests: mergeFeatureRequestsWithVoteIncrements(signalSeeds.featureRequests, runtimeStore),
     screenFeedback: [...signalSeeds.screenFeedback, ...(Array.isArray(runtimeStore.screenFeedback) ? runtimeStore.screenFeedback : [])],
-    kudos: [...signalSeeds.kudos, ...(Array.isArray(runtimeStore.kudos) ? runtimeStore.kudos : [])],
+    kudos: mergedKudos,
     cardSortResults: Array.isArray(runtimeStore.cardSortResults) ? runtimeStore.cardSortResults : [],
   };
 };
@@ -459,22 +861,29 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_kudos_product_feature_screen_created ON kudos(PRODUCT_ID, FEATURE_ID, SCREEN_ID, CREATED_AT);
 `);
 
-const readBody = async (request) => {
-  const chunks = [];
-  for await (const chunk of request) chunks.push(chunk);
-  if (chunks.length === 0) return {};
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
-};
+const configuredMaxBodyBytes = Number(process.env.API_MAX_BODY_BYTES ?? 256 * 1024);
+const MAX_BODY_BYTES = Number.isFinite(configuredMaxBodyBytes) && configuredMaxBodyBytes > 0
+  ? Math.floor(configuredMaxBodyBytes)
+  : 256 * 1024;
+const readBody = createJsonBodyReader(MAX_BODY_BYTES);
 
 const sendJson = (response, statusCode, payload) => {
   response.writeHead(statusCode, {
     "content-type": "application/json; charset=utf-8",
-    "access-control-allow-origin": "*",
-    "access-control-allow-methods": "GET,POST,OPTIONS",
-    "access-control-allow-headers": "content-type",
+    "access-control-allow-origin": corsAllowedOrigin,
+    "access-control-allow-methods": "GET,POST,PATCH,OPTIONS",
+    "access-control-allow-headers": "content-type,authorization",
   });
   response.end(JSON.stringify(payload));
 };
+
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const WRITE_RATE_LIMIT_MAX = Math.max(10, Number(process.env.API_RATE_LIMIT_WRITES_PER_MINUTE ?? 180));
+const SYNTHESIS_RATE_LIMIT_MAX = Math.max(3, Number(process.env.API_RATE_LIMIT_SYNTHESIS_PER_MINUTE ?? 20));
+const AUTH_RATE_LIMIT_MAX = Math.max(3, Number(process.env.API_RATE_LIMIT_AUTH_PER_MINUTE ?? 30));
+const applyRateLimit = createRateLimiter();
+const checkRateLimit = ({ request, bucket, max, windowMs = RATE_LIMIT_WINDOW_MS }) =>
+  applyRateLimit({ request, bucket, max, windowMs });
 
 const toAppArea = (value) => {
   if (value === "Digital Experience") return "digital-experience";
@@ -528,16 +937,17 @@ const bootstrapPayloadDb = () => {
     ORDER BY f.FEATURE_ID
   `).all();
 
-  const screens = db.prepare(`
+  const screenRows = db.prepare(`
     SELECT s.SCREEN_ID AS id, s.PRODUCT_ID AS productId, s.SCREEN_NAME AS name, s.SCREEN_CATEGORY AS screenCategory,
       s.SCREEN_DESCRIPTION AS description, s.LEGACY_SCREEN_CODE AS legacyScreenCode
     FROM screens s
     ORDER BY s.SCREEN_ID
   `).all();
+  const screens = withSeedScreenAssets(screenRows);
 
   const featureRequests = db.prepare(`
     SELECT fr.FEATURE_REQUEST_ID AS id, fr.PRODUCT_ID AS productId, fr.CONVERTED_FEATURE_ID AS convertedFeatureId,
-      fr.SCREEN_ID AS screenId, fr.SCREEN_NAME AS screenName, fr.APP_AREA AS app, fr.TITLE AS title, fr.DESCRIPTION AS description,
+      fr.SCREEN_ID AS screenId, fr.TITLE AS title, fr.DESCRIPTION AS description,
       fr.WORKFLOW_CONTEXT AS workflowContext, fr.STATUS AS status, fr.CREATED_AT AS createdAt, fr.LEGACY_REQUEST_CODE AS legacyRequestCode,
       fr.ORIGIN AS origin, COALESCE(SUM(frv.VOTE_VALUE), 0) AS votes
     FROM feature_requests fr
@@ -553,8 +963,8 @@ const bootstrapPayloadDb = () => {
   `).all();
 
   const kudos = db.prepare(`
-    SELECT KUDOS_ID AS id, PRODUCT_ID AS productId, FEATURE_ID AS featureId, SCREEN_ID AS screenId, APP_AREA AS app,
-      SCREEN_NAME AS screenName, QUOTE_TEXT AS text, ROLE AS role, CONSENT_PUBLIC AS consentPublic, CREATED_AT AS createdAt
+    SELECT KUDOS_ID AS id, PRODUCT_ID AS productId, FEATURE_ID AS featureId, SCREEN_ID AS screenId,
+      QUOTE_TEXT AS text, ROLE AS role, CONSENT_PUBLIC AS consentPublic, CREATED_AT AS createdAt
     FROM kudos ORDER BY CREATED_AT DESC
   `).all();
 
@@ -619,7 +1029,7 @@ const bootstrapPayloadPostgres = async () =>
       `)
     ).rows;
 
-    const screens = (
+    const screenRows = (
       await client.query(`
         SELECT s.screen_id AS id, s.product_id AS "productId", s.screen_name AS name, s.screen_category AS "screenCategory",
           s.screen_description AS description, s.legacy_screen_code AS "legacyScreenCode"
@@ -627,11 +1037,12 @@ const bootstrapPayloadPostgres = async () =>
         ORDER BY s.screen_id
       `)
     ).rows;
+    const screens = withSeedScreenAssets(screenRows);
 
     const featureRequests = (
       await client.query(`
         SELECT fr.feature_request_id AS id, fr.product_id AS "productId", fr.converted_feature_id AS "convertedFeatureId",
-          fr.screen_id AS "screenId", fr.screen_name AS "screenName", fr.app_area AS app, fr.title AS title, fr.description AS description,
+          fr.screen_id AS "screenId", fr.title AS title, fr.description AS description,
           fr.workflow_context AS "workflowContext", fr.status AS status, fr.created_at AS "createdAt", fr.legacy_request_code AS "legacyRequestCode",
           fr.origin AS origin, COALESCE(SUM(frv.vote_value), 0) AS votes
         FROM feature_requests fr
@@ -652,8 +1063,8 @@ const bootstrapPayloadPostgres = async () =>
 
     const kudosQuotes = (
       await client.query(`
-        SELECT kudos_id AS id, product_id AS "productId", feature_id AS "featureId", screen_id AS "screenId", app_area AS app,
-          screen_name AS "screenName", quote_text AS text, role AS role, consent_public AS "consentPublic", created_at AS "createdAt"
+        SELECT kudos_id AS id, product_id AS "productId", feature_id AS "featureId", screen_id AS "screenId",
+          quote_text AS text, role AS role, consent_public AS "consentPublic", created_at AS "createdAt"
         FROM kudos
         ORDER BY created_at DESC
       `)
@@ -694,19 +1105,35 @@ const toFlatBootstrap = () => {
   }));
 
   const featureByName = new Map(features.map((row) => [row.name.toLowerCase(), row]));
+  const screenLibraryByLegacy = new Map(
+    core.screenLibrary.map((screen) => [String(screen.id ?? ""), screen]),
+  );
+  const screenLibraryByName = new Map(
+    core.screenLibrary.map((screen) => [String(screen.name ?? "").toLowerCase(), screen]),
+  );
   // Use product feature rows as canonical screen list so PRD-005 retains full 51 features.
   const screenRows = core.productFeatures.length > 0 ? core.productFeatures : core.screenLibrary;
   const screens = screenRows.map((row, index) => {
     const name = String(row.name ?? "");
     const matchedFeature = featureByName.get(name.toLowerCase());
-    const app = row.app ?? toAppArea(matchedFeature?.moduleName ?? "Platform Services");
+    const matchedScreenLibrary =
+      screenLibraryByLegacy.get(String(row.id ?? "")) ?? screenLibraryByName.get(name.toLowerCase());
+    const app = String(
+      matchedScreenLibrary?.app ?? row.app ?? toAppArea(matchedFeature?.moduleName ?? "Platform Services"),
+    );
     return {
       id: index + 1,
       productId: matchedFeature?.productId ?? products[0]?.id ?? 1,
       name,
       screenCategory: app,
-      description: String(row.description ?? ""),
-      legacyScreenCode: String(row.id ?? `screen-${index + 1}`),
+      description: String(matchedScreenLibrary?.description ?? row.description ?? ""),
+      legacyScreenCode: String(matchedScreenLibrary?.id ?? row.id ?? `screen-${index + 1}`),
+      thumbnailAssetPath: String(matchedScreenLibrary?.thumbnailAssetPath ?? "splash-wall-hero.png"),
+      assets: Array.isArray(matchedScreenLibrary?.assets)
+        ? matchedScreenLibrary.assets
+            .filter((asset) => typeof asset === "string" && asset.trim().length > 0)
+            .map((asset) => String(asset))
+        : [],
     };
   });
 
@@ -727,14 +1154,13 @@ const toFlatBootstrap = () => {
   };
 
   const featureRequests = merged.featureRequests.map((row, index) => {
-    const screen = resolveScreen(row.screenId, row.screenName);
+    const screen = row.screenId != null || row.screenName ? resolveScreen(row.screenId, row.screenName) : null;
+    const explicitProductId = Number(row.productId);
     return {
       id: String(row.id ?? `fr-${index + 1}`),
-      productId: screen?.productId ?? products[0]?.id ?? 1,
+      productId: Number.isFinite(explicitProductId) ? explicitProductId : screen?.productId ?? products[0]?.id ?? 1,
       convertedFeatureId: null,
-      screenId: screen?.id,
-      screenName: screen?.name ?? String(row.screenName ?? ""),
-      app: row.app ?? screen?.screenCategory ?? "servicing",
+      screenId: row.screenId == null ? null : screen?.id ?? row.screenId,
       title: String(row.title ?? ""),
       description: String(row.description ?? row.title ?? ""),
       workflowContext: row.workflowContext ?? null,
@@ -763,14 +1189,13 @@ const toFlatBootstrap = () => {
   }).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 
   const kudosQuotes = merged.kudos.map((row, index) => {
-    const screen = resolveScreen(row.screenId, row.screenName);
+    const screen = row.screenId != null || row.screenName ? resolveScreen(row.screenId, row.screenName) : null;
+    const explicitProductId = Number(row.productId);
     return {
       id: String(row.id ?? `kd-${index + 1}`),
-      productId: screen?.productId ?? products[0]?.id ?? 1,
+      productId: Number.isFinite(explicitProductId) ? explicitProductId : screen?.productId ?? products[0]?.id ?? 1,
       featureId: featureByName.get(String(screen?.name ?? row.screenName ?? "").toLowerCase())?.id,
-      screenId: screen?.id,
-      app: row.app ?? screen?.screenCategory ?? "servicing",
-      screenName: screen?.name ?? String(row.screenName ?? ""),
+      screenId: row.screenId == null ? null : screen?.id ?? row.screenId,
       text: String(row.text ?? ""),
       role: normalizeRole(row.role),
       consentPublic: Boolean(row.consentPublic ?? row.isPublicSafe),
@@ -927,7 +1352,6 @@ const reseed = (payload) => {
       const screenId = screen?.ScreenID ?? byName?.ScreenID ?? null;
       const productId = screen?.ProductID ?? byName?.ProductID ?? defaultProductId;
       const convertedFeatureId = row.convertedFeatureId ?? null;
-      const appArea = row.app ?? (screen?.ScreenCategory ?? byName?.ScreenCategory ?? "servicing");
       const res = insertFeatureRequest.run(
         productId,
         convertedFeatureId,
@@ -937,9 +1361,9 @@ const reseed = (payload) => {
         String(row.status ?? "open"),
         String(row.createdAt ?? nowIso()),
         String(row.id ?? ""),
-        String(appArea),
+        null,
         screenId,
-        String(row.screenName ?? screen?.ScreenName ?? byName?.ScreenName ?? ""),
+        null,
         row.origin == null ? null : String(row.origin),
       );
       const requestId = Number(res.lastInsertRowid);
@@ -985,8 +1409,8 @@ const reseed = (payload) => {
         String(row.role ?? "unspecified"),
         row.consentPublic ? 1 : 0,
         String(row.createdAt ?? nowIso()),
-        String(row.app ?? screen?.ScreenCategory ?? byName?.ScreenCategory ?? "servicing"),
-        String(row.screenName ?? screen?.ScreenName ?? byName?.ScreenName ?? ""),
+        null,
+        null,
       );
     }
   });
@@ -1115,9 +1539,9 @@ export const reseedPostgres = async () => {
             String(row.status ?? "open"),
             String(row.createdAt ?? nowIso()),
             String(row.legacyRequestCode ?? row.id ?? ""),
-            String(row.app ?? "servicing"),
+            null,
             row.screenId == null ? null : screenDbIdByLocalId.get(Number(row.screenId)) ?? null,
-            row.screenName == null ? null : String(row.screenName),
+            null,
             row.origin == null ? null : String(row.origin),
           ],
         );
@@ -1167,8 +1591,8 @@ export const reseedPostgres = async () => {
             String(row.role ?? "unspecified"),
             Boolean(row.consentPublic),
             String(row.createdAt ?? nowIso()),
-            String(row.app ?? "servicing"),
-            row.screenName == null ? null : String(row.screenName),
+            null,
+            null,
           ],
         );
       }
@@ -1186,9 +1610,6 @@ const appendFlatRuntimeFeatureRequest = (body) => {
   const id = String(body.id ?? body.legacyRequestCode ?? `fr-runtime-${Date.now()}`);
   const entry = {
     id,
-    app: String(body.app ?? "servicing"),
-    screenId: body.screenId ?? null,
-    screenName: String(body.screenName ?? ""),
     title: String(body.title ?? ""),
     description: body.description == null ? undefined : String(body.description),
     workflowContext: body.workflowContext == null ? undefined : String(body.workflowContext),
@@ -1217,9 +1638,6 @@ const appendFlatRuntimeKudos = (body) => {
   const id = String(body.id ?? `kd-runtime-${Date.now()}`);
   const entry = {
     id,
-    app: String(body.app ?? "servicing"),
-    screenId: body.screenId ?? null,
-    screenName: String(body.screenName ?? ""),
     text: String(body.text ?? ""),
     role: normalizeRole(body.role),
     consentPublic: Boolean(body.consentPublic),
@@ -1267,23 +1685,38 @@ const upsertFlatRuntimeCardSort = (body) => {
   writeRuntimeStore(runtimeStorePath, runtime);
 };
 
+const filterRowsForSynthesis = (rows) => {
+  const featureRequests = (Array.isArray(rows.featureRequests) ? rows.featureRequests : [])
+    .filter((item) => !isInputSoftDeleted("feature_request", item.id));
+  const screenFeedback = (Array.isArray(rows.screenFeedback) ? rows.screenFeedback : [])
+    .filter((item) => !isInputSoftDeleted("screen_feedback", item.id));
+  const kudos = (Array.isArray(rows.kudos) ? rows.kudos : [])
+    .filter((item) => !isInputSoftDeleted("kudos", item.id));
+  return {
+    featureRequests,
+    screenFeedback,
+    kudos,
+    cardSortResults: Array.isArray(rows.cardSortResults) ? rows.cardSortResults : [],
+  };
+};
+
 const loadSignalsForSynthesis = async () => {
   if (!useDbDataSource) {
     const flat = toFlatBootstrap();
-    return toSynthesisSignals({
+    return toSynthesisSignals(filterRowsForSynthesis({
       featureRequests: flat.featureRequests,
       screenFeedback: flat.screenFeedback.map((item) => ({ ...item, appLabel: appLabelFromId(item.app) })),
       kudos: flat.kudosQuotes,
       cardSortResults: readRuntimeStore(runtimeStorePath).cardSortResults ?? [],
-    });
+    }));
   }
 
   if (usePostgresDb) {
     const signalRows = await withPostgresClient(async (client) => {
       const featureRequests = (
         await client.query(`
-          SELECT fr.feature_request_id AS id, fr.title AS title, fr.workflow_context AS "workflowContext", fr.app_area AS app,
-            fr.screen_name AS "screenName", fr.origin AS origin, COALESCE(SUM(frv.vote_value), 0) AS votes
+          SELECT fr.feature_request_id AS id, fr.title AS title, fr.workflow_context AS "workflowContext",
+            fr.origin AS origin, COALESCE(SUM(frv.vote_value), 0) AS votes
           FROM feature_requests fr
           LEFT JOIN feature_request_votes frv ON frv.feature_request_id = fr.feature_request_id
           GROUP BY fr.feature_request_id
@@ -1307,17 +1740,17 @@ const loadSignalsForSynthesis = async () => {
       return { featureRequests, screenFeedback, kudos };
     });
 
-    return toSynthesisSignals({
+    return toSynthesisSignals(filterRowsForSynthesis({
       featureRequests: signalRows.featureRequests,
       screenFeedback: signalRows.screenFeedback,
       kudos: signalRows.kudos,
       cardSortResults: [],
-    });
+    }));
   }
 
   const featureRequests = db.prepare(`
-    SELECT fr.FEATURE_REQUEST_ID AS id, fr.TITLE AS title, fr.WORKFLOW_CONTEXT AS workflowContext, fr.APP_AREA AS app,
-      fr.SCREEN_NAME AS screenName, fr.ORIGIN AS origin, COALESCE(SUM(frv.VOTE_VALUE), 0) AS votes
+    SELECT fr.FEATURE_REQUEST_ID AS id, fr.TITLE AS title, fr.WORKFLOW_CONTEXT AS workflowContext,
+      fr.ORIGIN AS origin, COALESCE(SUM(frv.VOTE_VALUE), 0) AS votes
     FROM feature_requests fr
     LEFT JOIN feature_request_votes frv ON frv.FEATURE_REQUEST_ID = fr.FEATURE_REQUEST_ID
     GROUP BY fr.FEATURE_REQUEST_ID
@@ -1334,16 +1767,480 @@ const loadSignalsForSynthesis = async () => {
     FROM kudos
   `).all();
 
-  return toSynthesisSignals({
+  return toSynthesisSignals(filterRowsForSynthesis({
     featureRequests,
     screenFeedback,
     kudos,
     cardSortResults: [],
-  });
+  }));
 };
 
 const sendSseEvent = (response, payload) => {
   response.write(`data: ${JSON.stringify(payload)}\n\n`);
+};
+
+const hasher = (value) => crypto.createHash("sha256").update(String(value ?? "")).digest();
+
+const timingSafePinMatch = (candidate, expected) => {
+  const candidateHash = hasher(candidate);
+  const expectedHash = hasher(expected);
+  return crypto.timingSafeEqual(candidateHash, expectedHash);
+};
+
+const toInteger = (value, fallback = 0) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.floor(n) : fallback;
+};
+
+const sanitizeModerationInputType = (value) => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "feature_request") return "feature_request";
+  if (normalized === "screen_feedback") return "screen_feedback";
+  if (normalized === "kudos") return "kudos";
+  return null;
+};
+
+const buildModerationInputKey = (type, id) => {
+  const safeType = sanitizeModerationInputType(type);
+  if (!safeType) return null;
+  return `${safeType}:${String(id ?? "").trim()}`;
+};
+
+const parseModerationRecordId = (recordId) => {
+  const value = String(recordId ?? "").trim();
+  if (!value) return null;
+  const parts = value.split(":");
+  if (parts.length !== 2) return null;
+  const type = sanitizeModerationInputType(parts[0]);
+  const id = String(parts[1] ?? "").trim();
+  if (!type || !id) return null;
+  return { type, id, key: `${type}:${id}` };
+};
+
+const getModerationStateMap = () => {
+  const runtime = readRuntimeStore(runtimeStorePath);
+  return runtime && typeof runtime.moderationInputStates === "object" && runtime.moderationInputStates
+    ? runtime.moderationInputStates
+    : {};
+};
+
+const readModerationState = (type, id) => {
+  const key = buildModerationInputKey(type, id);
+  if (!key) return null;
+  const map = getModerationStateMap();
+  const entry = map[key];
+  if (!entry || typeof entry !== "object") return null;
+  return entry;
+};
+
+const upsertModerationState = (type, id, patch) => {
+  const key = buildModerationInputKey(type, id);
+  if (!key) return null;
+  const runtime = readRuntimeStore(runtimeStorePath);
+  const map =
+    runtime && typeof runtime.moderationInputStates === "object" && runtime.moderationInputStates
+      ? runtime.moderationInputStates
+      : {};
+  const current = map[key] && typeof map[key] === "object" ? map[key] : {};
+  map[key] = {
+    ...current,
+    ...patch,
+    updatedAt: nowIso(),
+  };
+  runtime.moderationInputStates = map;
+  writeRuntimeStore(runtimeStorePath, runtime);
+  return map[key];
+};
+
+const isInputSoftDeleted = (type, id) => {
+  const state = readModerationState(type, id);
+  return Boolean(state?.deletedAt);
+};
+
+const isInputFlagged = (type, id) => {
+  const state = readModerationState(type, id);
+  return Boolean(state?.flagged);
+};
+
+const toFlagReason = (value) => {
+  const text = String(value ?? "").trim();
+  if (text) return text;
+  return "Flagged for facilitator review.";
+};
+
+const normalizeDedupKey = (value) => {
+  const normalized = String(value ?? "")
+    .replace(/\s*\[\d+\]\s*$/u, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/gu, " ");
+  return normalized;
+};
+
+const countDistinctBy = (items, keyFn) => {
+  const unique = new Set();
+  for (const item of items) {
+    const key = normalizeDedupKey(keyFn(item));
+    if (!key) continue;
+    unique.add(key);
+  }
+  return unique.size;
+};
+
+const toLocalTimeLabel = (isoString) => {
+  const date = new Date(isoString);
+  if (!Number.isFinite(date.getTime())) {
+    return "";
+  }
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
+
+const buildCountsFromSignals = (signals) => {
+  const featureRequests = (Array.isArray(signals.featureRequests) ? signals.featureRequests : [])
+    .filter((item) => !isInputSoftDeleted("feature_request", item.id));
+  const screenFeedback = (Array.isArray(signals.screenFeedback) ? signals.screenFeedback : [])
+    .filter((item) => !isInputSoftDeleted("screen_feedback", item.id));
+  const kudos = (Array.isArray(signals.kudos) ? signals.kudos : [])
+    .filter((item) => !isInputSoftDeleted("kudos", item.id));
+  const totalVotesCast = featureRequests.reduce((sum, item) => sum + Math.max(0, toInteger(item.votes, 0)), 0);
+  const consentApprovedKudos = kudos.filter((item) => Boolean(item.consentPublic)).length;
+  const distinctScreensCovered = countDistinctBy(screenFeedback, (item) => item.screenName);
+  const uniqueFeatureRequests = countDistinctBy(featureRequests, (item) => item.title);
+  const uniqueScreenFeedback = countDistinctBy(
+    screenFeedback,
+    (item) => item.text ?? `${item.screenName ?? ""}:${item.type ?? ""}:${item.role ?? ""}`,
+  );
+  const uniqueKudos = countDistinctBy(kudos, (item) => item.text);
+
+  return {
+    totalInputs: featureRequests.length + screenFeedback.length + kudos.length,
+    featureRequests: featureRequests.length,
+    screenFeedback: screenFeedback.length,
+    kudos: kudos.length,
+    totalVotesCast,
+    consentApprovedKudos,
+    distinctScreensCovered,
+    uniqueFeatureRequests,
+    uniqueScreenFeedback,
+    uniqueKudos,
+    uniqueInputs: uniqueFeatureRequests + uniqueScreenFeedback + uniqueKudos,
+    updatedAt: nowIso(),
+  };
+};
+
+const loadSignalRowsForOverview = async () => {
+  if (!useDbDataSource) {
+    return buildFlatMergedSignals();
+  }
+
+  if (usePostgresDb) {
+    return withPostgresClient(async (client) => {
+      const featureRequests = (
+        await client.query(`
+          SELECT fr.feature_request_id AS id,
+            fr.title AS title,
+            COALESCE(SUM(frv.vote_value), 0)::int AS votes
+          FROM feature_requests fr
+          LEFT JOIN feature_request_votes frv ON frv.feature_request_id = fr.feature_request_id
+          GROUP BY fr.feature_request_id
+        `)
+      ).rows;
+      const screenFeedback = (
+        await client.query(`
+          SELECT feedback_id AS id, screen_name AS "screenName", feedback_type AS type, feedback_text AS text, role AS role
+          FROM feedback
+        `)
+      ).rows;
+      const kudos = (
+        await client.query(`
+          SELECT kudos_id AS id, quote_text AS text, role AS role, consent_public AS "consentPublic"
+          FROM kudos
+        `)
+      ).rows;
+      return {
+        featureRequests,
+        screenFeedback,
+        kudos,
+      };
+    });
+  }
+
+  const featureRequests = db.prepare(`
+    SELECT fr.FEATURE_REQUEST_ID AS id,
+      fr.TITLE AS title,
+      COALESCE(SUM(frv.VOTE_VALUE), 0) AS votes
+    FROM feature_requests fr
+    LEFT JOIN feature_request_votes frv ON frv.FEATURE_REQUEST_ID = fr.FEATURE_REQUEST_ID
+    GROUP BY fr.FEATURE_REQUEST_ID
+  `).all();
+  const screenFeedback = db.prepare(`
+    SELECT FEEDBACK_ID AS id, SCREEN_NAME AS screenName, FEEDBACK_TYPE AS type, FEEDBACK_TEXT AS text, ROLE AS role
+    FROM feedback
+  `).all();
+  const kudos = db.prepare(`
+    SELECT KUDOS_ID AS id, QUOTE_TEXT AS text, ROLE AS role, CONSENT_PUBLIC AS consentPublic
+    FROM kudos
+  `).all().map((row) => ({
+    ...row,
+    consentPublic: Boolean(row.consentPublic),
+  }));
+
+  return {
+    featureRequests,
+    screenFeedback,
+    kudos,
+  };
+};
+
+const sortBySubmittedAtAsc = (items) => {
+  return items
+    .slice()
+    .sort((a, b) => {
+      const aTs = new Date(String(a.submittedAt ?? "")).getTime();
+      const bTs = new Date(String(b.submittedAt ?? "")).getTime();
+      return aTs - bTs;
+    });
+};
+
+const loadAllInputsForModeration = async () => {
+  if (!useDbDataSource) {
+    const merged = buildFlatMergedSignals();
+    const featureRequests = (Array.isArray(merged.featureRequests) ? merged.featureRequests : []).map((item) => ({
+      id: item.id,
+      type: "feature_request",
+      text: String(item.title ?? item.description ?? ""),
+      submittedAt: String(item.createdAt ?? nowIso()),
+    }));
+    const screenFeedback = (Array.isArray(merged.screenFeedback) ? merged.screenFeedback : []).map((item) => ({
+      id: item.id,
+      type: "screen_feedback",
+      text: String(item.text ?? ""),
+      submittedAt: String(item.createdAt ?? nowIso()),
+    }));
+    const kudos = (Array.isArray(merged.kudos) ? merged.kudos : []).map((item) => ({
+      id: item.id,
+      type: "kudos",
+      text: String(item.text ?? ""),
+      submittedAt: String(item.createdAt ?? nowIso()),
+    }));
+    return [...featureRequests, ...screenFeedback, ...kudos];
+  }
+
+  if (usePostgresDb) {
+    return withPostgresClient(async (client) => {
+      const featureRequests = (
+        await client.query(`
+          SELECT feature_request_id AS id, title AS text, created_at AS "submittedAt"
+          FROM feature_requests
+        `)
+      ).rows.map((row) => ({
+        id: row.id,
+        type: "feature_request",
+        text: String(row.text ?? ""),
+        submittedAt: String(row.submittedAt ?? nowIso()),
+      }));
+      const screenFeedback = (
+        await client.query(`
+          SELECT feedback_id AS id, feedback_text AS text, created_at AS "submittedAt"
+          FROM feedback
+        `)
+      ).rows.map((row) => ({
+        id: row.id,
+        type: "screen_feedback",
+        text: String(row.text ?? ""),
+        submittedAt: String(row.submittedAt ?? nowIso()),
+      }));
+      const kudos = (
+        await client.query(`
+          SELECT kudos_id AS id, quote_text AS text, created_at AS "submittedAt"
+          FROM kudos
+        `)
+      ).rows.map((row) => ({
+        id: row.id,
+        type: "kudos",
+        text: String(row.text ?? ""),
+        submittedAt: String(row.submittedAt ?? nowIso()),
+      }));
+      return [...featureRequests, ...screenFeedback, ...kudos];
+    });
+  }
+
+  const featureRequests = db.prepare(`
+    SELECT FEATURE_REQUEST_ID AS id, TITLE AS text, CREATED_AT AS submittedAt
+    FROM feature_requests
+  `).all().map((row) => ({
+    id: row.id,
+    type: "feature_request",
+    text: String(row.text ?? ""),
+    submittedAt: String(row.submittedAt ?? nowIso()),
+  }));
+  const screenFeedback = db.prepare(`
+    SELECT FEEDBACK_ID AS id, FEEDBACK_TEXT AS text, CREATED_AT AS submittedAt
+    FROM feedback
+  `).all().map((row) => ({
+    id: row.id,
+    type: "screen_feedback",
+    text: String(row.text ?? ""),
+    submittedAt: String(row.submittedAt ?? nowIso()),
+  }));
+  const kudos = db.prepare(`
+    SELECT KUDOS_ID AS id, QUOTE_TEXT AS text, CREATED_AT AS submittedAt
+    FROM kudos
+  `).all().map((row) => ({
+    id: row.id,
+    type: "kudos",
+    text: String(row.text ?? ""),
+    submittedAt: String(row.submittedAt ?? nowIso()),
+  }));
+  return [...featureRequests, ...screenFeedback, ...kudos];
+};
+
+const getFlaggedInputs = async () => {
+  const allInputs = await loadAllInputsForModeration();
+  const map = getModerationStateMap();
+  const flagged = [];
+  for (const item of allInputs) {
+    const key = buildModerationInputKey(item.type, item.id);
+    if (!key) continue;
+    const state = map[key];
+    if (!state || !state.flagged || state.deletedAt) continue;
+    flagged.push({
+      id: key,
+      type: item.type,
+      text: item.text,
+      flagReason: toFlagReason(state.flagReason),
+      submittedAt: item.submittedAt,
+    });
+  }
+  return sortBySubmittedAtAsc(flagged);
+};
+
+const buildSessionConfigPayload = () => {
+  const cutoffDate = new Date(synthesisSessionState.inputCutoffAt);
+  const cutoffAt = Number.isFinite(cutoffDate.getTime()) ? cutoffDate.toISOString() : nowIso();
+  const remainingSeconds = Math.max(0, Math.ceil((new Date(cutoffAt).getTime() - Date.now()) / 1_000));
+  const inputWindowOpen = synthesisSessionState.wallWindowOpen && remainingSeconds > 0;
+  return {
+    inputCutoffAt: cutoffAt,
+    inputWindowOpen,
+    countdownSecondsRemaining: remainingSeconds,
+    wallWindowOpen: synthesisSessionState.wallWindowOpen,
+    mobileWindowOpen: synthesisSessionState.mobileWindowOpen,
+    themesViewActive: synthesisSessionState.themesViewActive,
+    synthesisMinSignals: Math.max(1, toInteger(synthesisSessionState.synthesisMinSignals, DEFAULT_SYNTHESIS_MIN_SIGNALS)),
+    mobileWindowCloseTime: cutoffAt,
+    mobileWindowCloseTimeLocal: toLocalTimeLabel(cutoffAt),
+    updatedAt: nowIso(),
+  };
+};
+
+const parseInputCountType = (value) => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "feature_request") return "feature_request";
+  if (normalized === "screen_feedback") return "screen_feedback";
+  if (normalized === "kudos") return "kudos";
+  return null;
+};
+
+const getInputCounts = async (type = null) => {
+  const signals = await loadSignalRowsForOverview();
+  const counts = buildCountsFromSignals(signals);
+  if (type === "feature_request") {
+    return { type, count: counts.featureRequests, updatedAt: counts.updatedAt };
+  }
+  if (type === "screen_feedback") {
+    return { type, count: counts.screenFeedback, updatedAt: counts.updatedAt };
+  }
+  if (type === "kudos") {
+    return { type, count: counts.kudos, updatedAt: counts.updatedAt };
+  }
+  return counts;
+};
+
+const getDedupCounts = async () => {
+  const signals = await loadSignalRowsForOverview();
+  const counts = buildCountsFromSignals(signals);
+  return {
+    uniqueInputs: counts.uniqueInputs,
+    uniqueFeatureRequests: counts.uniqueFeatureRequests,
+    distinctScreensCovered: counts.distinctScreensCovered,
+    consentApprovedKudos: counts.consentApprovedKudos,
+    totalVotesCast: counts.totalVotesCast,
+    updatedAt: counts.updatedAt,
+  };
+};
+
+const patchSessionConfig = (body) => {
+  const nextState = { ...synthesisSessionState };
+  if (typeof body?.wallWindowOpen === "boolean") {
+    nextState.wallWindowOpen = Boolean(body.wallWindowOpen);
+  }
+  if (typeof body?.mobileWindowOpen === "boolean") {
+    nextState.mobileWindowOpen = Boolean(body.mobileWindowOpen);
+  }
+  if (typeof body?.themesViewActive === "boolean") {
+    nextState.themesViewActive = Boolean(body.themesViewActive);
+  }
+  if (typeof body?.synthesisMinSignals === "number") {
+    nextState.synthesisMinSignals = Math.max(1, toInteger(body.synthesisMinSignals, synthesisSessionState.synthesisMinSignals));
+  }
+  if (typeof body?.inputCutoffAt === "string" && body.inputCutoffAt) {
+    const parsedCutoff = new Date(body.inputCutoffAt);
+    nextState.inputCutoffAt = Number.isFinite(parsedCutoff.getTime())
+      ? parsedCutoff.toISOString()
+      : nextState.inputCutoffAt;
+  }
+  synthesisSessionState.inputCutoffAt = nextState.inputCutoffAt;
+  synthesisSessionState.wallWindowOpen = nextState.wallWindowOpen;
+  synthesisSessionState.mobileWindowOpen = nextState.mobileWindowOpen;
+  synthesisSessionState.themesViewActive = nextState.themesViewActive;
+  synthesisSessionState.synthesisMinSignals = nextState.synthesisMinSignals;
+  return buildSessionConfigPayload();
+};
+
+const checkAnthropicConnectivity = async () => {
+  if (!synthesisConfig.anthropicKey) {
+    return {
+      provider: "anthropic",
+      reachable: false,
+      reason: "not_configured",
+      checkedAt: nowIso(),
+    };
+  }
+
+  const probeUrl = `${synthesisConfig.anthropicBase.replace(/\/$/u, "")}/models`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4_500);
+
+  try {
+    const probe = await fetch(probeUrl, {
+      method: "GET",
+      headers: {
+        "x-api-key": synthesisConfig.anthropicKey,
+        "anthropic-version": synthesisConfig.anthropicVersion,
+      },
+      signal: controller.signal,
+    });
+    return {
+      provider: "anthropic",
+      reachable: probe.ok,
+      reason: probe.ok ? undefined : `http_${probe.status}`,
+      checkedAt: nowIso(),
+    };
+  } catch (error) {
+    const reason = error instanceof Error ? error.name : "request_failed";
+    return {
+      provider: "anthropic",
+      reachable: false,
+      reason,
+      checkedAt: nowIso(),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 };
 
 export const handleApiRequest = async (request, response) => {
@@ -1354,6 +2251,14 @@ export const handleApiRequest = async (request, response) => {
 
     if (method === "OPTIONS") {
       sendJson(response, 204, {});
+      return;
+    }
+
+    if (isProtectedAdminRoute(pathname) && !hasValidSynthesisAuthToken(request)) {
+      sendJson(response, 401, {
+        ok: false,
+        error: "Unauthorized. Authenticate with the synthesis PIN first.",
+      });
       return;
     }
 
@@ -1374,12 +2279,158 @@ export const handleApiRequest = async (request, response) => {
       return;
     }
 
+    if (method === "POST" && pathname === "/api/universe/search") {
+      checkRateLimit({ request, bucket: "universe-search", max: SYNTHESIS_RATE_LIMIT_MAX });
+      const body = await readBody(request);
+      const provider = String(body.provider ?? "openai").toLowerCase() === "anthropic" ? "anthropic" : "openai";
+      const messages = Array.isArray(body.messages) ? body.messages : [];
+      const completion = await runServerTextCompletion({
+        provider,
+        messages,
+        maxOutputTokens: body.maxOutputTokens,
+        temperature: body.temperature,
+      });
+      sendJson(response, 200, {
+        ok: true,
+        provider: completion.provider,
+        model: completion.model,
+        text: completion.text,
+      });
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/inputs/count") {
+      const requestedType = parseInputCountType(parsed.searchParams.get("type"));
+      sendJson(response, 200, await getInputCounts(requestedType));
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/inputs/dedup-count") {
+      sendJson(response, 200, await getDedupCounts());
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/inputs/flagged") {
+      const items = await getFlaggedInputs();
+      sendJson(response, 200, items);
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/session/config") {
+      sendJson(response, 200, buildSessionConfigPayload());
+      return;
+    }
+
+    if (method === "PATCH" && pathname === "/api/session/config") {
+      checkRateLimit({ request, bucket: "session-config-patch", max: WRITE_RATE_LIMIT_MAX });
+      const body = await readBody(request);
+      const validated = validateSessionConfigPatchPayload(body);
+      sendJson(response, 200, patchSessionConfig(validated));
+      return;
+    }
+
+    if ((method === "PATCH" || method === "DELETE") && pathname.startsWith("/api/inputs/")) {
+      checkRateLimit({ request, bucket: "moderation-write", max: WRITE_RATE_LIMIT_MAX });
+      const parts = pathname.split("/");
+      const idParam = decodeURIComponent(String(parts[3] ?? ""));
+      if (!idParam || idParam === "flagged") {
+        sendJson(response, 400, { error: "Invalid moderation input id." });
+        return;
+      }
+      const parsedRecordId = parseModerationRecordId(idParam);
+      if (!parsedRecordId) {
+        sendJson(response, 400, { error: "Moderation id must be type:id." });
+        return;
+      }
+
+      const allInputs = await loadAllInputsForModeration();
+      const exists = allInputs.some(
+        (item) =>
+          sanitizeModerationInputType(item.type) === parsedRecordId.type &&
+          String(item.id) === parsedRecordId.id,
+      );
+      if (!exists) {
+        sendJson(response, 404, { error: "Input not found." });
+        return;
+      }
+
+      if (method === "PATCH") {
+        const body = await readBody(request);
+        const nextFlagged = typeof body.flagged === "boolean" ? body.flagged : Boolean(body.flagged);
+        const nextReason = toOptionalString(body.flagReason, 240);
+        upsertModerationState(parsedRecordId.type, parsedRecordId.id, {
+          flagged: nextFlagged,
+          deletedAt: nextFlagged ? null : readModerationState(parsedRecordId.type, parsedRecordId.id)?.deletedAt ?? null,
+          flagReason: nextReason ?? readModerationState(parsedRecordId.type, parsedRecordId.id)?.flagReason ?? "Flagged for facilitator review.",
+        });
+      }
+
+      if (method === "DELETE") {
+        upsertModerationState(parsedRecordId.type, parsedRecordId.id, {
+          flagged: false,
+          deletedAt: nowIso(),
+          flagReason: readModerationState(parsedRecordId.type, parsedRecordId.id)?.flagReason ?? "Removed during moderation review.",
+        });
+      }
+
+      const pendingItems = await getFlaggedInputs();
+      sendJson(response, 200, {
+        ok: true,
+        id: parsedRecordId.key,
+        pendingCount: pendingItems.length,
+        moderationState: readModerationState(parsedRecordId.type, parsedRecordId.id),
+      });
+      return;
+    }
+
+    if (method === "POST" && pathname === "/api/synthesis/auth") {
+      checkRateLimit({ request, bucket: "synthesis-auth", max: AUTH_RATE_LIMIT_MAX });
+      const body = await readBody(request);
+      const submittedPin = toTrimmedString(body.pin);
+      if (!/^\d{4,6}$/u.test(submittedPin)) {
+        throw createHttpError(400, "PIN must be 4 to 6 digits.");
+      }
+
+      if (!synthesisPin) {
+        sendJson(response, 503, {
+          ok: false,
+          authenticated: false,
+          error: "Synthesis PIN is not configured on the server.",
+        });
+        return;
+      }
+
+      if (!submittedPin || !timingSafePinMatch(submittedPin, synthesisPin)) {
+        sendJson(response, 401, {
+          ok: false,
+          authenticated: false,
+          error: "Invalid PIN.",
+        });
+        return;
+      }
+
+      const session = issueSynthesisAuthToken();
+      sendJson(response, 200, {
+        ok: true,
+        authenticated: true,
+        token: session.token,
+        expiresAt: new Date(session.expiresAt).toISOString(),
+      });
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/synthesis/providers/anthropic/health") {
+      sendJson(response, 200, await checkAnthropicConnectivity());
+      return;
+    }
+
     if (method === "GET" && pathname === "/api/admin/tables") {
       sendJson(response, 200, { tables: await buildAdminTables() });
       return;
     }
 
     if (method === "POST" && pathname === "/api/admin/reseed") {
+      checkRateLimit({ request, bucket: "admin-reseed", max: 5 });
       const payload = await readBody(request);
       if (useDbDataSource) {
         if (usePostgresDb) {
@@ -1395,7 +2446,8 @@ export const handleApiRequest = async (request, response) => {
     }
 
     if (method === "POST" && pathname === "/api/feature-requests") {
-      const body = await readBody(request);
+      checkRateLimit({ request, bucket: "feature-request-create", max: WRITE_RATE_LIMIT_MAX });
+      const body = validateFeatureRequestPayload(await readBody(request));
       let id;
       if (useDbDataSource) {
         if (usePostgresDb) {
@@ -1407,24 +2459,24 @@ export const handleApiRequest = async (request, response) => {
               RETURNING feature_request_id
               `,
               [
-                Number(body.productId),
-                body.convertedFeatureId == null ? null : Number(body.convertedFeatureId),
-                String(body.title ?? ""),
-                body.description == null ? null : String(body.description),
-                body.workflowContext == null ? null : String(body.workflowContext),
-                String(body.status ?? "open"),
-                String(body.createdAt ?? nowIso()),
-                body.legacyRequestCode == null ? null : String(body.legacyRequestCode),
-                String(body.app ?? "servicing"),
-                body.screenId == null ? null : Number(body.screenId),
-                body.screenName == null ? null : String(body.screenName),
-                body.origin == null ? null : String(body.origin),
+                body.productId,
+                null,
+                body.title,
+                body.description,
+                body.workflowContext,
+                body.status,
+                body.createdAt,
+                body.legacyRequestCode,
+                null,
+                null,
+                null,
+                body.origin,
               ],
             );
             const requestId = Number(insertResult.rows[0]?.feature_request_id);
             await client.query(
               "INSERT INTO feature_request_votes (feature_request_id, session_id, vote_value, created_at) VALUES ($1, $2, 1, $3::timestamptz)",
-              [requestId, String(body.sessionId ?? "web"), String(body.createdAt ?? nowIso())],
+              [requestId, body.sessionId, body.createdAt],
             );
             return requestId;
           });
@@ -1433,24 +2485,24 @@ export const handleApiRequest = async (request, response) => {
           INSERT INTO feature_requests (PRODUCT_ID, CONVERTED_FEATURE_ID, TITLE, DESCRIPTION, WORKFLOW_CONTEXT, STATUS, CREATED_AT, LEGACY_REQUEST_CODE, APP_AREA, SCREEN_ID, SCREEN_NAME, ORIGIN)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
-          Number(body.productId),
-          body.convertedFeatureId == null ? null : Number(body.convertedFeatureId),
-          String(body.title ?? ""),
-          body.description == null ? null : String(body.description),
-          body.workflowContext == null ? null : String(body.workflowContext),
-          String(body.status ?? "open"),
-          String(body.createdAt ?? nowIso()),
-          body.legacyRequestCode == null ? null : String(body.legacyRequestCode),
-          String(body.app ?? "servicing"),
-          body.screenId == null ? null : Number(body.screenId),
-          body.screenName == null ? null : String(body.screenName),
-          body.origin == null ? null : String(body.origin),
+          body.productId,
+          null,
+          body.title,
+          body.description,
+          body.workflowContext,
+          body.status,
+          body.createdAt,
+          body.legacyRequestCode,
+          null,
+          null,
+          null,
+          body.origin,
         );
         id = Number(result.lastInsertRowid);
         db.prepare("INSERT INTO feature_request_votes (FEATURE_REQUEST_ID, SESSION_ID, VOTE_VALUE, CREATED_AT) VALUES (?, ?, 1, ?)").run(
           id,
-          String(body.sessionId ?? "web"),
-          String(body.createdAt ?? nowIso()),
+          body.sessionId,
+          body.createdAt,
         );
         }
       } else {
@@ -1461,9 +2513,10 @@ export const handleApiRequest = async (request, response) => {
     }
 
     if (method === "POST" && pathname.startsWith("/api/feature-requests/") && pathname.endsWith("/upvote")) {
+      checkRateLimit({ request, bucket: "feature-request-upvote", max: WRITE_RATE_LIMIT_MAX });
       const parts = pathname.split("/");
       const idParam = String(parts[3] ?? "");
-      const body = await readBody(request);
+      const body = validateFeatureUpvotePayload(await readBody(request));
       let votes = 0;
       if (useDbDataSource) {
         const id = Number(idParam);
@@ -1483,7 +2536,7 @@ export const handleApiRequest = async (request, response) => {
             }
             await client.query(
               "INSERT INTO feature_request_votes (feature_request_id, session_id, vote_value, created_at) VALUES ($1, $2, 1, $3::timestamptz)",
-              [id, String(body.sessionId ?? `web-${Date.now()}`), nowIso()],
+              [id, body.sessionId, nowIso()],
             );
             const votesResult = await client.query(
               "SELECT COALESCE(SUM(vote_value), 0)::int AS votes FROM feature_request_votes WHERE feature_request_id = $1",
@@ -1500,7 +2553,7 @@ export const handleApiRequest = async (request, response) => {
           }
           db.prepare("INSERT INTO feature_request_votes (FEATURE_REQUEST_ID, SESSION_ID, VOTE_VALUE, CREATED_AT) VALUES (?, ?, 1, ?)").run(
             id,
-            String(body.sessionId ?? `web-${Date.now()}`),
+            body.sessionId,
             nowIso(),
           );
           const votesRow = db.prepare(
@@ -1517,7 +2570,8 @@ export const handleApiRequest = async (request, response) => {
     }
 
     if (method === "POST" && pathname === "/api/kudos") {
-      const body = await readBody(request);
+      checkRateLimit({ request, bucket: "kudos-create", max: WRITE_RATE_LIMIT_MAX });
+      const body = validateKudosPayload(await readBody(request));
       if (useDbDataSource) {
         if (usePostgresDb) {
           const result = await withPostgresClient((client) =>
@@ -1528,15 +2582,15 @@ export const handleApiRequest = async (request, response) => {
               RETURNING kudos_id
               `,
               [
-                Number(body.productId),
-                body.featureId == null ? null : Number(body.featureId),
-                body.screenId == null ? null : Number(body.screenId),
-                String(body.text ?? ""),
-                String(body.role ?? "unspecified"),
-                Boolean(body.consentPublic),
-                String(body.createdAt ?? nowIso()),
-                String(body.app ?? "servicing"),
-                body.screenName == null ? null : String(body.screenName),
+                body.productId,
+                null,
+                null,
+                body.text,
+                body.role,
+                body.consentPublic,
+                body.createdAt,
+                null,
+                null,
               ],
             ),
           );
@@ -1546,15 +2600,15 @@ export const handleApiRequest = async (request, response) => {
           INSERT INTO kudos (PRODUCT_ID, FEATURE_ID, SCREEN_ID, QUOTE_TEXT, ROLE, CONSENT_PUBLIC, CREATED_AT, APP_AREA, SCREEN_NAME)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
-          Number(body.productId),
-          body.featureId == null ? null : Number(body.featureId),
-          body.screenId == null ? null : Number(body.screenId),
-          String(body.text ?? ""),
-          String(body.role ?? "unspecified"),
+          body.productId,
+          null,
+          null,
+          body.text,
+          body.role,
           body.consentPublic ? 1 : 0,
-          String(body.createdAt ?? nowIso()),
-          String(body.app ?? "servicing"),
-          body.screenName == null ? null : String(body.screenName),
+          body.createdAt,
+          null,
+          null,
         );
         sendJson(response, 200, { ok: true, id: Number(result.lastInsertRowid) });
         }
@@ -1565,7 +2619,8 @@ export const handleApiRequest = async (request, response) => {
     }
 
     if (method === "POST" && pathname === "/api/screen-feedback") {
-      const body = await readBody(request);
+      checkRateLimit({ request, bucket: "screen-feedback-create", max: WRITE_RATE_LIMIT_MAX });
+      const body = validateScreenFeedbackPayload(await readBody(request));
       if (useDbDataSource) {
         if (usePostgresDb) {
           const result = await withPostgresClient((client) =>
@@ -1576,15 +2631,15 @@ export const handleApiRequest = async (request, response) => {
               RETURNING feedback_id
               `,
               [
-                Number(body.productId),
-                body.featureId == null ? null : Number(body.featureId),
-                body.screenId == null ? null : Number(body.screenId),
-                String(body.type ?? "issue"),
-                body.text == null ? null : String(body.text),
-                String(body.role ?? "unspecified"),
-                String(body.createdAt ?? nowIso()),
-                String(body.app ?? "servicing"),
-                body.screenName == null ? null : String(body.screenName),
+                body.productId,
+                body.featureId,
+                body.screenId,
+                body.type,
+                body.text,
+                body.role,
+                body.createdAt,
+                body.app,
+                body.screenName,
               ],
             ),
           );
@@ -1594,15 +2649,15 @@ export const handleApiRequest = async (request, response) => {
           INSERT INTO feedback (PRODUCT_ID, FEATURE_ID, SCREEN_ID, FEEDBACK_TYPE, FEEDBACK_TEXT, ROLE, CREATED_AT, APP_AREA, SCREEN_NAME)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
-          Number(body.productId),
-          body.featureId == null ? null : Number(body.featureId),
-          body.screenId == null ? null : Number(body.screenId),
-          String(body.type ?? "issue"),
-          body.text == null ? null : String(body.text),
-          String(body.role ?? "unspecified"),
-          String(body.createdAt ?? nowIso()),
-          String(body.app ?? "servicing"),
-          body.screenName == null ? null : String(body.screenName),
+          body.productId,
+          body.featureId,
+          body.screenId,
+          body.type,
+          body.text,
+          body.role,
+          body.createdAt,
+          body.app,
+          body.screenName,
         );
         sendJson(response, 200, { ok: true, id: Number(result.lastInsertRowid) });
         }
@@ -1613,7 +2668,8 @@ export const handleApiRequest = async (request, response) => {
     }
 
     if (method === "POST" && pathname === "/api/card-sort") {
-      const body = await readBody(request);
+      checkRateLimit({ request, bucket: "card-sort-upsert", max: WRITE_RATE_LIMIT_MAX });
+      const body = validateCardSortPayload(await readBody(request));
       if (!useDbDataSource) {
         upsertFlatRuntimeCardSort(body);
       }
@@ -1622,17 +2678,27 @@ export const handleApiRequest = async (request, response) => {
     }
 
     if (method === "POST" && pathname === "/api/synthesis/stream") {
-      const body = await readBody(request);
+      checkRateLimit({ request, bucket: "synthesis-stream", max: SYNTHESIS_RATE_LIMIT_MAX });
+      const body = await readBody(request, { maxBytes: MAX_BODY_BYTES * 4 });
+      const outputMode = String(body.outputMode ?? body.mode ?? "roadmap").toLowerCase();
+      if (!["roadmap", "prd"].includes(outputMode)) {
+        throw createHttpError(400, "outputMode must be one of: roadmap, prd.");
+      }
+      const macrosType = typeof body.macros;
+      if (body.macros != null && (macrosType !== "object" || Array.isArray(body.macros))) {
+        throw createHttpError(400, "macros must be an object when provided.");
+      }
       const signals = await loadSignalsForSynthesis();
       response.writeHead(200, {
         "content-type": "text/event-stream; charset=utf-8",
         "cache-control": "no-cache, no-transform",
         connection: "keep-alive",
-        "access-control-allow-origin": "*",
+        "access-control-allow-origin": corsAllowedOrigin,
         "access-control-allow-methods": "POST,OPTIONS",
-        "access-control-allow-headers": "content-type",
+        "access-control-allow-headers": "content-type,authorization",
       });
       response.write(": connected\n\n");
+      let synthesisSucceeded = false;
       try {
         await runSynthesis({
           requestBody: body,
@@ -1641,11 +2707,15 @@ export const handleApiRequest = async (request, response) => {
           log: (message) => console.log(message),
           sendEvent: (event) => sendSseEvent(response, event),
         });
+        synthesisSucceeded = true;
       } catch (error) {
         const code = error?.code ?? "ERR-06";
         const message = error instanceof Error ? error.message : "Synthesis failed";
         sendSseEvent(response, { type: "error", code, message });
       } finally {
+        if (synthesisSucceeded) {
+          synthesisSessionState.themesViewActive = true;
+        }
         response.end();
       }
       return;
@@ -1653,16 +2723,34 @@ export const handleApiRequest = async (request, response) => {
 
     sendJson(response, 404, { error: "Not found" });
   } catch (error) {
+    if (error instanceof HttpError) {
+      sendJson(response, error.statusCode, { error: error.message });
+      return;
+    }
     const message = error instanceof Error ? error.message : "Unknown error";
     sendJson(response, 500, { error: message });
   }
 };
 
+const startupLocationMigrationPromise = (async () => {
+  if (useDbDataSource) {
+    await migrateDbLocationFields();
+    return;
+  }
+  migrateRuntimeStoreLocationFields();
+})().catch((error) => {
+  // eslint-disable-next-line no-console
+  console.warn("[Migration] Failed to strip location fields at startup.", error);
+});
+
 const isDirectExecution = process.argv[1] && path.resolve(process.argv[1]) === __filename;
 if (isDirectExecution) {
-  const server = http.createServer(handleApiRequest);
-  server.listen(port, "127.0.0.1", () => {
-    // eslint-disable-next-line no-console
-    console.log(`[api] running on http://localhost:${port} · mode=${dataSourceMode} · dbEngine=${dbEngine} · db=${dbPath} · synthesisProvider=${synthesisConfig.provider ?? "none"}`);
-  });
+  startupLocationMigrationPromise
+    .finally(() => {
+      const server = http.createServer(handleApiRequest);
+      server.listen(port, "127.0.0.1", () => {
+        // eslint-disable-next-line no-console
+        console.log(`[api] running on http://localhost:${port} · mode=${dataSourceMode} · dbEngine=${dbEngine} · db=${dbPath} · synthesisProvider=${synthesisConfig.provider ?? "none"}`);
+      });
+    });
 }

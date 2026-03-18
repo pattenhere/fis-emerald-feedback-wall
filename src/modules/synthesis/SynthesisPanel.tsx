@@ -20,7 +20,7 @@ interface SynthesisPanelProps {
   mode: SynthesisMode;
   onModeChange: (mode: SynthesisMode) => void;
   unlocked: boolean;
-  onUnlock: (pin: string) => boolean;
+  onUnlock: (pin: string) => Promise<boolean>;
   pinLengthRange: { min: number; max: number };
   output: string;
   onOutputChange: (next: string) => void;
@@ -99,6 +99,7 @@ export const SynthesisPanel = memo(({
 }: SynthesisPanelProps): JSX.Element => {
   const [pinAttempt, setPinAttempt] = useState("");
   const [pinError, setPinError] = useState("");
+  const [unlocking, setUnlocking] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [phaseStatus, setPhaseStatus] = useState<"idle" | "analyzing" | "generating">("idle");
   const [streamWarnings, setStreamWarnings] = useState<string[]>([]);
@@ -119,7 +120,7 @@ export const SynthesisPanel = memo(({
   const stats = useMemo(
     () => [
       { label: "Feature Requests", value: summary.totalFeatureVotes },
-      { label: "Kudos", value: summary.kudosCount },
+      { label: "Comments", value: summary.kudosCount },
       { label: "Screen Feedback", value: summary.screenFeedbackCount },
     ],
     [summary],
@@ -141,7 +142,7 @@ export const SynthesisPanel = memo(({
     setMacros(next);
   };
 
-  const handleUnlock = (): void => {
+  const handleUnlock = async (): Promise<void> => {
     if (!/^\d+$/.test(pinAttempt)) {
       setPinError("PIN must contain only digits.");
       return;
@@ -151,10 +152,15 @@ export const SynthesisPanel = memo(({
       return;
     }
 
-    const ok = onUnlock(pinAttempt);
-    setPinError(ok ? "" : "Invalid PIN");
-    if (ok) {
-      setPinAttempt("");
+    setUnlocking(true);
+    try {
+      const ok = await onUnlock(pinAttempt);
+      setPinError(ok ? "" : "Invalid PIN");
+      if (ok) {
+        setPinAttempt("");
+      }
+    } finally {
+      setUnlocking(false);
     }
   };
 
@@ -272,7 +278,7 @@ export const SynthesisPanel = memo(({
           className="inline-form"
           onSubmit={(event) => {
             event.preventDefault();
-            handleUnlock();
+            void handleUnlock();
           }}
         >
           <input
@@ -286,8 +292,8 @@ export const SynthesisPanel = memo(({
             placeholder={`${pinLengthRange.min}-${pinLengthRange.max} digit PIN`}
             maxLength={pinLengthRange.max}
           />
-          <button type="submit" className="primary-btn">
-            Unlock
+          <button type="submit" className="primary-btn" disabled={unlocking}>
+            {unlocking ? "Checking..." : "Unlock"}
           </button>
           {pinError && <p className="error-text">{pinError}</p>}
         </form>

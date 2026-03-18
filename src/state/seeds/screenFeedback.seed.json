@@ -5213,181 +5213,181 @@
   {
     "id": "sfb-0580",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "suggestion",
-    "text": "Provide saved filter presets on Booking / Maintenance to reduce context switching for servicing analysts. This wording was tuned for uniqueness.",
+    "text": "Add inline owner context on Payments / Billing / Payoff to speed first-pass decisions for underwriting reviewers.",
     "createdAt": "2026-03-11T00:40:00.000Z"
   },
   {
     "id": "sfb-0581",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "works-well",
-    "text": "The layout hierarchy in Booking / Maintenance supports fast triage for portfolio monitoring.",
+    "text": "The in-line data grouping in Payments / Billing / Payoff reduces backtracking for exception handling.",
     "createdAt": "2026-03-11T00:41:00.000Z"
   },
   {
     "id": "sfb-0582",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "works-well",
-    "text": "The search and sort behavior in Booking / Maintenance improves review confidence in daily operations.",
+    "text": "The status timeline in Payments / Billing / Payoff feels reliable under pressure during handoff checkpoints.",
     "createdAt": "2026-03-11T00:42:00.000Z"
   },
   {
     "id": "sfb-0583",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing automated dependency flags in Booking / Maintenance, which introduces avoidable errors for control officers. This wording was tuned for uniqueness.",
+    "text": "Missing direct jump links to related history in Payments / Billing / Payoff, which delays completion on complex requests for servicing specialists.",
     "createdAt": "2026-03-11T00:43:00.000Z"
   },
   {
     "id": "sfb-0584",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Task ownership on Booking / Maintenance adds avoidable rework at month-end close.",
+    "text": "Field validation on Payments / Billing / Payoff forces manual cross-checks during portfolio review cycles.",
     "createdAt": "2026-03-11T00:44:00.000Z"
   },
   {
     "id": "sfb-0585",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "suggestion",
-    "text": "Add a compact summary panel on Booking / Maintenance to reduce context switching for servicing analysts.",
+    "text": "Provide saved filter presets on Payments / Billing / Payoff to speed first-pass decisions for underwriting reviewers.",
     "createdAt": "2026-03-11T00:45:00.000Z"
   },
   {
     "id": "sfb-0586",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing direct jump links to related history in Booking / Maintenance, which forces manual tracking outside the app for agented loan admins.",
+    "text": "Missing clear stale-task indicators in Payments / Billing / Payoff, which increases handoff risk for portfolio governance teams.",
     "createdAt": "2026-03-11T00:46:00.000Z"
   },
   {
     "id": "sfb-0587",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Status context on Booking / Maintenance obscures priority handoffs when escalations hit at once.",
+    "text": "Workflow sequencing on Payments / Billing / Payoff reduces first-pass accuracy on repeat amendment requests.",
     "createdAt": "2026-03-11T00:47:00.000Z"
   },
   {
     "id": "sfb-0588",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Exception visibility on Booking / Maintenance causes late-stage corrections during regional handoff windows.",
+    "text": "Audit traceability on Payments / Billing / Payoff slows down daily processing when escalations hit at once.",
     "createdAt": "2026-03-11T00:48:00.000Z"
   },
   {
     "id": "sfb-0589",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "works-well",
-    "text": "The progress indicators in Booking / Maintenance helps teams resolve blockers quickly for service recovery tasks.",
+    "text": "The layout hierarchy in Payments / Billing / Payoff supports cleaner collaboration for recurring renewals.",
     "createdAt": "2026-03-11T00:49:00.000Z"
   },
   {
     "id": "sfb-0590",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "works-well",
-    "text": "The drill-down flow in Booking / Maintenance keeps context intact during high-volume windows.",
+    "text": "The search and sort behavior in Payments / Billing / Payoff is easy to explain to new users during onboarding.",
     "createdAt": "2026-03-11T00:50:00.000Z"
   },
   {
     "id": "sfb-0591",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "suggestion",
-    "text": "Add a compact summary panel on Booking / Maintenance to cut manual reconciliation for operations leads.",
+    "text": "Provide saved filter presets on Payments / Billing / Payoff to improve queue discipline for syndication teams.",
     "createdAt": "2026-03-11T00:51:00.000Z"
   },
   {
     "id": "sfb-0592",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Alert clarity on Booking / Maintenance raises operational risk during high-volume mornings.",
+    "text": "Search precision on Payments / Billing / Payoff obscures priority handoffs in exception-heavy batches.",
     "createdAt": "2026-03-11T00:52:00.000Z"
   },
   {
     "id": "sfb-0593",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "suggestion",
-    "text": "Add inline owner context on Booking / Maintenance to reduce training overhead for portfolio managers.",
+    "text": "Allow role-based default views on Payments / Billing / Payoff to shorten review cycles for compliance coordinators.",
     "createdAt": "2026-03-11T00:53:00.000Z"
   },
   {
     "id": "sfb-0594",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Approval routing on Booking / Maintenance slows down daily processing during portfolio review cycles.",
+    "text": "Alert clarity on Payments / Billing / Payoff creates extra back-and-forth in same-day service windows.",
     "createdAt": "2026-03-11T00:54:00.000Z"
   },
   {
     "id": "sfb-0595",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing cross-lane status rollups in Booking / Maintenance, which slows compliance follow-up for risk reviewers. This wording was tuned for uniqueness.",
+    "text": "Missing reusable review checklists in Payments / Billing / Payoff, which creates extra queue churn for product owners.",
     "createdAt": "2026-03-11T00:55:00.000Z"
   },
   {
     "id": "sfb-0596",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Handoff signaling on Booking / Maintenance makes triage less predictable while preparing audit packets.",
+    "text": "Approval routing on Payments / Billing / Payoff increases turnaround time at month-end close.",
     "createdAt": "2026-03-11T00:56:00.000Z"
   },
   {
     "id": "sfb-0597",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Task ownership on Booking / Maintenance causes teams to re-open tasks on repeat amendment requests.",
+    "text": "Field validation on Payments / Billing / Payoff raises operational risk while preparing audit packets.",
     "createdAt": "2026-03-11T00:57:00.000Z"
   },
   {
     "id": "sfb-0598",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "suggestion",
-    "text": "Provide saved filter presets on Booking / Maintenance to reduce training overhead for portfolio managers. This wording was tuned for uniqueness.",
+    "text": "Add inline owner context on Payments / Billing / Payoff to shorten review cycles for compliance coordinators.",
     "createdAt": "2026-03-11T00:58:00.000Z"
   },
   {
     "id": "sfb-0599",
     "app": "servicing",
-    "screenId": "sv-booking-maintenance",
-    "screenName": "Booking / Maintenance",
+    "screenId": "sv-payments-billing-payoff",
+    "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing linked task breadcrumbs in Booking / Maintenance, which reduces confidence in approvals for onboarding coordinators.",
+    "text": "Missing filter-by-owner options in Payments / Billing / Payoff, which hurts cycle-time predictability for analytics users.",
     "createdAt": "2026-03-11T00:59:00.000Z"
   },
   {
@@ -5396,7 +5396,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing override rationale capture in Payments / Billing / Payoff, which creates extra queue churn for product owners.",
+    "text": "Missing structured exception reasons in Payments / Billing / Payoff, which creates extra queue churn for product owners.",
     "createdAt": "2026-03-11T01:00:00.000Z"
   },
   {
@@ -5405,7 +5405,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing automated dependency flags in Payments / Billing / Payoff, which increases handoff risk for portfolio governance teams.",
+    "text": "Missing override rationale capture in Payments / Billing / Payoff, which increases handoff risk for portfolio governance teams.",
     "createdAt": "2026-03-11T01:01:00.000Z"
   },
   {
@@ -5414,7 +5414,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Search precision on Payments / Billing / Payoff causes teams to re-open tasks while preparing audit packets.",
+    "text": "Status context on Payments / Billing / Payoff causes teams to re-open tasks during cross-team handoffs.",
     "createdAt": "2026-03-11T01:02:00.000Z"
   },
   {
@@ -5423,7 +5423,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing bulk reassignment controls in Payments / Billing / Payoff, which delays completion on complex requests for servicing specialists.",
+    "text": "Missing cross-lane status rollups in Payments / Billing / Payoff, which delays completion on complex requests for servicing specialists.",
     "createdAt": "2026-03-11T01:03:00.000Z"
   },
   {
@@ -5432,7 +5432,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Alert clarity on Payments / Billing / Payoff causes late-stage corrections when escalations hit at once.",
+    "text": "Queue prioritization on Payments / Billing / Payoff causes late-stage corrections during high-volume mornings.",
     "createdAt": "2026-03-11T01:04:00.000Z"
   },
   {
@@ -5441,7 +5441,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "suggestion",
-    "text": "Surface next-best action guidance on Payments / Billing / Payoff to speed first-pass decisions for underwriting reviewers.",
+    "text": "Allow role-based default views on Payments / Billing / Payoff to speed first-pass decisions for underwriting reviewers.",
     "createdAt": "2026-03-11T01:05:00.000Z"
   },
   {
@@ -5450,7 +5450,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing linked task breadcrumbs in Payments / Billing / Payoff, which increases handoff risk for portfolio governance teams.",
+    "text": "Missing reusable review checklists in Payments / Billing / Payoff, which increases handoff risk for portfolio governance teams.",
     "createdAt": "2026-03-11T01:06:00.000Z"
   },
   {
@@ -5459,7 +5459,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Field validation on Payments / Billing / Payoff increases turnaround time during cross-team handoffs.",
+    "text": "Alert clarity on Payments / Billing / Payoff increases turnaround time at month-end close.",
     "createdAt": "2026-03-11T01:07:00.000Z"
   },
   {
@@ -5468,7 +5468,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "suggestion",
-    "text": "Add inline owner context on Payments / Billing / Payoff to shorten review cycles for compliance coordinators.",
+    "text": "Add a compact summary panel on Payments / Billing / Payoff to shorten review cycles for compliance coordinators.",
     "createdAt": "2026-03-11T01:08:00.000Z"
   },
   {
@@ -5477,7 +5477,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Task ownership on Payments / Billing / Payoff reduces first-pass accuracy during high-volume mornings.",
+    "text": "Approval routing on Payments / Billing / Payoff reduces first-pass accuracy on repeat amendment requests.",
     "createdAt": "2026-03-11T01:09:00.000Z"
   },
   {
@@ -5486,7 +5486,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "suggestion",
-    "text": "Add configurable signal thresholds on Payments / Billing / Payoff to speed first-pass decisions for underwriting reviewers.",
+    "text": "Add inline owner context on Payments / Billing / Payoff to speed first-pass decisions for underwriting reviewers. This wording was tuned for uniqueness.",
     "createdAt": "2026-03-11T01:10:00.000Z"
   },
   {
@@ -5495,7 +5495,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing override rationale capture in Payments / Billing / Payoff, which increases handoff risk for portfolio governance teams.",
+    "text": "Missing structured exception reasons in Payments / Billing / Payoff, which increases handoff risk for portfolio governance teams.",
     "createdAt": "2026-03-11T01:11:00.000Z"
   },
   {
@@ -5504,7 +5504,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Status context on Payments / Billing / Payoff makes triage less predictable at month-end close.",
+    "text": "Task ownership on Payments / Billing / Payoff makes triage less predictable while finalizing borrower updates.",
     "createdAt": "2026-03-11T01:12:00.000Z"
   },
   {
@@ -5513,7 +5513,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing cross-lane status rollups in Payments / Billing / Payoff, which delays completion on complex requests for servicing specialists.",
+    "text": "Missing automated dependency flags in Payments / Billing / Payoff, which delays completion on complex requests for servicing specialists.",
     "createdAt": "2026-03-11T01:13:00.000Z"
   },
   {
@@ -5522,7 +5522,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "suggestion",
-    "text": "Add inline owner context on Payments / Billing / Payoff to make escalations cleaner for regional users.",
+    "text": "Add a compact summary panel on Payments / Billing / Payoff to make escalations cleaner for regional users.",
     "createdAt": "2026-03-11T01:14:00.000Z"
   },
   {
@@ -5531,7 +5531,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing direct jump links to related history in Payments / Billing / Payoff, which creates extra queue churn for product owners.",
+    "text": "Missing bulk reassignment controls in Payments / Billing / Payoff, which creates extra queue churn for product owners.",
     "createdAt": "2026-03-11T01:15:00.000Z"
   },
   {
@@ -5540,7 +5540,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing reusable review checklists in Payments / Billing / Payoff, which increases handoff risk for portfolio governance teams.",
+    "text": "Missing direct jump links to related history in Payments / Billing / Payoff, which increases handoff risk for portfolio governance teams.",
     "createdAt": "2026-03-11T01:16:00.000Z"
   },
   {
@@ -5549,7 +5549,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing linked task breadcrumbs in Payments / Billing / Payoff, which makes escalation harder to manage for exception managers.",
+    "text": "Missing reusable review checklists in Payments / Billing / Payoff, which makes escalation harder to manage for exception managers.",
     "createdAt": "2026-03-11T01:17:00.000Z"
   },
   {
@@ -5558,7 +5558,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing clear stale-task indicators in Payments / Billing / Payoff, which delays completion on complex requests for servicing specialists.",
+    "text": "Missing linked task breadcrumbs in Payments / Billing / Payoff, which delays completion on complex requests for servicing specialists.",
     "createdAt": "2026-03-11T01:18:00.000Z"
   },
   {
@@ -5567,7 +5567,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing a dedicated audit note field in Payments / Billing / Payoff, which hurts cycle-time predictability for analytics users.",
+    "text": "Missing clear stale-task indicators in Payments / Billing / Payoff, which hurts cycle-time predictability for analytics users.",
     "createdAt": "2026-03-11T01:19:00.000Z"
   },
   {
@@ -5576,7 +5576,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Field validation on Payments / Billing / Payoff reduces first-pass accuracy during high-volume mornings.",
+    "text": "Alert clarity on Payments / Billing / Payoff reduces first-pass accuracy on repeat amendment requests.",
     "createdAt": "2026-03-11T01:20:00.000Z"
   },
   {
@@ -5585,7 +5585,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing structured exception reasons in Payments / Billing / Payoff, which increases handoff risk for portfolio governance teams.",
+    "text": "Missing filter-by-owner options in Payments / Billing / Payoff, which increases handoff risk for portfolio governance teams.",
     "createdAt": "2026-03-11T01:21:00.000Z"
   },
   {
@@ -5594,7 +5594,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "suggestion",
-    "text": "Add configurable signal thresholds on Payments / Billing / Payoff to keep teams aligned on state for overnight support teams.",
+    "text": "Add inline owner context on Payments / Billing / Payoff to keep teams aligned on state for overnight support teams.",
     "createdAt": "2026-03-11T01:22:00.000Z"
   },
   {
@@ -5603,7 +5603,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Workflow sequencing on Payments / Billing / Payoff makes triage less predictable at month-end close.",
+    "text": "Field validation on Payments / Billing / Payoff makes triage less predictable while finalizing borrower updates.",
     "createdAt": "2026-03-11T01:23:00.000Z"
   },
   {
@@ -5612,7 +5612,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "suggestion",
-    "text": "Add a compact summary panel on Payments / Billing / Payoff to make escalations cleaner for regional users.",
+    "text": "Add configurable signal thresholds on Payments / Billing / Payoff to make escalations cleaner for regional users.",
     "createdAt": "2026-03-11T01:24:00.000Z"
   },
   {
@@ -5621,7 +5621,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "suggestion",
-    "text": "Provide saved filter presets on Payments / Billing / Payoff to speed first-pass decisions for underwriting reviewers.",
+    "text": "Surface next-best action guidance on Payments / Billing / Payoff to speed first-pass decisions for underwriting reviewers.",
     "createdAt": "2026-03-11T01:25:00.000Z"
   },
   {
@@ -5630,7 +5630,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Exception visibility on Payments / Billing / Payoff causes late-stage corrections when escalations hit at once.",
+    "text": "Workflow sequencing on Payments / Billing / Payoff causes late-stage corrections during high-volume mornings.",
     "createdAt": "2026-03-11T01:26:00.000Z"
   },
   {
@@ -5639,7 +5639,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "works-well",
-    "text": "The exception workflow in Payments / Billing / Payoff feels reliable under pressure during handoff checkpoints.",
+    "text": "The approval context in Payments / Billing / Payoff feels reliable under pressure during handoff checkpoints.",
     "createdAt": "2026-03-11T01:27:00.000Z"
   },
   {
@@ -5648,7 +5648,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "works-well",
-    "text": "The cross-screen handoff in Payments / Billing / Payoff makes ownership clearer in compliance reviews.",
+    "text": "The exception workflow in Payments / Billing / Payoff makes ownership clearer in compliance reviews.",
     "createdAt": "2026-03-11T01:28:00.000Z"
   },
   {
@@ -5657,7 +5657,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing clear stale-task indicators in Payments / Billing / Payoff, which hurts cycle-time predictability for analytics users.",
+    "text": "Missing linked task breadcrumbs in Payments / Billing / Payoff, which hurts cycle-time predictability for analytics users.",
     "createdAt": "2026-03-11T01:29:00.000Z"
   },
   {
@@ -5666,7 +5666,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing a dedicated audit note field in Payments / Billing / Payoff, which creates extra queue churn for product owners.",
+    "text": "Missing clear stale-task indicators in Payments / Billing / Payoff, which creates extra queue churn for product owners.",
     "createdAt": "2026-03-11T01:30:00.000Z"
   },
   {
@@ -5675,7 +5675,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing filter-by-owner options in Payments / Billing / Payoff, which increases handoff risk for portfolio governance teams.",
+    "text": "Missing a dedicated audit note field in Payments / Billing / Payoff, which increases handoff risk for portfolio governance teams.",
     "createdAt": "2026-03-11T01:31:00.000Z"
   },
   {
@@ -5684,7 +5684,7 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "missing",
-    "text": "Missing structured exception reasons in Payments / Billing / Payoff, which makes escalation harder to manage for exception managers.",
+    "text": "Missing filter-by-owner options in Payments / Billing / Payoff, which makes escalation harder to manage for exception managers.",
     "createdAt": "2026-03-11T01:32:00.000Z"
   },
   {
@@ -5693,250 +5693,250 @@
     "screenId": "sv-payments-billing-payoff",
     "screenName": "Payments / Billing / Payoff",
     "type": "issue",
-    "text": "Field validation on Payments / Billing / Payoff adds avoidable rework during portfolio review cycles.",
+    "text": "Alert clarity on Payments / Billing / Payoff adds avoidable rework during regional handoff windows.",
     "createdAt": "2026-03-11T01:33:00.000Z"
   },
   {
     "id": "sfb-0634",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
-    "type": "issue",
-    "text": "Handoff signaling on Payments / Billing / Payoff makes triage less predictable at month-end close.",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
+    "type": "works-well",
+    "text": "The cross-screen handoff in Amortization / Accruals keeps context intact for cross-team work.",
     "createdAt": "2026-03-11T01:34:00.000Z"
   },
   {
     "id": "sfb-0635",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
-    "type": "issue",
-    "text": "Task ownership on Payments / Billing / Payoff causes teams to re-open tasks while preparing audit packets.",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
+    "type": "works-well",
+    "text": "The progress indicators in Amortization / Accruals supports fast triage for service recovery tasks.",
     "createdAt": "2026-03-11T01:35:00.000Z"
   },
   {
     "id": "sfb-0636",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
     "type": "missing",
-    "text": "Missing bulk reassignment controls in Payments / Billing / Payoff, which increases handoff risk for portfolio governance teams.",
+    "text": "Missing a dedicated audit note field in Amortization / Accruals, which weakens review transparency for risk reviewers.",
     "createdAt": "2026-03-11T01:36:00.000Z"
   },
   {
     "id": "sfb-0637",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
-    "type": "missing",
-    "text": "Missing direct jump links to related history in Payments / Billing / Payoff, which makes escalation harder to manage for exception managers.",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
+    "type": "issue",
+    "text": "Field validation on Amortization / Accruals slows down daily processing when escalations hit at once.",
     "createdAt": "2026-03-11T01:37:00.000Z"
   },
   {
     "id": "sfb-0638",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
     "type": "missing",
-    "text": "Missing reusable review checklists in Payments / Billing / Payoff, which delays completion on complex requests for servicing specialists.",
+    "text": "Missing structured exception reasons in Amortization / Accruals, which reduces confidence in approvals for operations teams.",
     "createdAt": "2026-03-11T01:38:00.000Z"
   },
   {
     "id": "sfb-0639",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
-    "type": "issue",
-    "text": "Exception visibility on Payments / Billing / Payoff forces manual cross-checks while finalizing borrower updates.",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
+    "type": "suggestion",
+    "text": "Add configurable signal thresholds on Amortization / Accruals to reduce context switching for portfolio managers.",
     "createdAt": "2026-03-11T01:39:00.000Z"
   },
   {
     "id": "sfb-0640",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Add configurable signal thresholds on Payments / Billing / Payoff to speed first-pass decisions for underwriting reviewers. This wording was tuned for uniqueness.",
+    "text": "Surface next-best action guidance on Amortization / Accruals to cut manual reconciliation for cross-functional squads.",
     "createdAt": "2026-03-11T01:40:00.000Z"
   },
   {
     "id": "sfb-0641",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
-    "type": "issue",
-    "text": "Search precision on Payments / Billing / Payoff raises operational risk in exception-heavy batches.",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
+    "type": "suggestion",
+    "text": "Add a compact summary panel on Amortization / Accruals to streamline complex handoffs for servicing analysts.",
     "createdAt": "2026-03-11T01:41:00.000Z"
   },
   {
     "id": "sfb-0642",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
-    "type": "issue",
-    "text": "Context retention on Payments / Billing / Payoff reduces first-pass accuracy during high-volume mornings.",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
+    "type": "suggestion",
+    "text": "Provide saved filter presets on Amortization / Accruals to reduce training overhead for operations leads.",
     "createdAt": "2026-03-11T01:42:00.000Z"
   },
   {
     "id": "sfb-0643",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
-    "type": "missing",
-    "text": "Missing structured exception reasons in Payments / Billing / Payoff, which delays completion on complex requests for servicing specialists.",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
+    "type": "works-well",
+    "text": "The approval context in Amortization / Accruals helps teams resolve blockers quickly in daily operations.",
     "createdAt": "2026-03-11T01:43:00.000Z"
   },
   {
     "id": "sfb-0644",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Add inline owner context on Payments / Billing / Payoff to make escalations cleaner for regional users. This wording was tuned for uniqueness.",
+    "text": "Allow role-based default views on Amortization / Accruals to reduce context switching for portfolio managers.",
     "createdAt": "2026-03-11T01:44:00.000Z"
   },
   {
     "id": "sfb-0645",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Allow role-based default views on Payments / Billing / Payoff to speed first-pass decisions for underwriting reviewers.",
+    "text": "Add configurable signal thresholds on Amortization / Accruals to cut manual reconciliation for cross-functional squads.",
     "createdAt": "2026-03-11T01:45:00.000Z"
   },
   {
     "id": "sfb-0646",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
-    "type": "missing",
-    "text": "Missing cross-lane status rollups in Payments / Billing / Payoff, which increases handoff risk for portfolio governance teams.",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
+    "type": "issue",
+    "text": "Context retention on Amortization / Accruals raises operational risk while preparing audit packets.",
     "createdAt": "2026-03-11T01:46:00.000Z"
   },
   {
     "id": "sfb-0647",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
     "type": "missing",
-    "text": "Missing bulk reassignment controls in Payments / Billing / Payoff, which makes escalation harder to manage for exception managers.",
+    "text": "Missing a dedicated audit note field in Amortization / Accruals, which introduces avoidable errors for agented loan admins.",
     "createdAt": "2026-03-11T01:47:00.000Z"
   },
   {
     "id": "sfb-0648",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
-    "type": "issue",
-    "text": "Task ownership on Payments / Billing / Payoff causes late-stage corrections when escalations hit at once.",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
+    "type": "suggestion",
+    "text": "Provide saved filter presets on Amortization / Accruals to improve SLA confidence for day-to-day operators.",
     "createdAt": "2026-03-11T01:48:00.000Z"
   },
   {
     "id": "sfb-0649",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
-    "type": "missing",
-    "text": "Missing reusable review checklists in Payments / Billing / Payoff, which hurts cycle-time predictability for analytics users.",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
+    "type": "works-well",
+    "text": "The layout hierarchy in Amortization / Accruals keeps context intact for cross-team work.",
     "createdAt": "2026-03-11T01:49:00.000Z"
   },
   {
     "id": "sfb-0650",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
-    "type": "missing",
-    "text": "Missing linked task breadcrumbs in Payments / Billing / Payoff, which creates extra queue churn for product owners.",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
+    "type": "issue",
+    "text": "Field validation on Amortization / Accruals makes triage less predictable while finalizing borrower updates.",
     "createdAt": "2026-03-11T01:50:00.000Z"
   },
   {
     "id": "sfb-0651",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Allow role-based default views on Payments / Billing / Payoff to improve queue discipline for syndication teams.",
+    "text": "Add configurable signal thresholds on Amortization / Accruals to streamline complex handoffs for servicing analysts.",
     "createdAt": "2026-03-11T01:51:00.000Z"
   },
   {
     "id": "sfb-0652",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
     "type": "missing",
-    "text": "Missing a dedicated audit note field in Payments / Billing / Payoff, which makes escalation harder to manage for exception managers.",
+    "text": "Missing cross-lane status rollups in Amortization / Accruals, which introduces avoidable errors for agented loan admins.",
     "createdAt": "2026-03-11T01:52:00.000Z"
   },
   {
     "id": "sfb-0653",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
-    "type": "missing",
-    "text": "Missing filter-by-owner options in Payments / Billing / Payoff, which delays completion on complex requests for servicing specialists.",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
+    "type": "issue",
+    "text": "Workflow sequencing on Amortization / Accruals causes late-stage corrections during high-volume mornings.",
     "createdAt": "2026-03-11T01:53:00.000Z"
   },
   {
     "id": "sfb-0654",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
-    "type": "missing",
-    "text": "Missing structured exception reasons in Payments / Billing / Payoff, which hurts cycle-time predictability for analytics users.",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
+    "type": "issue",
+    "text": "Audit traceability on Amortization / Accruals creates extra back-and-forth in same-day service windows.",
     "createdAt": "2026-03-11T01:54:00.000Z"
   },
   {
     "id": "sfb-0655",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
-    "type": "issue",
-    "text": "Context retention on Payments / Billing / Payoff adds avoidable rework during portfolio review cycles.",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
+    "type": "suggestion",
+    "text": "Add inline owner context on Amortization / Accruals to cut manual reconciliation for cross-functional squads.",
     "createdAt": "2026-03-11T01:55:00.000Z"
   },
   {
     "id": "sfb-0656",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
-    "type": "issue",
-    "text": "Alert clarity on Payments / Billing / Payoff makes triage less predictable at month-end close.",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
+    "type": "suggestion",
+    "text": "Allow role-based default views on Amortization / Accruals to streamline complex handoffs for servicing analysts.",
     "createdAt": "2026-03-11T01:56:00.000Z"
   },
   {
     "id": "sfb-0657",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Allow role-based default views on Payments / Billing / Payoff to keep teams aligned on state for overnight support teams.",
+    "text": "Add configurable signal thresholds on Amortization / Accruals to reduce training overhead for operations leads.",
     "createdAt": "2026-03-11T01:57:00.000Z"
   },
   {
     "id": "sfb-0658",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Add configurable signal thresholds on Payments / Billing / Payoff to shorten review cycles for compliance coordinators.",
+    "text": "Surface next-best action guidance on Amortization / Accruals to improve SLA confidence for day-to-day operators.",
     "createdAt": "2026-03-11T01:58:00.000Z"
   },
   {
     "id": "sfb-0659",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
     "type": "missing",
-    "text": "Missing direct jump links to related history in Payments / Billing / Payoff, which hurts cycle-time predictability for analytics users.",
+    "text": "Missing filter-by-owner options in Amortization / Accruals, which slows compliance follow-up for control officers.",
     "createdAt": "2026-03-11T01:59:00.000Z"
   },
   {
     "id": "sfb-0660",
     "app": "servicing",
-    "screenId": "sv-payments-billing-payoff",
-    "screenName": "Payments / Billing / Payoff",
+    "screenId": "sv-amortization-accruals",
+    "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Add a compact summary panel on Payments / Billing / Payoff to speed first-pass decisions for underwriting reviewers.",
+    "text": "Provide saved filter presets on Amortization / Accruals to cut manual reconciliation for cross-functional squads.",
     "createdAt": "2026-03-11T02:00:00.000Z"
   },
   {
@@ -5945,7 +5945,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "missing",
-    "text": "Missing bulk reassignment controls in Amortization / Accruals, which weakens review transparency for portfolio governance teams.",
+    "text": "Missing override rationale capture in Amortization / Accruals, which weakens review transparency for risk reviewers.",
     "createdAt": "2026-03-11T02:01:00.000Z"
   },
   {
@@ -5954,7 +5954,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "works-well",
-    "text": "The approval context in Amortization / Accruals matches real workflow order during handoff checkpoints.",
+    "text": "The policy control signals in Amortization / Accruals matches real workflow order for portfolio monitoring.",
     "createdAt": "2026-03-11T02:02:00.000Z"
   },
   {
@@ -5963,7 +5963,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "missing",
-    "text": "Missing reusable review checklists in Amortization / Accruals, which reduces confidence in approvals for servicing specialists.",
+    "text": "Missing cross-lane status rollups in Amortization / Accruals, which reduces confidence in approvals for operations teams.",
     "createdAt": "2026-03-11T02:03:00.000Z"
   },
   {
@@ -5972,7 +5972,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "works-well",
-    "text": "The cross-screen handoff in Amortization / Accruals keeps context intact for recurring renewals.",
+    "text": "The status timeline in Amortization / Accruals keeps context intact for cross-team work.",
     "createdAt": "2026-03-11T02:04:00.000Z"
   },
   {
@@ -5981,7 +5981,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Provide a split-view comparison mode on Amortization / Accruals to cut manual reconciliation for underwriting reviewers.",
+    "text": "Add a compact summary panel on Amortization / Accruals to cut manual reconciliation for cross-functional squads.",
     "createdAt": "2026-03-11T02:05:00.000Z"
   },
   {
@@ -5990,7 +5990,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Add focused exception drill-down on Amortization / Accruals to streamline complex handoffs for syndication teams.",
+    "text": "Provide saved filter presets on Amortization / Accruals to streamline complex handoffs for servicing analysts.",
     "createdAt": "2026-03-11T02:06:00.000Z"
   },
   {
@@ -5999,7 +5999,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Introduce a one-click quick action on Amortization / Accruals to reduce training overhead for overnight support teams.",
+    "text": "Add inline owner context on Amortization / Accruals to reduce training overhead for operations leads.",
     "createdAt": "2026-03-11T02:07:00.000Z"
   },
   {
@@ -6008,7 +6008,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "works-well",
-    "text": "The layout hierarchy in Amortization / Accruals helps teams resolve blockers quickly in compliance reviews.",
+    "text": "The progress indicators in Amortization / Accruals helps teams resolve blockers quickly in daily operations.",
     "createdAt": "2026-03-11T02:08:00.000Z"
   },
   {
@@ -6017,7 +6017,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "issue",
-    "text": "Approval routing on Amortization / Accruals reduces first-pass accuracy in same-day service windows.",
+    "text": "Exception visibility on Amortization / Accruals reduces first-pass accuracy on repeat amendment requests.",
     "createdAt": "2026-03-11T02:09:00.000Z"
   },
   {
@@ -6026,7 +6026,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Introduce pinned workflow checkpoints on Amortization / Accruals to cut manual reconciliation for underwriting reviewers.",
+    "text": "Surface next-best action guidance on Amortization / Accruals to cut manual reconciliation for cross-functional squads. This wording was tuned for uniqueness.",
     "createdAt": "2026-03-11T02:10:00.000Z"
   },
   {
@@ -6035,7 +6035,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Provide a split-view comparison mode on Amortization / Accruals to streamline complex handoffs for syndication teams.",
+    "text": "Add a compact summary panel on Amortization / Accruals to streamline complex handoffs for servicing analysts. This wording was tuned for uniqueness.",
     "createdAt": "2026-03-11T02:11:00.000Z"
   },
   {
@@ -6044,7 +6044,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "works-well",
-    "text": "The status timeline in Amortization / Accruals matches real workflow order during handoff checkpoints.",
+    "text": "The search and sort behavior in Amortization / Accruals matches real workflow order for portfolio monitoring.",
     "createdAt": "2026-03-11T02:12:00.000Z"
   },
   {
@@ -6053,7 +6053,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Introduce a one-click quick action on Amortization / Accruals to improve SLA confidence for compliance coordinators.",
+    "text": "Add inline owner context on Amortization / Accruals to improve SLA confidence for day-to-day operators.",
     "createdAt": "2026-03-11T02:13:00.000Z"
   },
   {
@@ -6062,7 +6062,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Expose a clearer progress timeline on Amortization / Accruals to reduce context switching for regional users.",
+    "text": "Allow role-based default views on Amortization / Accruals to reduce context switching for portfolio managers. This wording was tuned for uniqueness.",
     "createdAt": "2026-03-11T02:14:00.000Z"
   },
   {
@@ -6071,7 +6071,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Surface related records side-by-side on Amortization / Accruals to cut manual reconciliation for underwriting reviewers.",
+    "text": "Add configurable signal thresholds on Amortization / Accruals to cut manual reconciliation for cross-functional squads. This wording was tuned for uniqueness.",
     "createdAt": "2026-03-11T02:15:00.000Z"
   },
   {
@@ -6080,7 +6080,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Introduce pinned workflow checkpoints on Amortization / Accruals to streamline complex handoffs for syndication teams.",
+    "text": "Surface next-best action guidance on Amortization / Accruals to streamline complex handoffs for servicing analysts.",
     "createdAt": "2026-03-11T02:16:00.000Z"
   },
   {
@@ -6089,7 +6089,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "missing",
-    "text": "Missing a dedicated audit note field in Amortization / Accruals, which introduces avoidable errors for exception managers.",
+    "text": "Missing reusable review checklists in Amortization / Accruals, which introduces avoidable errors for agented loan admins.",
     "createdAt": "2026-03-11T02:17:00.000Z"
   },
   {
@@ -6098,7 +6098,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "works-well",
-    "text": "The queue visibility in Amortization / Accruals helps teams resolve blockers quickly in compliance reviews.",
+    "text": "The cross-screen handoff in Amortization / Accruals helps teams resolve blockers quickly in daily operations.",
     "createdAt": "2026-03-11T02:18:00.000Z"
   },
   {
@@ -6107,7 +6107,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Introduce a one-click quick action on Amortization / Accruals to reduce context switching for regional users.",
+    "text": "Add inline owner context on Amortization / Accruals to reduce context switching for portfolio managers.",
     "createdAt": "2026-03-11T02:19:00.000Z"
   },
   {
@@ -6116,7 +6116,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "works-well",
-    "text": "The search and sort behavior in Amortization / Accruals supports fast triage during onboarding.",
+    "text": "The drill-down flow in Amortization / Accruals supports fast triage for service recovery tasks.",
     "createdAt": "2026-03-11T02:20:00.000Z"
   },
   {
@@ -6125,7 +6125,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Surface related records side-by-side on Amortization / Accruals to streamline complex handoffs for syndication teams.",
+    "text": "Add configurable signal thresholds on Amortization / Accruals to streamline complex handoffs for servicing analysts. This wording was tuned for uniqueness.",
     "createdAt": "2026-03-11T02:21:00.000Z"
   },
   {
@@ -6134,7 +6134,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "missing",
-    "text": "Missing cross-lane status rollups in Amortization / Accruals, which introduces avoidable errors for exception managers.",
+    "text": "Missing structured exception reasons in Amortization / Accruals, which introduces avoidable errors for agented loan admins.",
     "createdAt": "2026-03-11T02:22:00.000Z"
   },
   {
@@ -6143,7 +6143,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "works-well",
-    "text": "The status timeline in Amortization / Accruals helps teams resolve blockers quickly in compliance reviews.",
+    "text": "The search and sort behavior in Amortization / Accruals helps teams resolve blockers quickly in daily operations.",
     "createdAt": "2026-03-11T02:23:00.000Z"
   },
   {
@@ -6152,7 +6152,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "issue",
-    "text": "Handoff signaling on Amortization / Accruals causes teams to re-open tasks on repeat amendment requests.",
+    "text": "Search precision on Amortization / Accruals causes teams to re-open tasks during cross-team handoffs.",
     "createdAt": "2026-03-11T02:24:00.000Z"
   },
   {
@@ -6161,7 +6161,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Introduce a one-click quick action on Amortization / Accruals to cut manual reconciliation for underwriting reviewers.",
+    "text": "Add inline owner context on Amortization / Accruals to cut manual reconciliation for cross-functional squads. This wording was tuned for uniqueness.",
     "createdAt": "2026-03-11T02:25:00.000Z"
   },
   {
@@ -6170,7 +6170,7 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Expose a clearer progress timeline on Amortization / Accruals to streamline complex handoffs for syndication teams.",
+    "text": "Allow role-based default views on Amortization / Accruals to streamline complex handoffs for servicing analysts. This wording was tuned for uniqueness.",
     "createdAt": "2026-03-11T02:26:00.000Z"
   },
   {
@@ -6179,493 +6179,493 @@
     "screenId": "sv-amortization-accruals",
     "screenName": "Amortization / Accruals",
     "type": "suggestion",
-    "text": "Surface related records side-by-side on Amortization / Accruals to reduce training overhead for overnight support teams.",
+    "text": "Add configurable signal thresholds on Amortization / Accruals to reduce training overhead for operations leads. This wording was tuned for uniqueness.",
     "createdAt": "2026-03-11T02:27:00.000Z"
   },
   {
     "id": "sfb-0688",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "suggestion",
-    "text": "Introduce pinned workflow checkpoints on Amortization / Accruals to improve SLA confidence for compliance coordinators.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "works-well",
+    "text": "The search and sort behavior in Transaction Processing supports cleaner collaboration for recurring renewals.",
     "createdAt": "2026-03-11T02:28:00.000Z"
   },
   {
     "id": "sfb-0689",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "works-well",
-    "text": "The queue visibility in Amortization / Accruals keeps context intact for recurring renewals.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "issue",
+    "text": "Approval routing on Transaction Processing causes teams to re-open tasks during cross-team handoffs.",
     "createdAt": "2026-03-11T02:29:00.000Z"
   },
   {
     "id": "sfb-0690",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
     "type": "suggestion",
-    "text": "Add focused exception drill-down on Amortization / Accruals to cut manual reconciliation for underwriting reviewers.",
+    "text": "Add configurable signal thresholds on Transaction Processing to improve queue discipline for syndication teams.",
     "createdAt": "2026-03-11T02:30:00.000Z"
   },
   {
     "id": "sfb-0691",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
     "type": "missing",
-    "text": "Missing override rationale capture in Amortization / Accruals, which weakens review transparency for portfolio governance teams.",
+    "text": "Missing bulk reassignment controls in Transaction Processing, which makes escalation harder to manage for exception managers.",
     "createdAt": "2026-03-11T02:31:00.000Z"
   },
   {
     "id": "sfb-0692",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "works-well",
-    "text": "The policy control signals in Amortization / Accruals matches real workflow order during handoff checkpoints.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "issue",
+    "text": "Task ownership on Transaction Processing creates extra back-and-forth in same-day service windows.",
     "createdAt": "2026-03-11T02:32:00.000Z"
   },
   {
     "id": "sfb-0693",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "suggestion",
-    "text": "Surface related records side-by-side on Amortization / Accruals to improve SLA confidence for compliance coordinators.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "issue",
+    "text": "Workflow sequencing on Transaction Processing forces manual cross-checks during portfolio review cycles.",
     "createdAt": "2026-03-11T02:33:00.000Z"
   },
   {
     "id": "sfb-0694",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "issue",
-    "text": "Review pacing on Amortization / Accruals makes triage less predictable while preparing audit packets.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "missing",
+    "text": "Missing linked task breadcrumbs in Transaction Processing, which creates extra queue churn for product owners.",
     "createdAt": "2026-03-11T02:34:00.000Z"
   },
   {
     "id": "sfb-0695",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
     "type": "suggestion",
-    "text": "Provide a split-view comparison mode on Amortization / Accruals to cut manual reconciliation for underwriting reviewers. This wording was tuned for uniqueness.",
+    "text": "Allow role-based default views on Transaction Processing to improve queue discipline for syndication teams.",
     "createdAt": "2026-03-11T02:35:00.000Z"
   },
   {
     "id": "sfb-0696",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "suggestion",
-    "text": "Add focused exception drill-down on Amortization / Accruals to streamline complex handoffs for syndication teams. This wording was tuned for uniqueness.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "issue",
+    "text": "Exception visibility on Transaction Processing reduces first-pass accuracy on repeat amendment requests.",
     "createdAt": "2026-03-11T02:36:00.000Z"
   },
   {
     "id": "sfb-0697",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
     "type": "suggestion",
-    "text": "Introduce a one-click quick action on Amortization / Accruals to reduce training overhead for overnight support teams. This wording was tuned for uniqueness.",
+    "text": "Surface next-best action guidance on Transaction Processing to shorten review cycles for compliance coordinators.",
     "createdAt": "2026-03-11T02:37:00.000Z"
   },
   {
     "id": "sfb-0698",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "works-well",
-    "text": "The progress indicators in Amortization / Accruals helps teams resolve blockers quickly in compliance reviews.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "issue",
+    "text": "Search precision on Transaction Processing adds avoidable rework during regional handoff windows.",
     "createdAt": "2026-03-11T02:38:00.000Z"
   },
   {
     "id": "sfb-0699",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "issue",
-    "text": "Workflow sequencing on Amortization / Accruals forces manual cross-checks during cross-team handoffs.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "missing",
+    "text": "Missing override rationale capture in Transaction Processing, which creates extra queue churn for product owners.",
     "createdAt": "2026-03-11T02:39:00.000Z"
   },
   {
     "id": "sfb-0700",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "suggestion",
-    "text": "Introduce pinned workflow checkpoints on Amortization / Accruals to cut manual reconciliation for underwriting reviewers. This wording was tuned for uniqueness.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "issue",
+    "text": "Alert clarity on Transaction Processing causes teams to re-open tasks during cross-team handoffs.",
     "createdAt": "2026-03-11T02:40:00.000Z"
   },
   {
     "id": "sfb-0701",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "issue",
-    "text": "Status context on Amortization / Accruals raises operational risk during high-volume mornings.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "missing",
+    "text": "Missing cross-lane status rollups in Transaction Processing, which makes escalation harder to manage for exception managers.",
     "createdAt": "2026-03-11T02:41:00.000Z"
   },
   {
     "id": "sfb-0702",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "issue",
-    "text": "Exception visibility on Amortization / Accruals reduces first-pass accuracy in same-day service windows.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "missing",
+    "text": "Missing bulk reassignment controls in Transaction Processing, which delays completion on complex requests for servicing specialists.",
     "createdAt": "2026-03-11T02:42:00.000Z"
   },
   {
     "id": "sfb-0703",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "works-well",
-    "text": "The policy control signals in Amortization / Accruals helps teams resolve blockers quickly in compliance reviews.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "missing",
+    "text": "Missing direct jump links to related history in Transaction Processing, which hurts cycle-time predictability for analytics users.",
     "createdAt": "2026-03-11T02:43:00.000Z"
   },
   {
     "id": "sfb-0704",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
     "type": "suggestion",
-    "text": "Expose a clearer progress timeline on Amortization / Accruals to reduce context switching for regional users. This wording was tuned for uniqueness.",
+    "text": "Add a compact summary panel on Transaction Processing to speed first-pass decisions for underwriting reviewers.",
     "createdAt": "2026-03-11T02:44:00.000Z"
   },
   {
     "id": "sfb-0705",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "works-well",
-    "text": "The status timeline in Amortization / Accruals supports fast triage during onboarding.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "issue",
+    "text": "Task ownership on Transaction Processing increases turnaround time at month-end close.",
     "createdAt": "2026-03-11T02:45:00.000Z"
   },
   {
     "id": "sfb-0706",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "works-well",
-    "text": "The approval context in Amortization / Accruals improves review confidence for exception handling.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "missing",
+    "text": "Missing clear stale-task indicators in Transaction Processing, which makes escalation harder to manage for exception managers.",
     "createdAt": "2026-03-11T02:46:00.000Z"
   },
   {
     "id": "sfb-0707",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "suggestion",
-    "text": "Provide a split-view comparison mode on Amortization / Accruals to reduce training overhead for overnight support teams.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "issue",
+    "text": "Audit traceability on Transaction Processing reduces first-pass accuracy on repeat amendment requests.",
     "createdAt": "2026-03-11T02:47:00.000Z"
   },
   {
     "id": "sfb-0708",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "works-well",
-    "text": "The cross-screen handoff in Amortization / Accruals helps teams resolve blockers quickly in compliance reviews.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "missing",
+    "text": "Missing filter-by-owner options in Transaction Processing, which hurts cycle-time predictability for analytics users.",
     "createdAt": "2026-03-11T02:48:00.000Z"
   },
   {
     "id": "sfb-0709",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "works-well",
-    "text": "The progress indicators in Amortization / Accruals keeps context intact for recurring renewals.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "missing",
+    "text": "Missing structured exception reasons in Transaction Processing, which creates extra queue churn for product owners.",
     "createdAt": "2026-03-11T02:49:00.000Z"
   },
   {
     "id": "sfb-0710",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "works-well",
-    "text": "The drill-down flow in Amortization / Accruals supports fast triage during onboarding.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "missing",
+    "text": "Missing override rationale capture in Transaction Processing, which increases handoff risk for portfolio governance teams.",
     "createdAt": "2026-03-11T02:50:00.000Z"
   },
   {
     "id": "sfb-0711",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "suggestion",
-    "text": "Surface related records side-by-side on Amortization / Accruals to streamline complex handoffs for syndication teams. This wording was tuned for uniqueness.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "issue",
+    "text": "Search precision on Transaction Processing causes teams to re-open tasks during cross-team handoffs.",
     "createdAt": "2026-03-11T02:51:00.000Z"
   },
   {
     "id": "sfb-0712",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
     "type": "missing",
-    "text": "Missing structured exception reasons in Amortization / Accruals, which introduces avoidable errors for exception managers.",
+    "text": "Missing cross-lane status rollups in Transaction Processing, which delays completion on complex requests for servicing specialists.",
     "createdAt": "2026-03-11T02:52:00.000Z"
   },
   {
     "id": "sfb-0713",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "issue",
-    "text": "Audit traceability on Amortization / Accruals reduces first-pass accuracy in same-day service windows.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "missing",
+    "text": "Missing bulk reassignment controls in Transaction Processing, which hurts cycle-time predictability for analytics users.",
     "createdAt": "2026-03-11T02:53:00.000Z"
   },
   {
     "id": "sfb-0714",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "works-well",
-    "text": "The policy control signals in Amortization / Accruals keeps context intact for recurring renewals.",
+    "screenId": "sv-transaction-processing",
+    "screenName": "Transaction Processing",
+    "type": "missing",
+    "text": "Missing direct jump links to related history in Transaction Processing, which creates extra queue churn for product owners.",
     "createdAt": "2026-03-11T02:54:00.000Z"
   },
   {
     "id": "sfb-0715",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "missing",
-    "text": "Missing cross-lane status rollups in Amortization / Accruals, which forces manual tracking outside the app for product owners.",
+    "text": "Missing a dedicated audit note field in EIR Fees, which weakens review transparency for exception managers.",
     "createdAt": "2026-03-11T02:55:00.000Z"
   },
   {
     "id": "sfb-0716",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "missing",
-    "text": "Missing bulk reassignment controls in Amortization / Accruals, which weakens review transparency for portfolio governance teams. This wording was tuned for uniqueness.",
+    "text": "Missing filter-by-owner options in EIR Fees, which introduces avoidable errors for servicing specialists.",
     "createdAt": "2026-03-11T02:56:00.000Z"
   },
   {
     "id": "sfb-0717",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "missing",
-    "text": "Missing direct jump links to related history in Amortization / Accruals, which introduces avoidable errors for exception managers.",
+    "text": "Missing structured exception reasons in EIR Fees, which reduces confidence in approvals for analytics users.",
     "createdAt": "2026-03-11T02:57:00.000Z"
   },
   {
     "id": "sfb-0718",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "suggestion",
-    "text": "Introduce pinned workflow checkpoints on Amortization / Accruals to improve SLA confidence for compliance coordinators. This wording was tuned for uniqueness.",
+    "text": "Introduce a one-click quick action on EIR Fees to reduce context switching for underwriting reviewers.",
     "createdAt": "2026-03-11T02:58:00.000Z"
   },
   {
     "id": "sfb-0719",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "suggestion",
-    "text": "Provide a split-view comparison mode on Amortization / Accruals to reduce context switching for regional users.",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
+    "type": "issue",
+    "text": "Context retention on EIR Fees creates extra back-and-forth on repeat amendment requests.",
     "createdAt": "2026-03-11T02:59:00.000Z"
   },
   {
     "id": "sfb-0720",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
-    "type": "works-well",
-    "text": "The progress indicators in Amortization / Accruals supports fast triage during onboarding.",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
+    "type": "missing",
+    "text": "Missing cross-lane status rollups in EIR Fees, which weakens review transparency for exception managers.",
     "createdAt": "2026-03-11T03:00:00.000Z"
   },
   {
     "id": "sfb-0721",
     "app": "servicing",
-    "screenId": "sv-amortization-accruals",
-    "screenName": "Amortization / Accruals",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "missing",
-    "text": "Missing a dedicated audit note field in Amortization / Accruals, which weakens review transparency for portfolio governance teams.",
+    "text": "Missing bulk reassignment controls in EIR Fees, which introduces avoidable errors for servicing specialists.",
     "createdAt": "2026-03-11T03:01:00.000Z"
   },
   {
     "id": "sfb-0722",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "missing",
-    "text": "Missing linked task breadcrumbs in Transaction Processing, which delays completion on complex requests for exception managers.",
+    "text": "Missing direct jump links to related history in EIR Fees, which reduces confidence in approvals for analytics users.",
     "createdAt": "2026-03-11T03:02:00.000Z"
   },
   {
     "id": "sfb-0723",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "suggestion",
-    "text": "Add inline owner context on Transaction Processing to make escalations cleaner for compliance coordinators.",
+    "text": "Add focused exception drill-down on EIR Fees to reduce context switching for underwriting reviewers.",
     "createdAt": "2026-03-11T03:03:00.000Z"
   },
   {
     "id": "sfb-0724",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "works-well",
-    "text": "The drill-down flow in Transaction Processing is easy to explain to new users for recurring renewals.",
+    "text": "The cross-screen handoff in EIR Fees supports fast triage for exception handling.",
     "createdAt": "2026-03-11T03:04:00.000Z"
   },
   {
     "id": "sfb-0725",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "suggestion",
-    "text": "Add configurable signal thresholds on Transaction Processing to improve queue discipline for underwriting reviewers.",
+    "text": "Expose a clearer progress timeline on EIR Fees to streamline complex handoffs for overnight support teams.",
     "createdAt": "2026-03-11T03:05:00.000Z"
   },
   {
     "id": "sfb-0726",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "issue",
-    "text": "Exception visibility on Transaction Processing forces manual cross-checks in exception-heavy batches.",
+    "text": "Workflow sequencing on EIR Fees makes triage less predictable in same-day service windows.",
     "createdAt": "2026-03-11T03:06:00.000Z"
   },
   {
     "id": "sfb-0727",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "missing",
-    "text": "Missing override rationale capture in Transaction Processing, which delays completion on complex requests for exception managers.",
+    "text": "Missing filter-by-owner options in EIR Fees, which reduces confidence in approvals for analytics users.",
     "createdAt": "2026-03-11T03:07:00.000Z"
   },
   {
     "id": "sfb-0728",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "works-well",
-    "text": "The policy control signals in Transaction Processing supports cleaner collaboration in compliance reviews.",
+    "text": "The layout hierarchy in EIR Fees keeps context intact during onboarding.",
     "createdAt": "2026-03-11T03:08:00.000Z"
   },
   {
     "id": "sfb-0729",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "suggestion",
-    "text": "Add inline owner context on Transaction Processing to speed first-pass decisions for regional users.",
+    "text": "Add focused exception drill-down on EIR Fees to cut manual reconciliation for syndication teams.",
     "createdAt": "2026-03-11T03:09:00.000Z"
   },
   {
     "id": "sfb-0730",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "missing",
-    "text": "Missing bulk reassignment controls in Transaction Processing, which increases handoff risk for product owners.",
+    "text": "Missing automated dependency flags in EIR Fees, which weakens review transparency for exception managers.",
     "createdAt": "2026-03-11T03:10:00.000Z"
   },
   {
     "id": "sfb-0731",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "issue",
-    "text": "Review pacing on Transaction Processing adds avoidable rework while preparing audit packets.",
+    "text": "Search precision on EIR Fees forces manual cross-checks when escalations hit at once.",
     "createdAt": "2026-03-11T03:11:00.000Z"
   },
   {
     "id": "sfb-0732",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "missing",
-    "text": "Missing reusable review checklists in Transaction Processing, which delays completion on complex requests for exception managers.",
+    "text": "Missing bulk reassignment controls in EIR Fees, which reduces confidence in approvals for analytics users.",
     "createdAt": "2026-03-11T03:12:00.000Z"
   },
   {
     "id": "sfb-0733",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "issue",
-    "text": "Field validation on Transaction Processing causes teams to re-open tasks when escalations hit at once.",
+    "text": "Alert clarity on EIR Fees raises operational risk while finalizing borrower updates.",
     "createdAt": "2026-03-11T03:13:00.000Z"
   },
   {
     "id": "sfb-0734",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "missing",
-    "text": "Missing clear stale-task indicators in Transaction Processing, which creates extra queue churn for analytics users.",
+    "text": "Missing reusable review checklists in EIR Fees, which forces manual tracking outside the app for portfolio governance teams.",
     "createdAt": "2026-03-11T03:14:00.000Z"
   },
   {
     "id": "sfb-0735",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
-    "type": "issue",
-    "text": "Task ownership on Transaction Processing causes late-stage corrections while finalizing borrower updates.",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
+    "type": "missing",
+    "text": "Missing linked task breadcrumbs in EIR Fees, which weakens review transparency for exception managers.",
     "createdAt": "2026-03-11T03:15:00.000Z"
   },
   {
     "id": "sfb-0736",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "missing",
-    "text": "Missing filter-by-owner options in Transaction Processing, which makes escalation harder to manage for portfolio governance teams.",
+    "text": "Missing clear stale-task indicators in EIR Fees, which introduces avoidable errors for servicing specialists.",
     "createdAt": "2026-03-11T03:16:00.000Z"
   },
   {
     "id": "sfb-0737",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "missing",
-    "text": "Missing structured exception reasons in Transaction Processing, which delays completion on complex requests for exception managers.",
+    "text": "Missing a dedicated audit note field in EIR Fees, which reduces confidence in approvals for analytics users.",
     "createdAt": "2026-03-11T03:17:00.000Z"
   },
   {
     "id": "sfb-0738",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "missing",
-    "text": "Missing override rationale capture in Transaction Processing, which hurts cycle-time predictability for servicing specialists.",
+    "text": "Missing filter-by-owner options in EIR Fees, which slows compliance follow-up for product owners.",
     "createdAt": "2026-03-11T03:18:00.000Z"
   },
   {
     "id": "sfb-0739",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "suggestion",
-    "text": "Add a compact summary panel on Transaction Processing to speed first-pass decisions for regional users.",
+    "text": "Introduce pinned workflow checkpoints on EIR Fees to cut manual reconciliation for syndication teams.",
     "createdAt": "2026-03-11T03:19:00.000Z"
   },
   {
     "id": "sfb-0740",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "suggestion",
-    "text": "Provide saved filter presets on Transaction Processing to improve queue discipline for underwriting reviewers.",
+    "text": "Provide a split-view comparison mode on EIR Fees to streamline complex handoffs for overnight support teams.",
     "createdAt": "2026-03-11T03:20:00.000Z"
   },
   {
     "id": "sfb-0741",
     "app": "servicing",
-    "screenId": "sv-transaction-processing",
-    "screenName": "Transaction Processing",
+    "screenId": "sv-eir-fees",
+    "screenName": "EIR Fees",
     "type": "missing",
-    "text": "Missing bulk reassignment controls in Transaction Processing, which makes escalation harder to manage for portfolio governance teams.",
+    "text": "Missing automated dependency flags in EIR Fees, which introduces avoidable errors for servicing specialists.",
     "createdAt": "2026-03-11T03:21:00.000Z"
   },
   {

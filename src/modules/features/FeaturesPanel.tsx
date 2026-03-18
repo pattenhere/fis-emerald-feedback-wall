@@ -1,26 +1,20 @@
 import { memo, type KeyboardEvent, useState } from "react";
-import type { AppArea, AppScreen, FeatureRequest } from "../../types/domain";
+import type { AppScreen, FeatureRequest } from "../../types/domain";
 
 interface FeaturesPanelProps {
   items: FeatureRequest[];
-  activeApp: AppArea;
   selectedScreen: AppScreen;
   selectedCategoryLabel: string;
   onAdd: (input: {
     title: string;
     workflowContext?: string;
-    app: AppArea;
     productId: number;
-    featureId?: number;
-    screenId?: number;
-    screenName: string;
   }) => void;
   onUpvote: (featureId: number) => void;
 }
 
 export const FeaturesPanel = memo(({
   items,
-  activeApp,
   selectedScreen,
   selectedCategoryLabel,
   onAdd,
@@ -37,11 +31,7 @@ export const FeaturesPanel = memo(({
     onAdd({
       title,
       workflowContext,
-      app: activeApp,
       productId: selectedScreen.productId ?? 0,
-      featureId: selectedScreen.featureId,
-      screenId: Number(selectedScreen.id),
-      screenName: selectedScreen.name,
     });
     setTitle("");
     setWorkflowContext("");
@@ -88,7 +78,7 @@ export const FeaturesPanel = memo(({
             <div className="feature-card-body">
               <p className="card-title">{feature.title}</p>
               <p className="feature-brief">{feature.workflowContext ?? feature.title}</p>
-              <p className="card-meta">Area: {feature.screenName}</p>
+              <p className="card-meta">Area: {selectedCategoryLabel}</p>
               <button
                 type="button"
                 className={`vote-pill ${feature.votes >= 0 ? "is-positive" : "is-negative"}`}

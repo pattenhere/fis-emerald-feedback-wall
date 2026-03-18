@@ -5,8 +5,16 @@ import {
   CARD_SORT_CONCEPTS,
   SCREEN_COUNT_BY_APP,
 } from "./seedData";
-import { ADMIN_SEED_TABLES } from "./adminSeedData";
 import { buildDbSeedPayload } from "./dbSeedPayload";
+import {
+  clamp,
+  dedupeSnapshot,
+  mapBootstrapToSnapshot,
+  normalizeTextKey,
+  nowIso,
+  pTierByRank,
+  type WallSeedSnapshot,
+} from "./wallStateHelpers";
 import type {
   AppArea,
   CardSortConcept,
@@ -27,9 +35,10 @@ import type {
   AppScreen,
 } from "../types/domain";
 import { dataApi } from "../services/dataApi";
+import { synthesisModuleApi } from "../services/synthesisModuleApi";
 import { useDbDataSource } from "../config/runtimeConfig";
+import { migrateStripLocationFields } from "../data/migrations/strip-location-from-fr-kudos";
 
-const DEFAULT_SYNTHESIS_PIN = "2468";
 const SYNTHESIS_PIN_LENGTH_RANGE = { min: 4, max: 6 } as const;
 const DEFAULT_SYNTHESIS_COUNTDOWN_SECONDS = 1800;
 const ENV_SYNTHESIS_COUNTDOWN_SECONDS = Number(import.meta.env.VITE_SYNTHESIS_COUNTDOWN_SECONDS ?? DEFAULT_SYNTHESIS_COUNTDOWN_SECONDS);
@@ -39,14 +48,11 @@ const SYNTHESIS_COUNTDOWN_SECONDS = Number.isFinite(ENV_SYNTHESIS_COUNTDOWN_SECO
 const POSITIVE_TYPES = new Set<FeedbackType>(["works-well", "suggestion"]);
 const NEGATIVE_TYPES = new Set<FeedbackType>(["issue", "missing"]);
 const SEEDED_KUDOS_MIN = 784;
-const APP_AREA_LABEL_BY_ID: Record<AppArea, string> = Object.fromEntries(
-  APP_AREAS.map((area) => [area.id, area.label]),
-) as Record<AppArea, string>;
 
 export interface ExportRecord {
   submission_type: "feature" | "screen_feedback" | "kudos" | "card_sort";
-  app_section: string;
-  screen_name: string;
+  app_section?: string;
+  screen_name?: string;
   feedback_type: string;
   freetext: string;
   role_label: string;
@@ -68,11 +74,7 @@ export interface WallState {
   addFeatureRequest: (input: {
     title: string;
     workflowContext?: string;
-    app: AppArea;
     productId: number;
-    featureId?: number;
-    screenId?: number;
-    screenName: string;
     origin?: "kiosk" | "mobile";
   }) => void;
   upvoteFeatureRequest: (featureId: number) => void;
@@ -83,10 +85,6 @@ export interface WallState {
     role: KudosRole;
     consentPublic: boolean;
     productId: number;
-    featureId?: number;
-    app?: AppArea;
-    screenId?: number;
-    screenName?: string;
   }) => void;
   screenFeedback: ScreenFeedback[];
   addScreenFeedback: (input: {
@@ -104,7 +102,7 @@ export interface WallState {
   synthesisOutput: string;
   setSynthesisOutput: (next: string) => void;
   synthesisUnlocked: boolean;
-  unlockSynthesis: (pin: string) => boolean;
+  unlockSynthesis: (pin: string) => Promise<boolean>;
   resetSynthesisLock: () => void;
   signalSummary: SignalSummary;
   synthesisCountdownTarget: string;
@@ -143,145 +141,8 @@ export interface WallState {
   retryDataLoad: () => Promise<void>;
 }
 
-const nowIso = (): string => new Date().toISOString();
-const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
-const stripLegacyDuplicateSuffix = (value: string | undefined): string =>
-  (value ?? "").replace(/\s*\[\d+\]\s*$/u, "").trim();
-const normalizeTextKey = (value: string | undefined): string =>
-  stripLegacyDuplicateSuffix(value).toLowerCase();
-
-const dedupeByText = <T,>(items: T[], getText: (item: T) => string | undefined): T[] => {
-  const seen = new Set<string>();
-  const result: T[] = [];
-  for (const item of items) {
-    const key = normalizeTextKey(getText(item));
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    result.push(item);
-  }
-  return result;
-};
-
-const dedupeSnapshot = (snapshot: WallSeedSnapshot): WallSeedSnapshot => ({
-  ...snapshot,
-  featureRequests: dedupeByText(
-    snapshot.featureRequests.map((item) => ({ ...item, title: stripLegacyDuplicateSuffix(item.title) })),
-    (item) => item.title,
-  ),
-  kudosQuotes: dedupeByText(
-    snapshot.kudosQuotes.map((item) => ({ ...item, text: stripLegacyDuplicateSuffix(item.text) })),
-    (item) => item.text,
-  ),
-  screenFeedback: dedupeByText(
-    snapshot.screenFeedback.map((item) => ({ ...item, text: stripLegacyDuplicateSuffix(item.text) })),
-    (item) => item.text ?? `__id:${item.id}`,
-  ),
-});
-
-const pTierByRank = (index: number): "P0" | "P1" | "P2" => {
-  if (index < 2) {
-    return "P0";
-  }
-  if (index < 5) {
-    return "P1";
-  }
-  return "P2";
-};
-
-interface WallSeedSnapshot {
-  featureRequests: FeatureRequest[];
-  kudosQuotes: KudosQuote[];
-  screenFeedback: ScreenFeedback[];
-  products: ProductDefinition[];
-  screens: AppScreen[];
-  cardSortConcepts: CardSortConcept[];
-  adminTables: SeedTableDefinition[];
-  selectedScreenId: number;
-}
-
-const toNumericId = (value: unknown): number | undefined => {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : undefined;
-};
-
-const toAppAreaValue = (value: unknown): AppArea => {
-  const normalized = String(value ?? "").trim().toLowerCase();
-  if (
-    normalized === "digital-experience" ||
-    normalized === "origination" ||
-    normalized === "credit-risk" ||
-    normalized === "servicing" ||
-    normalized === "monitoring-controls" ||
-    normalized === "syndication-complex-lending" ||
-    normalized === "analytics-inquiry" ||
-    normalized === "platform-services"
-  ) {
-    return normalized;
-  }
-  if (normalized === "digital experience") return "digital-experience";
-  if (normalized === "credit & risk" || normalized === "customer risk & credit") return "credit-risk";
-  if (normalized === "monitoring & controls") return "monitoring-controls";
-  if (normalized === "syndication / complex lending" || normalized === "syndication") return "syndication-complex-lending";
-  if (normalized === "analytics & inquiry") return "analytics-inquiry";
-  if (normalized === "platform services") return "platform-services";
-  return "servicing";
-};
-
-const mapBootstrapToSnapshot = (bootstrap: Awaited<ReturnType<typeof dataApi.getBootstrap>>): WallSeedSnapshot => ({
-  featureRequests: bootstrap.featureRequests.map((item) => ({
-    ...item,
-    id: toNumericId(item.id) ?? item.id,
-    productId: toNumericId(item.productId),
-    featureId: toNumericId(item.featureId),
-    screenId: toNumericId(item.screenId) ?? item.screenId,
-    app: toAppAreaValue(item.app),
-    votes: Number(item.votes ?? 0),
-  })),
-  kudosQuotes: bootstrap.kudosQuotes.map((item) => ({
-    ...item,
-    id: toNumericId(item.id) ?? item.id,
-    productId: toNumericId(item.productId),
-    featureId: toNumericId(item.featureId),
-    screenId: toNumericId(item.screenId) ?? item.screenId,
-    app: item.app ? toAppAreaValue(item.app) : undefined,
-  })),
-  screenFeedback: bootstrap.screenFeedback.map((item) => ({
-    ...item,
-    id: toNumericId(item.id) ?? item.id,
-    productId: toNumericId(item.productId),
-    featureId: toNumericId(item.featureId),
-    screenId: toNumericId(item.screenId) ?? item.screenId,
-    app: toAppAreaValue(item.app),
-  })),
-  products: bootstrap.products.map((item) => ({
-    id: toNumericId(item.id) ?? item.id,
-    legacyProductCode: item.legacyProductCode,
-    category: item.category,
-    subcategory: item.subcategory,
-    name: item.name,
-    app: "servicing",
-    icon: "◉",
-  })),
-  screens: bootstrap.screens.map((screen) => ({
-    id: toNumericId(screen.id) ?? screen.id,
-    productId: toNumericId(screen.productId),
-    legacyScreenCode: screen.legacyScreenCode,
-    app: toAppAreaValue(screen.screenCategory),
-    name: screen.name,
-    wireframeLabel: "Feature detail · working prototype taxonomy",
-    description: screen.description ?? "",
-    categoryId: toAppAreaValue(screen.screenCategory),
-    categoryLabel: APP_AREA_LABEL_BY_ID[toAppAreaValue(screen.screenCategory)] ?? "Servicing",
-  })),
-  cardSortConcepts: bootstrap.cardSortConcepts,
-  adminTables: bootstrap.adminTables.length > 0 ? bootstrap.adminTables : ADMIN_SEED_TABLES,
-  selectedScreenId: Number(bootstrap.screens[0]?.id ?? 0),
-});
-
 export const useWallState = (): WallState => {
-  const [drawerOpen, setDrawerOpen] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeDrawerTab, setActiveDrawerTab] = useState<DrawerTab>("features");
   const [activeApp, setActiveApp] = useState<AppArea>(APP_AREAS[0].id);
   const [selectedScreenId, setSelectedScreenId] = useState(0);
@@ -373,7 +234,9 @@ export const useWallState = (): WallState => {
     try {
       await refreshHealth();
       const bootstrap = await dataApi.getBootstrap();
-      applySnapshot(mapBootstrapToSnapshot(bootstrap));
+      const snapshot = mapBootstrapToSnapshot(bootstrap);
+      migrateStripLocationFields(snapshot);
+      applySnapshot(snapshot);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("[wall-state] reloadFromStore failed", error);
@@ -395,15 +258,15 @@ export const useWallState = (): WallState => {
         bootstrap.features.length > 0 &&
         bootstrap.screens.length > 0;
       const hasKudosSeedVolume = bootstrap.kudosQuotes.length >= SEEDED_KUDOS_MIN;
-
       if (!hasCanonicalSeed || !hasKudosSeedVolume) {
-        await dataApi.reseed(buildDbSeedPayload());
-        await reloadFromStore();
-        return;
+        // eslint-disable-next-line no-console
+        console.warn("[wall-state] canonical DB seed volume checks failed; continuing without automatic reseed.");
       }
     }
-    applySnapshot(mapBootstrapToSnapshot(bootstrap));
-  }, [applySnapshot, refreshHealth, reloadFromStore]);
+    const snapshot = mapBootstrapToSnapshot(bootstrap);
+    migrateStripLocationFields(snapshot);
+    applySnapshot(snapshot);
+  }, [applySnapshot, refreshHealth]);
 
   useEffect(() => {
     let cancelled = false;
@@ -538,11 +401,7 @@ export const useWallState = (): WallState => {
   const addFeatureRequest = useCallback((input: {
     title: string;
     workflowContext?: string;
-    app: AppArea;
     productId: number;
-    featureId?: number;
-    screenId?: number;
-    screenName: string;
     origin?: "kiosk" | "mobile";
   }): void => {
     const trimmedTitle = input.title.trim();
@@ -557,10 +416,6 @@ export const useWallState = (): WallState => {
     const next: FeatureRequest = {
       id: -Date.now(),
       productId: input.productId,
-      featureId: input.featureId,
-      screenId: input.screenId,
-      app: input.app,
-      screenName: input.screenName,
       title: trimmedTitle,
       description: trimmedTitle,
       workflowContext: trimmedContext || undefined,
@@ -602,10 +457,6 @@ export const useWallState = (): WallState => {
     role: KudosRole;
     consentPublic: boolean;
     productId: number;
-    featureId?: number;
-    app?: AppArea;
-    screenId?: number;
-    screenName?: string;
   }): void => {
     const trimmed = quote.text.trim();
     if (!trimmed) {
@@ -618,13 +469,9 @@ export const useWallState = (): WallState => {
     const next: KudosQuote = {
       id: -Date.now(),
       productId: quote.productId,
-      featureId: quote.featureId,
-      screenId: quote.screenId,
       text: trimmed,
       role: quote.role,
       consentPublic: quote.consentPublic,
-      app: quote.app,
-      screenName: quote.screenName,
       createdAt: nowIso(),
     };
 
@@ -677,16 +524,30 @@ export const useWallState = (): WallState => {
     );
   }, []);
 
-  const unlockSynthesis = useCallback((pin: string): boolean => {
+  const screenAppById = useMemo(() => {
+    const map = new Map<number, AppArea>();
+    for (const screen of screens) {
+      map.set(Number(screen.id), screen.app);
+    }
+    return map;
+  }, [screens]);
+
+  const unlockSynthesis = useCallback(async (pin: string): Promise<boolean> => {
     const digitsOnly = /^\d+$/.test(pin);
     const validLength =
       pin.length >= SYNTHESIS_PIN_LENGTH_RANGE.min && pin.length <= SYNTHESIS_PIN_LENGTH_RANGE.max;
-    if (digitsOnly && validLength && pin === DEFAULT_SYNTHESIS_PIN) {
-      setSynthesisUnlocked(true);
-      return true;
+    if (!digitsOnly || !validLength) {
+      return false;
     }
 
-    return false;
+    try {
+      const result = await synthesisModuleApi.verifyPin(pin);
+      if (!result.authenticated) return false;
+      setSynthesisUnlocked(true);
+      return true;
+    } catch {
+      return false;
+    }
   }, []);
 
   const resetSynthesisLock = useCallback((): void => {
@@ -706,7 +567,11 @@ export const useWallState = (): WallState => {
 
     const featureLines = featureRequests
       .map((feature, index) => {
-        const macroWeight = macros?.upweightApp === feature.app ? " | weight=2x" : "";
+        const featureApp =
+          feature.screenId == null
+            ? undefined
+            : screenAppById.get(Number(feature.screenId));
+        const macroWeight = macros?.upweightApp && featureApp === macros.upweightApp ? " | weight=2x" : "";
         const origin = feature.origin ?? "kiosk";
         return `${index + 1}. ${feature.title} | votes=${feature.votes} | workflow=${feature.workflowContext ?? "n/a"} | role=${roleLabel} | origin=${origin}${macroWeight}`;
       })
@@ -767,8 +632,8 @@ export const useWallState = (): WallState => {
       "Screen Feedback",
       screenFeedbackLines || "No screen feedback yet.",
       "",
-      "Kudos",
-      kudosLines || "No kudos yet.",
+      "Comments",
+      kudosLines || "No comments yet.",
       "",
       "Card Sort Rankings",
       cardSortTotals || "No card-sort submissions yet.",
@@ -779,7 +644,7 @@ export const useWallState = (): WallState => {
       "Prompt Modifiers",
       activeMacroLines.length ? activeMacroLines.map((line, index) => `${index + 1}. ${line}`).join("\n") : "No macros active.",
     ].join("\n");
-  }, [cardSortConcepts, cardSortResponses, conflicts, featureRequests, kudosQuotes, screenFeedback, screenSubmissionCounts, sessionRole]);
+  }, [cardSortConcepts, cardSortResponses, conflicts, featureRequests, kudosQuotes, screenAppById, screenFeedback, screenSubmissionCounts, sessionRole]);
 
   const clearSynthesisOutput = useCallback((): void => {
     setSynthesisOutput("");
@@ -852,8 +717,6 @@ export const useWallState = (): WallState => {
 
     const featureRows: ExportRecord[] = sortedFeatureRequests.map((feature) => ({
       submission_type: "feature",
-      app_section: feature.app,
-      screen_name: feature.screenName,
       feedback_type: "request",
       freetext: feature.workflowContext ? `${feature.title} | ${feature.workflowContext}` : feature.title,
       role_label: roleLabel,
@@ -876,8 +739,6 @@ export const useWallState = (): WallState => {
 
     const kudosRows: ExportRecord[] = kudosQuotes.map((quote) => ({
       submission_type: "kudos",
-      app_section: "",
-      screen_name: "",
       feedback_type: "quote",
       freetext: quote.text,
       role_label: quote.role,

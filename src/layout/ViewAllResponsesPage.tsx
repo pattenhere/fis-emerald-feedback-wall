@@ -1,7 +1,7 @@
 import { memo } from "react";
 
 export interface ViewAllCategorySection {
-  type: "Feedback" | "Feature Requests" | "Kudos";
+  type: "Feedback" | "Feature Requests" | "Comments";
   items: Array<{
     id: string;
     title: string;
@@ -26,7 +26,7 @@ export const ViewAllResponsesPage = memo(({
     <section className="view-all-page">
       <header className="view-all-head">
         <h2>All Responses</h2>
-        <p>Feedback, feature requests, and kudos organized by category.</p>
+        <p>Feedback, feature requests, and comments organized by category.</p>
       </header>
 
       {groups.length === 0 ? (

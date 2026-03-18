@@ -91,7 +91,7 @@ export const loadFlatAdminTablesFromSeeds = async (): Promise<Array<{ id: string
   return [
     ...coreTables,
     { id: "feature_requests", label: "feature_requests", rows: signalSeeds.featureRequests as unknown as SeedRow[] },
-    { id: "kudos", label: "kudos", rows: signalSeeds.kudos as unknown as SeedRow[] },
+    { id: "kudos", label: "comments", rows: signalSeeds.kudos as unknown as SeedRow[] },
     { id: "screen_feedback", label: "screen_feedback", rows: signalSeeds.screenFeedback as unknown as SeedRow[] },
   ];
 };

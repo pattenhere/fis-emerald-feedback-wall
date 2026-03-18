@@ -18,6 +18,7 @@ const ensureArray = (value: unknown, name: string): SeedRecord[] => {
 };
 
 const hasString = (row: SeedRecord, key: string): boolean => typeof row[key] === "string" && String(row[key]).trim().length > 0;
+const ASSET_PATH_PATTERN = /^[a-z0-9-_/]+\/\d{2}-[a-z0-9-]+\.(png|jpg)$/i;
 
 const validateRequiredStringKeys = (rows: SeedRecord[], name: string, keys: string[]): void => {
   rows.forEach((row, index) => {
@@ -73,7 +74,43 @@ export const validateProductFeaturesSeedRows = (raw: unknown): SeedRecord[] => {
 
 export const validateScreenLibrarySeed = (raw: unknown): AppScreen[] => {
   const rows = ensureArray(raw, "screenLibrary.seed.json");
-  validateRequiredStringKeys(rows, "screenLibrary.seed.json", ["id", "app", "name", "wireframeLabel", "description"]);
+  validateRequiredStringKeys(rows, "screenLibrary.seed.json", [
+    "id",
+    "app",
+    "name",
+    "wireframeLabel",
+    "description",
+    "thumbnailAssetPath",
+  ]);
+
+  rows.forEach((row, index) => {
+    const assets = row.assets;
+    if (!Array.isArray(assets)) {
+      throw new Error(`[seed-validator] screenLibrary.seed.json[${index}] must include assets as an array`);
+    }
+    if (assets.length > 20) {
+      // eslint-disable-next-line no-console
+      console.warn(`[seed-validator] screenLibrary.seed.json[${index}] assets length ${assets.length} exceeds max 20`);
+    }
+    assets.forEach((asset, assetIndex) => {
+      if (typeof asset !== "string") {
+        // eslint-disable-next-line no-console
+        console.warn(`[seed-validator] screenLibrary.seed.json[${index}].assets[${assetIndex}] must be a string path`);
+        return;
+      }
+      const trimmed = asset.trim();
+      const filename = trimmed.split("/").pop() ?? "";
+      if (filename.length > 64) {
+        // eslint-disable-next-line no-console
+        console.warn(`[seed-validator] screenLibrary.seed.json[${index}] asset filename exceeds 64 chars: ${filename}`);
+      }
+      if (!ASSET_PATH_PATTERN.test(trimmed)) {
+        // eslint-disable-next-line no-console
+        console.warn(`[seed-validator] screenLibrary.seed.json[${index}] asset path does not match naming convention: ${trimmed}`);
+      }
+    });
+  });
+
   return rows as unknown as AppScreen[];
 };
 
@@ -85,7 +122,7 @@ export const validateCardSortConceptsSeed = (raw: unknown): CardSortConcept[] =>
 
 export const validateFeatureRequestsSeed = (raw: unknown): FeatureRequest[] => {
   const rows = ensureArray(raw, "featureRequests.seed.json");
-  validateRequiredStringKeys(rows, "featureRequests.seed.json", ["id", "app", "screenName", "title", "createdAt"]);
+  validateRequiredStringKeys(rows, "featureRequests.seed.json", ["id", "title", "createdAt"]);
   return rows as unknown as FeatureRequest[];
 };
 

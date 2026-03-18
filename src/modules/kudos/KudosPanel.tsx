@@ -30,13 +30,13 @@ export const KudosPanel = memo(({ items, onAdd }: KudosPanelProps): JSX.Element 
   return (
     <section className="panel-stack">
       <header>
-        <h2>Kudos & Quotes</h2>
+        <h2>Comments & Quotes</h2>
         <p>Role attribution is optional. Public quote usage is opt-in only.</p>
       </header>
 
       <form className="inline-form" onSubmit={handleSubmit}>
         <textarea
-          placeholder="Share feedback or a quote"
+          placeholder="Share a comment or a quote"
           rows={4}
           value={text}
           onChange={(event) => setText(event.target.value)}
@@ -62,7 +62,7 @@ export const KudosPanel = memo(({ items, onAdd }: KudosPanelProps): JSX.Element 
         <p className="privacy-notice">Your response is processed securely. No names are stored.</p>
         {error && <p className="error-text">{error}</p>}
         <button type="submit" className="primary-btn" disabled={!text.trim()}>
-          Submit Quote
+          Submit Comment
         </button>
       </form>
 
