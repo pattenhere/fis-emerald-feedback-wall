@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { synthesisModuleApi, type SessionConfigResponse } from "../services/synthesisModuleApi";
-
-interface SynthesisOverviewPageProps {
-  onNavigate: (path: string) => void;
-}
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { generateThemeSnapshot } from "../api/themeSnapshot";
+import { synthesisModuleApi } from "../services/synthesisModuleApi";
+import { makeId } from "../utils/id";
+import { THEME_SNAPSHOT_MAX, appendThemeSnapshot, readThemeSnapshots, writePublishedThemeSnapshot } from "../themeSnapshots/store";
+import type { ThemeSnapshot } from "../themeSnapshots/types";
 
 interface OverviewStatsState {
   featureRequestsTotal: number;
@@ -24,12 +25,10 @@ interface CardLoadingState {
   votes: boolean;
 }
 
-interface SessionToggleState {
-  wallWindowOpen: boolean;
-  mobileWindowOpen: boolean;
-  themesViewActive: boolean;
-  mobileWindowCloseLabel: string;
-}
+type ThemeSnapshotThresholds = {
+  minEach: number;
+  minSplitRatio: number;
+};
 
 const DEFAULT_MIN_SIGNALS = 30;
 
@@ -60,62 +59,30 @@ const toInteger = (value: unknown): number => {
 
 const formatInt = (value: number): string => toInteger(value).toLocaleString();
 
-const toLocalTimeLabel = (payload: SessionConfigResponse): string => {
-  if (typeof payload.mobileWindowCloseTimeLocal === "string" && payload.mobileWindowCloseTimeLocal.trim()) {
-    return payload.mobileWindowCloseTimeLocal.trim();
-  }
-  const source = payload.mobileWindowCloseTime ?? payload.inputCutoffAt;
-  const parsed = new Date(String(source ?? ""));
-  if (!Number.isFinite(parsed.getTime())) return "--:--";
-  return parsed.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-};
-
-export const SynthesisOverviewPage = ({ onNavigate }: SynthesisOverviewPageProps): JSX.Element => {
+export const SynthesisOverviewPage = (): JSX.Element => {
   const [stats, setStats] = useState<OverviewStatsState>(initialStatsState);
   const [cardLoading, setCardLoading] = useState<CardLoadingState>(initialCardLoadingState);
-  const [sessionToggles, setSessionToggles] = useState<SessionToggleState>({
-    wallWindowOpen: true,
-    mobileWindowOpen: true,
-    themesViewActive: false,
-    mobileWindowCloseLabel: "--:--",
-  });
-  const [toggleError, setToggleError] = useState<string | null>(null);
   const [lastUpdatedLabel, setLastUpdatedLabel] = useState("--");
-  const [togglePending, setTogglePending] = useState({
-    wallWindowOpen: false,
-    mobileWindowOpen: false,
-    themesViewActive: false,
-  });
+  const [wallWindowOpen, setWallWindowOpen] = useState(true);
+  const [eventName, setEventName] = useState("");
+  const [themeSnapshotThresholds, setThemeSnapshotThresholds] = useState<ThemeSnapshotThresholds>({ minEach: 3, minSplitRatio: 0.4 });
+  const [themeSnapshots, setThemeSnapshots] = useState<ThemeSnapshot[]>(() => readThemeSnapshots());
+  const [previewSnapshot, setPreviewSnapshot] = useState<ThemeSnapshot | null>(null);
+  const [expandedSnapshotIds, setExpandedSnapshotIds] = useState<Record<string, boolean>>({});
+  const [isGeneratingSnapshot, setIsGeneratingSnapshot] = useState(false);
+  const [themeSnapshotError, setThemeSnapshotError] = useState<string | null>(null);
   const isFirstLoad = useRef(true);
-
-  const applySessionConfig = useCallback((payload: SessionConfigResponse): void => {
-    setSessionToggles((current) => ({
-      ...current,
-      wallWindowOpen: payload.wallWindowOpen ?? current.wallWindowOpen,
-      mobileWindowOpen: payload.mobileWindowOpen ?? current.mobileWindowOpen,
-      themesViewActive: payload.themesViewActive ?? current.themesViewActive,
-      mobileWindowCloseLabel: toLocalTimeLabel(payload),
-    }));
-    if (payload.synthesisMinSignals != null) {
-      setStats((current) => ({
-        ...current,
-        synthesisMinSignals: Math.max(1, toInteger(payload.synthesisMinSignals)),
-      }));
-    }
-  }, []);
 
   const refreshOverviewData = useCallback(async (): Promise<void> => {
     const nextUpdatedAt = new Date();
     try {
-      const [featureCount, screenCount, kudosCount, dedupCounts, sessionConfig] = await Promise.all([
+      const [featureCount, screenCount, kudosCount, dedupCounts, sessionConfig, synthesisParameters] = await Promise.all([
         synthesisModuleApi.getInputsCountByType("feature_request"),
         synthesisModuleApi.getInputsCountByType("screen_feedback"),
         synthesisModuleApi.getInputsCountByType("kudos"),
         synthesisModuleApi.getDedupCounts(),
         synthesisModuleApi.getSessionConfig(),
+        synthesisModuleApi.getSynthesisParameters(),
       ]);
 
       setStats((current) => ({
@@ -130,7 +97,14 @@ export const SynthesisOverviewPage = ({ onNavigate }: SynthesisOverviewPageProps
         uniqueInputs: toInteger(dedupCounts.uniqueInputs),
         synthesisMinSignals: Math.max(1, toInteger(sessionConfig.synthesisMinSignals ?? current.synthesisMinSignals)),
       }));
-      applySessionConfig(sessionConfig);
+      setWallWindowOpen(Boolean(sessionConfig.wallWindowOpen ?? true));
+      setEventName(String(sessionConfig.eventName ?? ""));
+      setThemeSnapshotThresholds({
+        minEach: Math.max(1, toInteger(synthesisParameters.parameters.competingMinEach ?? 3)),
+        minSplitRatio: Number.isFinite(Number(synthesisParameters.parameters.competingMinSplitRatio))
+          ? Number(synthesisParameters.parameters.competingMinSplitRatio)
+          : 0.4,
+      });
       setLastUpdatedLabel(nextUpdatedAt.toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
@@ -145,7 +119,7 @@ export const SynthesisOverviewPage = ({ onNavigate }: SynthesisOverviewPageProps
         });
         isFirstLoad.current = false;
       }
-    } catch (error) {
+    } catch {
       if (isFirstLoad.current) {
         setCardLoading({
           features: false,
@@ -155,9 +129,9 @@ export const SynthesisOverviewPage = ({ onNavigate }: SynthesisOverviewPageProps
         });
         isFirstLoad.current = false;
       }
-      setToggleError(error instanceof Error ? error.message : "Unable to refresh overview metrics.");
+      // Keep the same fallback behavior while the cards are loading.
     }
-  }, [applySessionConfig]);
+  }, []);
 
   useEffect(() => {
     void refreshOverviewData();
@@ -167,24 +141,15 @@ export const SynthesisOverviewPage = ({ onNavigate }: SynthesisOverviewPageProps
     return () => window.clearInterval(timer);
   }, [refreshOverviewData]);
 
-  const patchToggle = useCallback(async (
-    key: "wallWindowOpen" | "mobileWindowOpen" | "themesViewActive",
-    value: boolean,
-  ): Promise<void> => {
-    setToggleError(null);
-    const previousValue = sessionToggles[key];
-    setSessionToggles((current) => ({ ...current, [key]: value }));
-    setTogglePending((current) => ({ ...current, [key]: true }));
-    try {
-      const updated = await synthesisModuleApi.patchSessionConfig({ [key]: value });
-      applySessionConfig(updated);
-    } catch (error) {
-      setSessionToggles((current) => ({ ...current, [key]: previousValue }));
-      setToggleError(error instanceof Error ? error.message : "Unable to save session settings.");
-    } finally {
-      setTogglePending((current) => ({ ...current, [key]: false }));
-    }
-  }, [applySessionConfig, sessionToggles]);
+  useEffect(() => {
+    setThemeSnapshots(readThemeSnapshots());
+  }, []);
+
+  useEffect(() => {
+    if (!themeSnapshotError) return;
+    const timer = window.setTimeout(() => setThemeSnapshotError(null), 5_000);
+    return () => window.clearTimeout(timer);
+  }, [themeSnapshotError]);
 
   const readinessDelta = stats.synthesisMinSignals - stats.uniqueInputs;
   const readinessProgressPercent = useMemo(() => {
@@ -197,9 +162,107 @@ export const SynthesisOverviewPage = ({ onNavigate }: SynthesisOverviewPageProps
     : readinessDelta <= 10
       ? "is-near"
       : "is-low";
+  const readinessStatusLine = stats.uniqueInputs >= stats.synthesisMinSignals
+    ? `Ready — ${formatInt(stats.uniqueInputs)} inputs collected, ${formatInt(stats.synthesisMinSignals)} required.`
+    : readinessDelta <= 10
+      ? `${formatInt(stats.uniqueInputs)} inputs — ${formatInt(readinessDelta)} more to reach threshold.`
+      : `${formatInt(stats.uniqueInputs)} inputs collected. Minimum: ${formatInt(stats.synthesisMinSignals)}.`;
+  const themeSnapshotCount = themeSnapshots.length;
+  const themeSnapshotLimitReached = themeSnapshotCount >= THEME_SNAPSHOT_MAX;
+  const themeSnapshotCanGenerate = wallWindowOpen && !themeSnapshotLimitReached;
+  const orderedThemeSnapshots = useMemo(
+    () => [...themeSnapshots].sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime()),
+    [themeSnapshots],
+  );
+  const previewSignalCounts = useMemo(
+    () => ({
+      featureRequests: stats.featureRequestsTotal,
+      screenFeedback: stats.screenFeedbackTotal,
+      comments: stats.kudosTotal,
+    }),
+    [stats.featureRequestsTotal, stats.kudosTotal, stats.screenFeedbackTotal],
+  );
+  const formatSnapshotTime = useCallback((value: string): string => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }, []);
+
+  const clearThemeSnapshotError = useCallback(() => {
+    setThemeSnapshotError(null);
+  }, []);
+
+  const handleGenerateThemeSnapshot = useCallback(async () => {
+    if (!themeSnapshotCanGenerate || isGeneratingSnapshot) return;
+    clearThemeSnapshotError();
+    setIsGeneratingSnapshot(true);
+    try {
+      const result = await generateThemeSnapshot(eventName || "Emerald Feedback Wall");
+      const generatedAt = new Date().toISOString();
+      const nextSnapshot: ThemeSnapshot = {
+        id: makeId(),
+        themes: result.themes.slice(0, 4),
+        generatedAt,
+        publishedAt: null,
+        signalCounts: previewSignalCounts,
+        thresholdsAtGeneration: {
+          minEach: themeSnapshotThresholds.minEach,
+          minSplitRatio: themeSnapshotThresholds.minSplitRatio,
+        },
+      };
+      setPreviewSnapshot(nextSnapshot);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "INVALID_RESPONSE";
+      if (message === "TIMEOUT") {
+        setThemeSnapshotError("Generation timed out. Try again.");
+      } else if (message === "AUTH_FAILED") {
+        setThemeSnapshotError("API connection error. Check settings.");
+      } else {
+        setThemeSnapshotError("Unexpected response. Try again.");
+      }
+    } finally {
+      setIsGeneratingSnapshot(false);
+    }
+  }, [
+    clearThemeSnapshotError,
+    eventName,
+    isGeneratingSnapshot,
+    previewSignalCounts,
+    themeSnapshotCanGenerate,
+    themeSnapshotThresholds.minEach,
+    themeSnapshotThresholds.minSplitRatio,
+  ]);
+
+  const handleDiscardPreview = useCallback(() => {
+    clearThemeSnapshotError();
+    setPreviewSnapshot(null);
+  }, [clearThemeSnapshotError]);
+
+  const handlePublishPreview = useCallback(() => {
+    if (!previewSnapshot) return;
+    const publishedSnapshot: ThemeSnapshot = {
+      ...previewSnapshot,
+      publishedAt: new Date().toISOString(),
+    };
+    appendThemeSnapshot(publishedSnapshot);
+    writePublishedThemeSnapshot(publishedSnapshot);
+    setThemeSnapshots((current) => [...current, publishedSnapshot]);
+    setPreviewSnapshot(null);
+    clearThemeSnapshotError();
+  }, [clearThemeSnapshotError, previewSnapshot]);
+
+  const toggleHistory = useCallback((id: string) => {
+    setExpandedSnapshotIds((current) => ({ ...current, [id]: !current[id] }));
+  }, []);
 
   return (
     <section className="synthesis-overview">
+      <p className="overview-subheader">Live synthesis metrics and readiness checks at a glance.</p>
       <div className="synthesis-overview-grid">
         <article className="overview-stat-card accent-feature">
           <p>Feature requests</p>
@@ -228,77 +291,103 @@ export const SynthesisOverviewPage = ({ onNavigate }: SynthesisOverviewPageProps
       </div>
 
       <p className="overview-last-updated">Last updated: {lastUpdatedLabel}</p>
+      <section className="overview-panel">
+        <h2>Readiness</h2>
+        <p className="overview-readiness-numbers">
+          <strong>{formatInt(stats.uniqueInputs)}</strong>
+          <span>/</span>
+          <strong>{formatInt(stats.synthesisMinSignals)}</strong>
+        </p>
+        <div className={`overview-readiness-bar ${readinessToneClass}`}>
+          <div style={{ width: `${readinessProgressPercent}%` }} />
+        </div>
+        <p className="overview-readiness-warning">{readinessStatusLine}</p>
+      </section>
 
-      <div className="overview-bottom-grid">
-        <section className="overview-panel">
-          <h2>Session controls</h2>
-          <div className="overview-toggle-row">
-            <div>
-              <p>Wall input window</p>
+      <section className="overview-panel overview-theme-snapshots">
+        <h2>Theme snapshots</h2>
+        <div className="overview-theme-snapshots-body">
+          {!previewSnapshot ? (
+            <div className="overview-theme-generator">
+              <button
+                type="button"
+                className="overview-theme-primary-btn"
+                disabled={!themeSnapshotCanGenerate || isGeneratingSnapshot}
+                onClick={handleGenerateThemeSnapshot}
+              >
+                {isGeneratingSnapshot ? "Generating..." : "Generate theme snapshot"}
+              </button>
+              {themeSnapshotLimitReached && (
+                <p className="overview-theme-limit-copy">
+                  Maximum snapshots reached for this event ({THEME_SNAPSHOT_MAX}).
+                </p>
+              )}
             </div>
-            <button
-              type="button"
-              className={`overview-toggle ${sessionToggles.wallWindowOpen ? "is-on" : ""}`}
-              aria-pressed={sessionToggles.wallWindowOpen}
-              onClick={() => void patchToggle("wallWindowOpen", !sessionToggles.wallWindowOpen)}
-              disabled={togglePending.wallWindowOpen}
-            >
-              <span />
-            </button>
-          </div>
-          <div className="overview-toggle-row">
-            <div>
-              <p>Mobile QR window</p>
-              <span>Closes at {sessionToggles.mobileWindowCloseLabel}</span>
-            </div>
-            <button
-              type="button"
-              className={`overview-toggle ${sessionToggles.mobileWindowOpen ? "is-on" : ""}`}
-              aria-pressed={sessionToggles.mobileWindowOpen}
-              onClick={() => void patchToggle("mobileWindowOpen", !sessionToggles.mobileWindowOpen)}
-              disabled={togglePending.mobileWindowOpen}
-            >
-              <span />
-            </button>
-          </div>
-          <div className="overview-toggle-row">
-            <div>
-              <p>Themes view on wall</p>
-              <span>Auto-switches after synthesis.</span>
-            </div>
-            <button
-              type="button"
-              className={`overview-toggle ${sessionToggles.themesViewActive ? "is-on" : ""}`}
-              aria-pressed={sessionToggles.themesViewActive}
-              onClick={() => void patchToggle("themesViewActive", !sessionToggles.themesViewActive)}
-              disabled={togglePending.themesViewActive}
-            >
-              <span />
-            </button>
-          </div>
-          {toggleError && <p className="overview-toggle-error">{toggleError}</p>}
-        </section>
-
-        <section className="overview-panel">
-          <h2>Readiness</h2>
-          <p className="overview-readiness-numbers">
-            <strong>{formatInt(stats.uniqueInputs)}</strong>
-            <span>/</span>
-            <strong>{formatInt(stats.synthesisMinSignals)}</strong>
-          </p>
-          <div className={`overview-readiness-bar ${readinessToneClass}`}>
-            <div style={{ width: `${readinessProgressPercent}%` }} />
-          </div>
-          <button type="button" className="overview-synthesis-link" onClick={() => onNavigate("/synthesis/run")}>
-            Go to synthesis →
-          </button>
-          {stats.uniqueInputs < stats.synthesisMinSignals && (
-            <p className="overview-readiness-warning">
-              We recommend at least {formatInt(stats.synthesisMinSignals)} signals for best synthesis results.
-            </p>
+          ) : (
+            <article className="overview-theme-preview">
+              <div className="overview-theme-preview-head">
+                <strong>Preview snapshot</strong>
+                <span>{formatSnapshotTime(previewSnapshot.generatedAt)}</span>
+              </div>
+              <ol className="overview-theme-preview-list">
+                {previewSnapshot.themes.map((theme, index) => (
+                  <li key={`${previewSnapshot.id}-${index}`}>{theme}</li>
+                ))}
+              </ol>
+              <p className="overview-theme-preview-meta">
+                Based on {previewSnapshot.signalCounts.featureRequests} feature requests, {previewSnapshot.signalCounts.screenFeedback} screen feedback items, {previewSnapshot.signalCounts.comments} comments
+              </p>
+              <div className="overview-theme-preview-actions">
+                <button type="button" className="overview-theme-primary-btn" onClick={handlePublishPreview}>
+                  Publish to wall
+                </button>
+                <button type="button" className="overview-theme-secondary-btn" onClick={handleDiscardPreview}>
+                  Discard
+                </button>
+              </div>
+            </article>
           )}
-        </section>
-      </div>
+          {themeSnapshotError && <p className="overview-theme-error">{themeSnapshotError}</p>}
+
+          <div className="overview-theme-history">
+            <strong>Snapshot history</strong>
+            {orderedThemeSnapshots.length === 0 ? (
+              <p className="overview-theme-empty">No snapshots generated yet.</p>
+            ) : (
+              <div className="overview-theme-history-list">
+                {orderedThemeSnapshots.map((snapshot) => {
+                  const expanded = Boolean(expandedSnapshotIds[snapshot.id]);
+                  return (
+                    <article key={snapshot.id} className="overview-theme-history-item">
+                      <button
+                        type="button"
+                        className="overview-theme-history-row"
+                        onClick={() => toggleHistory(snapshot.id)}
+                        aria-expanded={expanded}
+                      >
+                        <span>{formatSnapshotTime(snapshot.generatedAt)}</span>
+                        <span className={`overview-theme-history-badge ${snapshot.publishedAt ? "is-published" : "is-draft"}`}>
+                          {snapshot.publishedAt ? "Published" : "Not published"}
+                        </span>
+                        <span className="overview-theme-history-caret" aria-hidden="true">
+                          {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </span>
+                      </button>
+                      {expanded && (
+                        <ol className="overview-theme-history-themes">
+                          {snapshot.themes.map((theme, index) => (
+                            <li key={`${snapshot.id}-history-${index}`}>{theme}</li>
+                          ))}
+                        </ol>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
     </section>
   );
 };

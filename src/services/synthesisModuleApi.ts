@@ -1,3 +1,6 @@
+import type { AppArea } from "../types/domain";
+import type { TShirtSizingResultsPayload } from "../synthesis/tshirt/sizingResultsStore";
+
 export interface InputsCountResponse {
   totalInputs: number;
   featureRequests: number;
@@ -32,6 +35,10 @@ export interface SessionConfigResponse {
   synthesisMinSignals?: number;
   mobileWindowCloseTime?: string;
   mobileWindowCloseTimeLocal?: string;
+  eventName?: string;
+  eventSlug?: string;
+  ceremonyStartTimeLocal?: string;
+  day2RevealTimeLocal?: string;
   updatedAt?: string;
 }
 
@@ -43,11 +50,12 @@ export interface PinAuthResponse {
   error?: string;
 }
 
-export interface AnthropicHealthResponse {
+export interface AIProviderHealthResponse {
   reachable: boolean;
   checkedAt: string;
-  provider: "anthropic";
+  provider: "anthropic" | "openai";
   reason?: string;
+  error?: string;
 }
 
 export interface SessionConfigPatchRequest {
@@ -56,7 +64,29 @@ export interface SessionConfigPatchRequest {
   themesViewActive?: boolean;
   synthesisMinSignals?: number;
   inputCutoffAt?: string;
+  mobileWindowCloseTime?: string;
+  eventName?: string;
+  eventSlug?: string;
+  ceremonyStartTimeLocal?: string;
+  day2RevealTimeLocal?: string;
 }
+
+export interface SynthesisParametersResponse {
+  parameters: {
+    excludeBelowN: number | null;
+    upweightSection: AppArea | null;
+    upweightMultiplier: number;
+    p0FocusOnly: boolean;
+    emphasiseQuotes: boolean;
+    maxQuotes: number;
+    competingMinEach: number;
+    competingMinSplitRatio: number;
+  };
+  updatedAt: string | null;
+  usingDefaults: boolean;
+}
+
+export type SynthesisParametersPatchRequest = Partial<SynthesisParametersResponse["parameters"]>;
 
 export interface FlaggedInputRecord {
   id: string;
@@ -75,6 +105,44 @@ export interface ModerationActionResponse {
   ok: boolean;
   id: string;
   pendingCount: number;
+}
+
+export interface Phase1P0Item {
+  title: string;
+  rationale: string;
+  evidenceSources: string[];
+  feasibilityNote: string;
+  conflictContext: string | null;
+  roleContext: string | null;
+}
+
+export interface Phase1Analysis {
+  p0Items: Phase1P0Item[];
+  p1Items: Array<{ title: string; rationale: string; signalCount: number }>;
+  p2Themes: Array<{ theme: string; description: string }>;
+  crossCuttingInsights: Array<{ insight: string; rolesAffected: string[] | null; screenCount: number }>;
+  selectedQuotes: Array<{ text: string; role: string | null }>;
+  competingPerspectivesNotes: Array<{ screenName: string; interpretation: string; recommendation: string }>;
+  macroApplicationLog: string[];
+}
+
+export interface SynthesisMetadata {
+  generatedAt: string;
+  outputMode: "roadmap" | "prd";
+  macrosActive: string[];
+  phase1DurationMs: number;
+  phase2DurationMs: number;
+  totalTokensPhase1: number;
+  estimatedTokensPhase2: number;
+}
+
+export interface Day2Narrative {
+  opening: string;
+  what_we_heard: string;
+  what_we_built: string;
+  what_we_deferred: string;
+  closing: string;
+  updatedAt?: string;
 }
 
 const jsonHeaders = { "content-type": "application/json" };
@@ -188,10 +256,94 @@ export const synthesisModuleApi = {
     return payload;
   },
 
-  getAnthropicHealth: async (): Promise<AnthropicHealthResponse> => {
-    const response = await fetch("/api/synthesis/providers/anthropic/health", { headers: buildSynthesisAuthHeaders() });
-    return readJson<AnthropicHealthResponse>(response);
+  getAIProviderHealth: async (): Promise<AIProviderHealthResponse> => {
+    return fetchAIProviderHealth();
   },
+
+  getSynthesisParameters: async (): Promise<SynthesisParametersResponse> => {
+    const response = await fetch("/api/synthesis/parameters", { headers: buildSynthesisAuthHeaders() });
+    return readJson<SynthesisParametersResponse>(response);
+  },
+
+  patchSynthesisParameters: async (payload: SynthesisParametersPatchRequest): Promise<SynthesisParametersResponse> => {
+    const response = await fetch("/api/synthesis/parameters", {
+      method: "PATCH",
+      headers: buildSynthesisAuthHeaders(jsonHeaders),
+      body: JSON.stringify(payload),
+    });
+    return readJson<SynthesisParametersResponse>(response);
+  },
+
+  getLatestPhase1Analysis: async (): Promise<{ phase1Analysis: Phase1Analysis | null }> => {
+    const response = await fetch("/api/synthesis/phase1", { headers: buildSynthesisAuthHeaders() });
+    return readJson<{ phase1Analysis: Phase1Analysis | null }>(response);
+  },
+
+  saveLatestPhase1Analysis: async (phase1Analysis: Phase1Analysis): Promise<{ phase1Analysis: Phase1Analysis }> => {
+    const response = await fetch("/api/synthesis/phase1", {
+      method: "POST",
+      headers: buildSynthesisAuthHeaders(jsonHeaders),
+      body: JSON.stringify({ phase1Analysis }),
+    });
+    return readJson<{ phase1Analysis: Phase1Analysis }>(response);
+  },
+
+  getLatestSynthesisOutput: async (): Promise<{ output: string | null }> => {
+    const response = await fetch("/api/synthesis/output", { headers: buildSynthesisAuthHeaders() });
+    return readJson<{ output: string | null }>(response);
+  },
+
+  saveLatestSynthesisOutput: async (output: string): Promise<{ output: string }> => {
+    const response = await fetch("/api/synthesis/output", {
+      method: "POST",
+      headers: buildSynthesisAuthHeaders(jsonHeaders),
+      body: JSON.stringify({ output }),
+    });
+    return readJson<{ output: string }>(response);
+  },
+
+  getLatestSynthesisMetadata: async (): Promise<{ metadata: SynthesisMetadata | null }> => {
+    const response = await fetch("/api/synthesis/metadata", { headers: buildSynthesisAuthHeaders() });
+    return readJson<{ metadata: SynthesisMetadata | null }>(response);
+  },
+
+  saveLatestSynthesisMetadata: async (metadata: SynthesisMetadata): Promise<{ metadata: SynthesisMetadata }> => {
+    const response = await fetch("/api/synthesis/metadata", {
+      method: "POST",
+      headers: buildSynthesisAuthHeaders(jsonHeaders),
+      body: JSON.stringify({ metadata }),
+    });
+    return readJson<{ metadata: SynthesisMetadata }>(response);
+  },
+
+  getLatestTShirtSizing: async (): Promise<{ sizing: TShirtSizingResultsPayload | null }> => {
+    const response = await fetch("/api/synthesis/sizing", { headers: buildSynthesisAuthHeaders() });
+    return readJson<{ sizing: TShirtSizingResultsPayload | null }>(response);
+  },
+
+  saveLatestTShirtSizing: async (sizing: TShirtSizingResultsPayload): Promise<{ sizing: TShirtSizingResultsPayload }> => {
+    const response = await fetch("/api/synthesis/sizing", {
+      method: "POST",
+      headers: buildSynthesisAuthHeaders(jsonHeaders),
+      body: JSON.stringify({ sizing }),
+    });
+    return readJson<{ sizing: TShirtSizingResultsPayload }>(response);
+  },
+
+  getSavedNarrative: async (): Promise<{ savedNarrative: Day2Narrative | null }> => {
+    const response = await fetch("/api/synthesis/narrative", { headers: buildSynthesisAuthHeaders() });
+    return readJson<{ savedNarrative: Day2Narrative | null }>(response);
+  },
+
+  saveSavedNarrative: async (savedNarrative: Day2Narrative): Promise<{ savedNarrative: Day2Narrative }> => {
+    const response = await fetch("/api/synthesis/narrative", {
+      method: "POST",
+      headers: buildSynthesisAuthHeaders(jsonHeaders),
+      body: JSON.stringify({ savedNarrative }),
+    });
+    return readJson<{ savedNarrative: Day2Narrative }>(response);
+  },
+
 };
 import {
   buildSynthesisAuthHeaders,
@@ -199,3 +351,4 @@ import {
   writeSynthesisAuthFlag,
   writeSynthesisAuthToken,
 } from "./synthesisAuth";
+import { getAIProviderHealth as fetchAIProviderHealth } from "../api/aiHealth";

@@ -22,6 +22,7 @@ export const LeftPanel = memo(({
   onAddComment,
   onSeeAll,
 }: LeftPanelProps): JSX.Element => {
+  const TWO_LINE_PREVIEW_CHAR_LIMIT = 110;
   const [activeTab, setActiveTab] = useState<"features" | "comments">("features");
   const [featureTitle, setFeatureTitle] = useState("");
   const [featureContext, setFeatureContext] = useState("");
@@ -53,7 +54,7 @@ export const LeftPanel = memo(({
   };
 
   const truncate = (value: string, max: number): string =>
-    value.length <= max ? value : `${value.slice(0, Math.max(0, max - 1)).trimEnd()}…`;
+    value.length <= max ? value : `${value.slice(0, Math.max(0, max - 3)).trimEnd()}...`;
 
   const handleFeatureSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -87,7 +88,7 @@ export const LeftPanel = memo(({
         onClick={togglePanel}
         aria-label={isOpen ? "Close feedback panel" : "Open feedback panel"}
       >
-        Feedback
+        Requests & Comments
       </button>
 
       <aside className={`newui-left-panel ${isOpen ? "is-open" : ""}`} aria-label="Feedback panel">
@@ -98,7 +99,7 @@ export const LeftPanel = memo(({
               className={`newui-left-tab ${activeTab === "features" ? "is-active" : ""}`}
               onClick={() => setActiveTab("features")}
             >
-              Features
+              Requests
             </button>
             <button
               type="button"
@@ -145,7 +146,7 @@ export const LeftPanel = memo(({
                 ) : (
                   recentFeatures.slice(0, 3).map((feature) => (
                     <li key={feature.id} className="quote-card newui-mini-card">
-                      <p className="card-title">{truncate(feature.title, 60)}</p>
+                      <p className="card-title">{truncate(feature.title, TWO_LINE_PREVIEW_CHAR_LIMIT)}</p>
                       <p className="card-meta">
                         <span className="newui-mini-vote">↑ {feature.votes}</span>
                         {typeof feature.impactScore === "number" ? ` · Impact ${feature.impactScore}/5` : ""}
@@ -155,7 +156,14 @@ export const LeftPanel = memo(({
                 )}
               </ul>
               {recentFeatures.length > 3 && (
-                <button type="button" className="newui-see-all-link" onClick={() => onSeeAll("features")}>
+                <button
+                  type="button"
+                  className="newui-see-all-link"
+                  onClick={() => {
+                    onSeeAll("features");
+                    onClose();
+                  }}
+                >
                   See all {recentFeatures.length.toLocaleString()} feature requests →
                 </button>
               )}
@@ -201,7 +209,7 @@ export const LeftPanel = memo(({
                 ) : (
                   recentComments.slice(0, 3).map((comment) => (
                     <li key={comment.id} className="quote-card newui-mini-card">
-                      <p>{truncate(comment.text, 80)}</p>
+                      <p className="card-title">{truncate(comment.text, TWO_LINE_PREVIEW_CHAR_LIMIT)}</p>
                       <p className="card-meta">
                         {comment.roleLabel ?? (comment.role !== "unspecified" ? comment.role.toUpperCase() : "")}
                         {(comment.roleLabel || comment.role !== "unspecified") && (comment.isPublicSafe ?? comment.consentPublic) ? " · " : ""}
@@ -212,7 +220,14 @@ export const LeftPanel = memo(({
                 )}
               </ul>
               {recentComments.length > 3 && (
-                <button type="button" className="newui-see-all-link" onClick={() => onSeeAll("comments")}>
+                <button
+                  type="button"
+                  className="newui-see-all-link"
+                  onClick={() => {
+                    onSeeAll("comments");
+                    onClose();
+                  }}
+                >
                   See all {recentComments.length.toLocaleString()} comments →
                 </button>
               )}

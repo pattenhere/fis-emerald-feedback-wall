@@ -155,8 +155,9 @@ export const HeroCarousel = memo(({
           </div>
         )}
         <button type="button" className="primary-btn newui-submit-btn" onClick={onSubmitFeedbackClick}>
-          Submit Feedback
+          Leave Feedback
         </button>
+        {selectedScreen?.name ? <p className="newui-active-screen-context">Giving feedback on: {selectedScreen.name}</p> : null}
       </div>
     </section>
   );

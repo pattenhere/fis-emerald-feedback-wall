@@ -8,6 +8,9 @@ import { getPostgresPool, isPostgresConfigured } from "./db/postgres/client.mjs"
 import { buildSynthesisConfig, runSynthesis, toSynthesisSignals } from "./synthesisOrchestrator.mjs";
 import { initRuntimeStore, readRuntimeStore, resetRuntimeStore, writeRuntimeStore } from "./runtimeStore.mjs";
 import { runServerTextCompletion } from "./ai/providerClients.mjs";
+import { getAIProviderHealth } from "./api/aiHealth.mjs";
+import { aiCall as runServerAICall, AICallError as ServerAICallError } from "./api/aiCall.mjs";
+import { loadConfigEnv } from "./config/loadConfigEnv.mjs";
 import {
   HttpError,
   createHttpError,
@@ -20,39 +23,21 @@ import {
   toTrimmedString,
 } from "./http/requestGuards.mjs";
 
+const toInteger = (value, fallback = 0) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.floor(n) : fallback;
+};
+const toPositiveInt = (value, fallback) => {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return Math.floor(n);
+};
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..");
 
-const parseDotenvFile = (filePath) => {
-  if (!fs.existsSync(filePath)) return {};
-  const rows = fs.readFileSync(filePath, "utf8").split(/\r?\n/u);
-  const parsed = {};
-  for (const row of rows) {
-    const trimmed = row.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eqIndex = trimmed.indexOf("=");
-    if (eqIndex <= 0) continue;
-    const key = trimmed.slice(0, eqIndex).trim();
-    let value = trimmed.slice(eqIndex + 1).trim();
-    if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-    parsed[key] = value;
-  }
-  return parsed;
-};
-
-// Mirror Vite's mode=config env behavior for the Node API process.
-const envFromConfig = {
-  ...parseDotenvFile(path.resolve(rootDir, ".env.config")),
-  ...parseDotenvFile(path.resolve(rootDir, ".env.config.local")),
-};
-for (const [key, value] of Object.entries(envFromConfig)) {
-  if (process.env[key] === undefined) {
-    process.env[key] = value;
-  }
-}
+loadConfigEnv();
 
 const port = Number(process.env.API_PORT ?? 8794);
 const isVercelRuntime = String(process.env.VERCEL ?? "").toLowerCase() === "1" || String(process.env.VERCEL ?? "").toLowerCase() === "true";
@@ -86,6 +71,38 @@ const toBoolEnv = (value, fallback) => {
   if (normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "on") return true;
   if (normalized === "false" || normalized === "0" || normalized === "no" || normalized === "off") return false;
   return fallback;
+};
+const normalizeLocalTime = (value, fallback = "") => {
+  const candidate = String(value ?? "").trim();
+  if (!candidate) return fallback;
+  const match = candidate.match(/^(\d{1,2}):(\d{2})$/u);
+  if (!match) return fallback;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return fallback;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return fallback;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+};
+const localTimeToIso = (timeValue, fallbackIso) => {
+  const normalized = normalizeLocalTime(timeValue, "");
+  if (!normalized) return fallbackIso;
+  const [hoursRaw, minutesRaw] = normalized.split(":");
+  const date = new Date();
+  date.setHours(Number(hoursRaw), Number(minutesRaw), 0, 0);
+  return date.toISOString();
+};
+const toLocalHm = (isoValue) => {
+  const parsed = new Date(String(isoValue ?? ""));
+  if (!Number.isFinite(parsed.getTime())) return "";
+  return `${String(parsed.getHours()).padStart(2, "0")}:${String(parsed.getMinutes()).padStart(2, "0")}`;
+};
+const slugifyEventName = (value) => {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, "-")
+    .replace(/-{2,}/gu, "-")
+    .replace(/^-+|-+$/gu, "")
+    .slice(0, 40);
 };
 const configuredSessionCountdownSeconds = Number(
   process.env.SYNTHESIS_INPUT_WINDOW_SECONDS ??
@@ -121,7 +138,32 @@ const synthesisSessionState = {
   mobileWindowOpen: toBoolEnv(process.env.SYNTHESIS_MOBILE_WINDOW_OPEN, true),
   themesViewActive: toBoolEnv(process.env.SYNTHESIS_THEMES_VIEW_ACTIVE, false),
   synthesisMinSignals,
+  mobileWindowCloseTime: normalizeLocalTime(process.env.SYNTHESIS_MOBILE_WINDOW_CLOSE_TIME, ""),
+  eventName: String(process.env.SYNTHESIS_EVENT_NAME ?? "").trim(),
+  eventSlug: String(process.env.SYNTHESIS_EVENT_SLUG ?? "").trim().toLowerCase().replace(/[^a-z0-9-]/gu, "").slice(0, 40),
+  ceremonyStartTimeLocal: normalizeLocalTime(process.env.SYNTHESIS_CEREMONY_START_TIME, ""),
+  day2RevealTimeLocal: normalizeLocalTime(process.env.SYNTHESIS_DAY2_REVEAL_TIME, ""),
 };
+const DEFAULT_SYNTHESIS_PARAMETERS = Object.freeze({
+  excludeBelowN: null,
+  upweightSection: null,
+  upweightMultiplier: 2,
+  p0FocusOnly: false,
+  emphasiseQuotes: false,
+  maxQuotes: 6,
+  competingMinEach: 3,
+  competingMinSplitRatio: 0.4,
+});
+const normalizeRatio = (value, fallback) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  const rounded = Number(numeric.toFixed(2));
+  return Math.max(0.2, Math.min(0.8, rounded));
+};
+const synthesisParametersState = {
+  ...DEFAULT_SYNTHESIS_PARAMETERS,
+};
+let synthesisParametersUpdatedAt = null;
 const DEFAULT_AUTH_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const configuredAuthSessionTtlMs = Number(process.env.SYNTHESIS_AUTH_SESSION_TTL_MS ?? DEFAULT_AUTH_SESSION_TTL_MS);
 const synthesisAuthSessionTtlMs =
@@ -129,6 +171,7 @@ const synthesisAuthSessionTtlMs =
     ? Math.floor(configuredAuthSessionTtlMs)
     : DEFAULT_AUTH_SESSION_TTL_MS;
 const synthesisAuthSessions = new Map();
+const aiCompleteRouteTimeoutMs = toPositiveInt(process.env.AI_COMPLETE_ROUTE_TIMEOUT_MS, 300_000);
 
 const cleanupExpiredSynthesisAuthSessions = () => {
   const now = Date.now();
@@ -198,6 +241,82 @@ const withPostgresClient = async (work) => {
 
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 initRuntimeStore(runtimeStorePath);
+const runtimeConfig = readRuntimeStore(runtimeStorePath);
+const persistedSessionConfig = runtimeConfig?.sessionConfig && typeof runtimeConfig.sessionConfig === "object"
+  ? runtimeConfig.sessionConfig
+  : {};
+synthesisSessionState.inputCutoffAt =
+  typeof persistedSessionConfig.inputCutoffAt === "string" && Number.isFinite(new Date(persistedSessionConfig.inputCutoffAt).getTime())
+    ? new Date(persistedSessionConfig.inputCutoffAt).toISOString()
+    : synthesisSessionState.inputCutoffAt;
+synthesisSessionState.wallWindowOpen =
+  typeof persistedSessionConfig.wallWindowOpen === "boolean" ? persistedSessionConfig.wallWindowOpen : synthesisSessionState.wallWindowOpen;
+synthesisSessionState.mobileWindowOpen =
+  typeof persistedSessionConfig.mobileWindowOpen === "boolean" ? persistedSessionConfig.mobileWindowOpen : synthesisSessionState.mobileWindowOpen;
+synthesisSessionState.themesViewActive =
+  typeof persistedSessionConfig.themesViewActive === "boolean" ? persistedSessionConfig.themesViewActive : synthesisSessionState.themesViewActive;
+synthesisSessionState.synthesisMinSignals =
+  typeof persistedSessionConfig.synthesisMinSignals === "number"
+    ? Math.max(10, Math.min(500, toInteger(persistedSessionConfig.synthesisMinSignals, synthesisSessionState.synthesisMinSignals)))
+    : synthesisSessionState.synthesisMinSignals;
+synthesisSessionState.mobileWindowCloseTime = normalizeLocalTime(
+  persistedSessionConfig.mobileWindowCloseTime,
+  synthesisSessionState.mobileWindowCloseTime,
+);
+synthesisSessionState.eventName =
+  typeof persistedSessionConfig.eventName === "string" ? persistedSessionConfig.eventName.trim().slice(0, 80) : synthesisSessionState.eventName;
+synthesisSessionState.eventSlug =
+  typeof persistedSessionConfig.eventSlug === "string"
+    ? persistedSessionConfig.eventSlug.trim().toLowerCase().replace(/[^a-z0-9-]/gu, "").slice(0, 40)
+    : synthesisSessionState.eventSlug;
+synthesisSessionState.ceremonyStartTimeLocal = normalizeLocalTime(
+  persistedSessionConfig.ceremonyStartTimeLocal,
+  synthesisSessionState.ceremonyStartTimeLocal,
+);
+synthesisSessionState.day2RevealTimeLocal = normalizeLocalTime(
+  persistedSessionConfig.day2RevealTimeLocal,
+  synthesisSessionState.day2RevealTimeLocal,
+);
+const persistedSynthesisParameters =
+  runtimeConfig?.synthesisParameters && typeof runtimeConfig.synthesisParameters === "object"
+    ? runtimeConfig.synthesisParameters
+    : null;
+if (persistedSynthesisParameters) {
+  const excludeBelowN = Number(persistedSynthesisParameters.excludeBelowN);
+  synthesisParametersState.excludeBelowN =
+    Number.isInteger(excludeBelowN) && excludeBelowN >= 1 && excludeBelowN <= 10 ? excludeBelowN : null;
+
+  const upweightSection = String(persistedSynthesisParameters.upweightSection ?? "").trim();
+  synthesisParametersState.upweightSection = upweightSection || null;
+
+  const upweightMultiplier = Number(persistedSynthesisParameters.upweightMultiplier);
+  synthesisParametersState.upweightMultiplier =
+    Number.isInteger(upweightMultiplier) && upweightMultiplier >= 2 && upweightMultiplier <= 4
+      ? upweightMultiplier
+      : DEFAULT_SYNTHESIS_PARAMETERS.upweightMultiplier;
+
+  synthesisParametersState.p0FocusOnly = Boolean(persistedSynthesisParameters.p0FocusOnly);
+  synthesisParametersState.emphasiseQuotes = Boolean(persistedSynthesisParameters.emphasiseQuotes);
+
+  const maxQuotes = Number(persistedSynthesisParameters.maxQuotes);
+  synthesisParametersState.maxQuotes =
+    Number.isInteger(maxQuotes) && maxQuotes >= 3 && maxQuotes <= 10 ? maxQuotes : DEFAULT_SYNTHESIS_PARAMETERS.maxQuotes;
+
+  const competingMinEach = Number(persistedSynthesisParameters.competingMinEach);
+  synthesisParametersState.competingMinEach =
+    Number.isInteger(competingMinEach) && competingMinEach >= 2 && competingMinEach <= 10
+      ? competingMinEach
+      : DEFAULT_SYNTHESIS_PARAMETERS.competingMinEach;
+
+  synthesisParametersState.competingMinSplitRatio = normalizeRatio(
+    persistedSynthesisParameters.competingMinSplitRatio,
+    DEFAULT_SYNTHESIS_PARAMETERS.competingMinSplitRatio,
+  );
+}
+synthesisParametersUpdatedAt =
+  typeof runtimeConfig?.synthesisParametersUpdatedAt === "string" && runtimeConfig.synthesisParametersUpdatedAt.trim()
+    ? runtimeConfig.synthesisParametersUpdatedAt
+    : null;
 
 const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
@@ -314,7 +433,18 @@ const validateCardSortPayload = (body) => {
 };
 
 const validateSessionConfigPatchPayload = (body) => {
-  const allowedKeys = new Set(["wallWindowOpen", "mobileWindowOpen", "themesViewActive", "synthesisMinSignals", "inputCutoffAt"]);
+  const allowedKeys = new Set([
+    "wallWindowOpen",
+    "mobileWindowOpen",
+    "themesViewActive",
+    "synthesisMinSignals",
+    "inputCutoffAt",
+    "mobileWindowCloseTime",
+    "eventName",
+    "eventSlug",
+    "ceremonyStartTimeLocal",
+    "day2RevealTimeLocal",
+  ]);
   for (const key of Object.keys(body ?? {})) {
     if (!allowedKeys.has(key)) {
       throw createHttpError(400, `Unsupported session config field: ${key}`);
@@ -327,13 +457,110 @@ const validateSessionConfigPatchPayload = (body) => {
   if ("synthesisMinSignals" in body) {
     payload.synthesisMinSignals = toOptionalInt(body.synthesisMinSignals, {
       field: "synthesisMinSignals",
-      min: 1,
-      max: 10_000,
+      min: 10,
+      max: 500,
     });
   }
   if ("inputCutoffAt" in body) {
     payload.inputCutoffAt = toOptionalIso(body.inputCutoffAt, "inputCutoffAt");
   }
+  if ("mobileWindowCloseTime" in body) {
+    const normalized = normalizeLocalTime(body.mobileWindowCloseTime, "");
+    if (!normalized) {
+      throw createHttpError(400, "mobileWindowCloseTime must be HH:MM.");
+    }
+    payload.mobileWindowCloseTime = normalized;
+  }
+  if ("eventName" in body) {
+    payload.eventName = toOptionalString(body.eventName, 80) ?? "";
+  }
+  if ("eventSlug" in body) {
+    const slug = String(toOptionalString(body.eventSlug, 40) ?? "").toLowerCase();
+    if (slug && !/^[a-z0-9-]{1,40}$/u.test(slug)) {
+      throw createHttpError(400, "eventSlug must match /^[a-z0-9-]{1,40}$/.");
+    }
+    payload.eventSlug = slug;
+  }
+  if ("ceremonyStartTimeLocal" in body) {
+    const normalized = normalizeLocalTime(body.ceremonyStartTimeLocal, "");
+    if (!normalized) {
+      throw createHttpError(400, "ceremonyStartTimeLocal must be HH:MM.");
+    }
+    payload.ceremonyStartTimeLocal = normalized;
+  }
+  if ("day2RevealTimeLocal" in body) {
+    const normalized = normalizeLocalTime(body.day2RevealTimeLocal, "");
+    if (!normalized) {
+      throw createHttpError(400, "day2RevealTimeLocal must be HH:MM.");
+    }
+    payload.day2RevealTimeLocal = normalized;
+  }
+  return payload;
+};
+
+const validateSynthesisParametersPatchPayload = (body) => {
+  const allowedKeys = new Set([
+    "excludeBelowN",
+    "upweightSection",
+    "upweightMultiplier",
+    "p0FocusOnly",
+    "emphasiseQuotes",
+    "maxQuotes",
+    "competingMinEach",
+    "competingMinSplitRatio",
+  ]);
+  for (const key of Object.keys(body ?? {})) {
+    if (!allowedKeys.has(key)) {
+      throw createHttpError(400, `Unsupported synthesis parameter field: ${key}`);
+    }
+  }
+
+  const payload = {};
+
+  if ("excludeBelowN" in body) {
+    if (body.excludeBelowN == null || body.excludeBelowN === "") {
+      payload.excludeBelowN = null;
+    } else {
+      const parsed = toOptionalInt(body.excludeBelowN, { field: "excludeBelowN", min: 1, max: 10 });
+      if (parsed == null) throw createHttpError(400, "excludeBelowN must be 1-10 or null.");
+      payload.excludeBelowN = parsed;
+    }
+  }
+
+  if ("upweightSection" in body) {
+    const next = String(body.upweightSection ?? "").trim();
+    payload.upweightSection = next || null;
+  }
+
+  if ("upweightMultiplier" in body) {
+    const parsed = toOptionalInt(body.upweightMultiplier, { field: "upweightMultiplier", min: 2, max: 4 });
+    if (parsed == null) throw createHttpError(400, "upweightMultiplier must be 2-4.");
+    payload.upweightMultiplier = parsed;
+  }
+
+  if ("p0FocusOnly" in body) payload.p0FocusOnly = Boolean(body.p0FocusOnly);
+  if ("emphasiseQuotes" in body) payload.emphasiseQuotes = Boolean(body.emphasiseQuotes);
+
+  if ("maxQuotes" in body) {
+    const parsed = toOptionalInt(body.maxQuotes, { field: "maxQuotes", min: 3, max: 10 });
+    if (parsed == null) throw createHttpError(400, "maxQuotes must be 3-10.");
+    payload.maxQuotes = parsed;
+  }
+
+  if ("competingMinEach" in body) {
+    const parsed = toOptionalInt(body.competingMinEach, { field: "competingMinEach", min: 2, max: 10 });
+    if (parsed == null) throw createHttpError(400, "competingMinEach must be 2-10.");
+    payload.competingMinEach = parsed;
+  }
+
+  if ("competingMinSplitRatio" in body) {
+    const numeric = Number(body.competingMinSplitRatio);
+    if (!Number.isFinite(numeric) || numeric < 0.2 || numeric > 0.8) {
+      throw createHttpError(400, "competingMinSplitRatio must be 0.20-0.80.");
+    }
+    payload.competingMinSplitRatio = Number(numeric.toFixed(2));
+  }
+
   return payload;
 };
 
@@ -467,6 +694,7 @@ const withSeedScreenAssets = (screensRows) => {
 };
 
 const ASSET_PATH_PATTERN = /^[a-z0-9-_/]+\/\d{2}-[a-z0-9-]+\.(png|jpg)$/i;
+const LEGACY_ASSET_PATH_PATTERN = /^[a-z0-9-_/]+\/\d{2}[ _-][a-z0-9][a-z0-9 ._-]*\.(png|jpg)$/i;
 const SCREEN_FILE_EXTENSIONS = new Set([".png", ".jpg"]);
 let hasLoggedScreenAssetValidation = false;
 
@@ -506,7 +734,7 @@ const validateScreenLibraryAssetPaths = (screenLibraryRows) => {
     }
     for (const assetPathRaw of assets) {
       const assetPath = String(assetPathRaw ?? "").trim();
-      if (!ASSET_PATH_PATTERN.test(assetPath)) {
+      if (!ASSET_PATH_PATTERN.test(assetPath) && !LEGACY_ASSET_PATH_PATTERN.test(assetPath)) {
         // eslint-disable-next-line no-console
         console.warn(`[seed-validator] screen "${screenName}" asset path violates naming convention: ${assetPath}`);
       }
@@ -877,6 +1105,23 @@ const sendJson = (response, statusCode, payload) => {
   response.end(JSON.stringify(payload));
 };
 
+const createRequestAbortController = (request, response) => {
+  const controller = new AbortController();
+  const abort = () => {
+    if (!controller.signal.aborted) controller.abort();
+    cleanup();
+  };
+  const cleanup = () => {
+    request.off("aborted", abort);
+    response.off("close", abort);
+    response.off("finish", cleanup);
+  };
+  request.on("aborted", abort);
+  response.on("close", abort);
+  response.on("finish", cleanup);
+  return { controller, cleanup };
+};
+
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const WRITE_RATE_LIMIT_MAX = Math.max(10, Number(process.env.API_RATE_LIMIT_WRITES_PER_MINUTE ?? 180));
 const SYNTHESIS_RATE_LIMIT_MAX = Math.max(3, Number(process.env.API_RATE_LIMIT_SYNTHESIS_PER_MINUTE ?? 20));
@@ -973,39 +1218,41 @@ const bootstrapPayloadDb = () => {
   return { products, features, screens, featureRequests, screenFeedback: feedback, kudosQuotes: kudos, appAreas: [], cardSortConcepts: [], adminTables: tables };
 };
 
-const buildAdminTablesPostgres = async () =>
-  withPostgresClient(async (client) => {
-    const names = (
-      await client.query(
-        `SELECT table_name
-         FROM information_schema.tables
-         WHERE table_schema = 'public'
-         ORDER BY table_name`,
-      )
-    ).rows
-      .map((row) => String(row.table_name))
-      .filter((name) => ERD_TABLES.includes(name.toLowerCase()));
+const buildAdminTablesPostgresFromClient = async (client) => {
+  const names = (
+    await client.query(
+      `SELECT table_name
+       FROM information_schema.tables
+       WHERE table_schema = 'public'
+       ORDER BY table_name`,
+    )
+  ).rows
+    .map((row) => String(row.table_name))
+    .filter((name) => ERD_TABLES.includes(name.toLowerCase()));
 
-    const tables = [];
-    for (const tableName of names) {
-      const columnRows = await client.query(
-        `SELECT column_name
-         FROM information_schema.columns
-         WHERE table_schema = 'public'
-           AND table_name = $1
-         ORDER BY ordinal_position`,
-        [tableName],
-      );
-      const rowData = await client.query(`SELECT * FROM ${tableName}`);
-      tables.push({
-        id: tableName,
-        label: tableName,
-        columns: columnRows.rows.map((row) => String(row.column_name)),
-        rows: rowData.rows,
-      });
-    }
-    return tables;
-  });
+  const tables = [];
+  for (const tableName of names) {
+    const columnRows = await client.query(
+      `SELECT column_name
+       FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND table_name = $1
+       ORDER BY ordinal_position`,
+      [tableName],
+    );
+    const rowData = await client.query(`SELECT * FROM ${quoteIdentifier(tableName)}`);
+    tables.push({
+      id: tableName,
+      label: tableName,
+      columns: columnRows.rows.map((row) => String(row.column_name)),
+      rows: rowData.rows,
+    });
+  }
+  return tables;
+};
+
+const buildAdminTablesPostgres = async () =>
+  withPostgresClient(async (client) => buildAdminTablesPostgresFromClient(client));
 
 const bootstrapPayloadPostgres = async () =>
   withPostgresClient(async (client) => {
@@ -1070,7 +1317,9 @@ const bootstrapPayloadPostgres = async () =>
       `)
     ).rows;
 
-    return { products, features, screens, featureRequests, screenFeedback, kudosQuotes, appAreas: [], cardSortConcepts: [], adminTables: [] };
+    const adminTables = await buildAdminTablesPostgresFromClient(client);
+
+    return { products, features, screens, featureRequests, screenFeedback, kudosQuotes, appAreas: [], cardSortConcepts: [], adminTables: adminTables };
   });
 
 const toFlatBootstrap = () => {
@@ -1787,11 +2036,6 @@ const timingSafePinMatch = (candidate, expected) => {
   return crypto.timingSafeEqual(candidateHash, expectedHash);
 };
 
-const toInteger = (value, fallback = 0) => {
-  const n = Number(value);
-  return Number.isFinite(n) ? Math.floor(n) : fallback;
-};
-
 const sanitizeModerationInputType = (value) => {
   const normalized = String(value ?? "").trim().toLowerCase();
   if (normalized === "feature_request") return "feature_request";
@@ -2123,6 +2367,10 @@ const buildSessionConfigPayload = () => {
   const cutoffAt = Number.isFinite(cutoffDate.getTime()) ? cutoffDate.toISOString() : nowIso();
   const remainingSeconds = Math.max(0, Math.ceil((new Date(cutoffAt).getTime() - Date.now()) / 1_000));
   const inputWindowOpen = synthesisSessionState.wallWindowOpen && remainingSeconds > 0;
+  const mobileWindowCloseTimeLocal = normalizeLocalTime(
+    synthesisSessionState.mobileWindowCloseTime,
+    toLocalHm(cutoffAt),
+  );
   return {
     inputCutoffAt: cutoffAt,
     inputWindowOpen,
@@ -2130,10 +2378,144 @@ const buildSessionConfigPayload = () => {
     wallWindowOpen: synthesisSessionState.wallWindowOpen,
     mobileWindowOpen: synthesisSessionState.mobileWindowOpen,
     themesViewActive: synthesisSessionState.themesViewActive,
-    synthesisMinSignals: Math.max(1, toInteger(synthesisSessionState.synthesisMinSignals, DEFAULT_SYNTHESIS_MIN_SIGNALS)),
-    mobileWindowCloseTime: cutoffAt,
-    mobileWindowCloseTimeLocal: toLocalTimeLabel(cutoffAt),
+    synthesisMinSignals: Math.max(10, Math.min(500, toInteger(synthesisSessionState.synthesisMinSignals, DEFAULT_SYNTHESIS_MIN_SIGNALS))),
+    mobileWindowCloseTime: localTimeToIso(mobileWindowCloseTimeLocal, cutoffAt),
+    mobileWindowCloseTimeLocal,
+    eventName: String(synthesisSessionState.eventName ?? "").trim(),
+    eventSlug: String(synthesisSessionState.eventSlug ?? "").trim() || slugifyEventName(synthesisSessionState.eventName || ""),
+    ceremonyStartTimeLocal: normalizeLocalTime(synthesisSessionState.ceremonyStartTimeLocal, ""),
+    day2RevealTimeLocal: normalizeLocalTime(synthesisSessionState.day2RevealTimeLocal, ""),
     updatedAt: nowIso(),
+  };
+};
+
+const buildSynthesisParametersPayload = () => {
+  const usingDefaults = synthesisParametersUpdatedAt == null;
+  return {
+    parameters: {
+      excludeBelowN: synthesisParametersState.excludeBelowN,
+      upweightSection: synthesisParametersState.upweightSection,
+      upweightMultiplier: synthesisParametersState.upweightMultiplier,
+      p0FocusOnly: synthesisParametersState.p0FocusOnly,
+      emphasiseQuotes: synthesisParametersState.emphasiseQuotes,
+      maxQuotes: synthesisParametersState.maxQuotes,
+      competingMinEach: synthesisParametersState.competingMinEach,
+      competingMinSplitRatio: synthesisParametersState.competingMinSplitRatio,
+    },
+    updatedAt: synthesisParametersUpdatedAt,
+    usingDefaults,
+  };
+};
+
+const buildLatestSynthesisPhase1Payload = () => {
+  const runtime = readRuntimeStore(runtimeStorePath);
+  return {
+    phase1Analysis: runtime.latestPhase1Analysis ?? null,
+  };
+};
+
+const buildLatestTShirtSizingPayload = () => {
+  const runtime = readRuntimeStore(runtimeStorePath);
+  return {
+    sizing: runtime.latestTShirtSizing ?? null,
+  };
+};
+
+const buildLatestSynthesisOutputPayload = () => {
+  const runtime = readRuntimeStore(runtimeStorePath);
+  return {
+    output: runtime.latestSynthesisOutput ?? null,
+  };
+};
+
+const buildLatestSynthesisMetadataPayload = () => {
+  const runtime = readRuntimeStore(runtimeStorePath);
+  return {
+    metadata: runtime.latestSynthesisMetadata ?? null,
+  };
+};
+
+const buildSavedNarrativePayload = () => {
+  const runtime = readRuntimeStore(runtimeStorePath);
+  return {
+    savedNarrative: runtime.savedNarrative ?? null,
+  };
+};
+
+const isPlainObject = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const patchLatestSynthesisPhase1 = (body) => {
+  const hasField = Object.prototype.hasOwnProperty.call(body ?? {}, "phase1Analysis");
+  const phase1Analysis = hasField ? body.phase1Analysis : null;
+  if (phase1Analysis != null && !isPlainObject(phase1Analysis)) {
+    throw createHttpError(400, "phase1Analysis must be an object or null.");
+  }
+
+  const runtime = readRuntimeStore(runtimeStorePath);
+  runtime.latestPhase1Analysis = phase1Analysis ?? null;
+  writeRuntimeStore(runtimeStorePath, runtime);
+  return {
+    phase1Analysis: runtime.latestPhase1Analysis,
+  };
+};
+
+const patchLatestTShirtSizing = (body) => {
+  const hasField = Object.prototype.hasOwnProperty.call(body ?? {}, "sizing");
+  const sizing = hasField ? body.sizing : null;
+  if (sizing != null && !isPlainObject(sizing)) {
+    throw createHttpError(400, "sizing must be an object or null.");
+  }
+
+  const runtime = readRuntimeStore(runtimeStorePath);
+  runtime.latestTShirtSizing = sizing ?? null;
+  writeRuntimeStore(runtimeStorePath, runtime);
+  return {
+    sizing: runtime.latestTShirtSizing,
+  };
+};
+
+const patchLatestSynthesisOutput = (body) => {
+  const hasField = Object.prototype.hasOwnProperty.call(body ?? {}, "output");
+  const output = hasField ? body.output : null;
+  if (output != null && typeof output !== "string") {
+    throw createHttpError(400, "output must be a string or null.");
+  }
+
+  const runtime = readRuntimeStore(runtimeStorePath);
+  runtime.latestSynthesisOutput = output ?? null;
+  writeRuntimeStore(runtimeStorePath, runtime);
+  return {
+    output: runtime.latestSynthesisOutput,
+  };
+};
+
+const patchLatestSynthesisMetadata = (body) => {
+  const hasField = Object.prototype.hasOwnProperty.call(body ?? {}, "metadata");
+  const metadata = hasField ? body.metadata : null;
+  if (metadata != null && !isPlainObject(metadata)) {
+    throw createHttpError(400, "metadata must be an object or null.");
+  }
+
+  const runtime = readRuntimeStore(runtimeStorePath);
+  runtime.latestSynthesisMetadata = metadata ?? null;
+  writeRuntimeStore(runtimeStorePath, runtime);
+  return {
+    metadata: runtime.latestSynthesisMetadata,
+  };
+};
+
+const patchSavedNarrative = (body) => {
+  const hasField = Object.prototype.hasOwnProperty.call(body ?? {}, "savedNarrative");
+  const savedNarrative = hasField ? body.savedNarrative : null;
+  if (savedNarrative != null && !isPlainObject(savedNarrative)) {
+    throw createHttpError(400, "savedNarrative must be an object or null.");
+  }
+
+  const runtime = readRuntimeStore(runtimeStorePath);
+  runtime.savedNarrative = savedNarrative ?? null;
+  writeRuntimeStore(runtimeStorePath, runtime);
+  return {
+    savedNarrative: runtime.savedNarrative,
   };
 };
 
@@ -2143,6 +2525,30 @@ const parseInputCountType = (value) => {
   if (normalized === "screen_feedback") return "screen_feedback";
   if (normalized === "kudos") return "kudos";
   return null;
+};
+
+const validateAICallPayload = (body) => {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw createHttpError(400, "JSON object required.");
+  }
+  const systemPrompt = toRequiredString(body.systemPrompt, { field: "systemPrompt", maxLength: 100_000 });
+  const userPrompt = toRequiredString(body.userPrompt, { field: "userPrompt", maxLength: 100_000 });
+  const model = toRequiredString(body.model, { field: "model", maxLength: 200 });
+  const maxTokens = toOptionalInt(body.maxTokens, { field: "maxTokens", min: 1, max: 131_072 });
+  if (maxTokens == null) {
+    throw createHttpError(400, "maxTokens is required.");
+  }
+  const temperatureRaw = Number(body.temperature);
+  if (!Number.isFinite(temperatureRaw) || temperatureRaw < 0 || temperatureRaw > 2) {
+    throw createHttpError(400, "temperature must be between 0 and 2.");
+  }
+  return {
+    systemPrompt,
+    userPrompt,
+    model,
+    maxTokens: Number(maxTokens),
+    temperature: temperatureRaw,
+  };
 };
 
 const getInputCounts = async (type = null) => {
@@ -2173,6 +2579,31 @@ const getDedupCounts = async () => {
   };
 };
 
+const buildAdminBootstrapPayload = async () => {
+  const [sessionConfig, synthesisParameters, inputsCount, dedupCounts, flaggedItems] = await Promise.all([
+    Promise.resolve(buildSessionConfigPayload()),
+    Promise.resolve(buildSynthesisParametersPayload()),
+    getInputCounts(),
+    getDedupCounts(),
+    getFlaggedInputs(),
+  ]);
+  const runtime = readRuntimeStore(runtimeStorePath);
+
+  return {
+    sessionConfig,
+    synthesisParameters,
+    inputsCount,
+    dedupCounts,
+    latestPhase1Analysis: runtime.latestPhase1Analysis ?? null,
+    latestTShirtSizing: runtime.latestTShirtSizing ?? null,
+    savedNarrative: runtime.savedNarrative ?? null,
+    moderation: {
+      pendingCount: flaggedItems.length,
+    },
+    loadedAt: nowIso(),
+  };
+};
+
 const patchSessionConfig = (body) => {
   const nextState = { ...synthesisSessionState };
   if (typeof body?.wallWindowOpen === "boolean") {
@@ -2185,7 +2616,7 @@ const patchSessionConfig = (body) => {
     nextState.themesViewActive = Boolean(body.themesViewActive);
   }
   if (typeof body?.synthesisMinSignals === "number") {
-    nextState.synthesisMinSignals = Math.max(1, toInteger(body.synthesisMinSignals, synthesisSessionState.synthesisMinSignals));
+    nextState.synthesisMinSignals = Math.max(10, Math.min(500, toInteger(body.synthesisMinSignals, synthesisSessionState.synthesisMinSignals)));
   }
   if (typeof body?.inputCutoffAt === "string" && body.inputCutoffAt) {
     const parsedCutoff = new Date(body.inputCutoffAt);
@@ -2193,54 +2624,68 @@ const patchSessionConfig = (body) => {
       ? parsedCutoff.toISOString()
       : nextState.inputCutoffAt;
   }
+  if (typeof body?.mobileWindowCloseTime === "string" && body.mobileWindowCloseTime) {
+    nextState.mobileWindowCloseTime = normalizeLocalTime(body.mobileWindowCloseTime, nextState.mobileWindowCloseTime);
+  }
+  if (typeof body?.eventName === "string") {
+    nextState.eventName = body.eventName.trim().slice(0, 80);
+  }
+  if (typeof body?.eventSlug === "string") {
+    nextState.eventSlug = body.eventSlug.trim().toLowerCase().replace(/[^a-z0-9-]/gu, "").slice(0, 40);
+  }
+  if (typeof body?.ceremonyStartTimeLocal === "string" && body.ceremonyStartTimeLocal) {
+    nextState.ceremonyStartTimeLocal = normalizeLocalTime(body.ceremonyStartTimeLocal, nextState.ceremonyStartTimeLocal);
+  }
+  if (typeof body?.day2RevealTimeLocal === "string" && body.day2RevealTimeLocal) {
+    nextState.day2RevealTimeLocal = normalizeLocalTime(body.day2RevealTimeLocal, nextState.day2RevealTimeLocal);
+  }
   synthesisSessionState.inputCutoffAt = nextState.inputCutoffAt;
   synthesisSessionState.wallWindowOpen = nextState.wallWindowOpen;
   synthesisSessionState.mobileWindowOpen = nextState.mobileWindowOpen;
   synthesisSessionState.themesViewActive = nextState.themesViewActive;
   synthesisSessionState.synthesisMinSignals = nextState.synthesisMinSignals;
+  synthesisSessionState.mobileWindowCloseTime = nextState.mobileWindowCloseTime;
+  synthesisSessionState.eventName = nextState.eventName;
+  synthesisSessionState.eventSlug = nextState.eventSlug;
+  synthesisSessionState.ceremonyStartTimeLocal = nextState.ceremonyStartTimeLocal;
+  synthesisSessionState.day2RevealTimeLocal = nextState.day2RevealTimeLocal;
+  const runtime = readRuntimeStore(runtimeStorePath);
+  runtime.sessionConfig = {
+    ...(runtime.sessionConfig && typeof runtime.sessionConfig === "object" ? runtime.sessionConfig : {}),
+    inputCutoffAt: synthesisSessionState.inputCutoffAt,
+    wallWindowOpen: synthesisSessionState.wallWindowOpen,
+    mobileWindowOpen: synthesisSessionState.mobileWindowOpen,
+    themesViewActive: synthesisSessionState.themesViewActive,
+    synthesisMinSignals: synthesisSessionState.synthesisMinSignals,
+    mobileWindowCloseTime: synthesisSessionState.mobileWindowCloseTime,
+    eventName: synthesisSessionState.eventName,
+    eventSlug: synthesisSessionState.eventSlug,
+    ceremonyStartTimeLocal: synthesisSessionState.ceremonyStartTimeLocal,
+    day2RevealTimeLocal: synthesisSessionState.day2RevealTimeLocal,
+  };
+  writeRuntimeStore(runtimeStorePath, runtime);
   return buildSessionConfigPayload();
 };
 
-const checkAnthropicConnectivity = async () => {
-  if (!synthesisConfig.anthropicKey) {
-    return {
-      provider: "anthropic",
-      reachable: false,
-      reason: "not_configured",
-      checkedAt: nowIso(),
-    };
-  }
+const patchSynthesisParameters = (body) => {
+  if ("excludeBelowN" in body) synthesisParametersState.excludeBelowN = body.excludeBelowN;
+  if ("upweightSection" in body) synthesisParametersState.upweightSection = body.upweightSection;
+  if ("upweightMultiplier" in body) synthesisParametersState.upweightMultiplier = body.upweightMultiplier;
+  if ("p0FocusOnly" in body) synthesisParametersState.p0FocusOnly = body.p0FocusOnly;
+  if ("emphasiseQuotes" in body) synthesisParametersState.emphasiseQuotes = body.emphasiseQuotes;
+  if ("maxQuotes" in body) synthesisParametersState.maxQuotes = body.maxQuotes;
+  if ("competingMinEach" in body) synthesisParametersState.competingMinEach = body.competingMinEach;
+  if ("competingMinSplitRatio" in body) synthesisParametersState.competingMinSplitRatio = body.competingMinSplitRatio;
 
-  const probeUrl = `${synthesisConfig.anthropicBase.replace(/\/$/u, "")}/models`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 4_500);
+  synthesisParametersUpdatedAt = nowIso();
+  const runtime = readRuntimeStore(runtimeStorePath);
+  runtime.synthesisParameters = {
+    ...synthesisParametersState,
+  };
+  runtime.synthesisParametersUpdatedAt = synthesisParametersUpdatedAt;
+  writeRuntimeStore(runtimeStorePath, runtime);
 
-  try {
-    const probe = await fetch(probeUrl, {
-      method: "GET",
-      headers: {
-        "x-api-key": synthesisConfig.anthropicKey,
-        "anthropic-version": synthesisConfig.anthropicVersion,
-      },
-      signal: controller.signal,
-    });
-    return {
-      provider: "anthropic",
-      reachable: probe.ok,
-      reason: probe.ok ? undefined : `http_${probe.status}`,
-      checkedAt: nowIso(),
-    };
-  } catch (error) {
-    const reason = error instanceof Error ? error.name : "request_failed";
-    return {
-      provider: "anthropic",
-      reachable: false,
-      reason,
-      checkedAt: nowIso(),
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
+  return buildSynthesisParametersPayload();
 };
 
 export const handleApiRequest = async (request, response) => {
@@ -2279,13 +2724,16 @@ export const handleApiRequest = async (request, response) => {
       return;
     }
 
+    if (method === "GET" && pathname === "/api/bootstrap-admin") {
+      sendJson(response, 200, await buildAdminBootstrapPayload());
+      return;
+    }
+
     if (method === "POST" && pathname === "/api/universe/search") {
       checkRateLimit({ request, bucket: "universe-search", max: SYNTHESIS_RATE_LIMIT_MAX });
       const body = await readBody(request);
-      const provider = String(body.provider ?? "openai").toLowerCase() === "anthropic" ? "anthropic" : "openai";
       const messages = Array.isArray(body.messages) ? body.messages : [];
       const completion = await runServerTextCompletion({
-        provider,
         messages,
         maxOutputTokens: body.maxOutputTokens,
         temperature: body.temperature,
@@ -2296,6 +2744,121 @@ export const handleApiRequest = async (request, response) => {
         model: completion.model,
         text: completion.text,
       });
+      return;
+    }
+
+    if (method === "POST" && pathname === "/api/ai/complete") {
+      const rawBody = await readBody(request, { maxBytes: MAX_BODY_BYTES * 4 });
+      const {
+        systemPrompt,
+        userPrompt,
+        model,
+        maxTokens,
+        temperature,
+      } = rawBody ?? {};
+      // eslint-disable-next-line no-console
+      console.log("[api/ai/complete] Request received:", JSON.stringify({
+        model,
+        maxTokens,
+        temperature,
+        systemPromptLength: typeof systemPrompt === "string" ? systemPrompt.length : null,
+        userPromptLength: typeof userPrompt === "string" ? userPrompt.length : null,
+      }));
+      if (!systemPrompt || !userPrompt || !model || !maxTokens || temperature === undefined) {
+        sendJson(response, 400, {
+          error: "Missing required fields",
+          received: Object.keys(rawBody ?? {}),
+        });
+        return;
+      }
+      
+      console.log('[api/ai/complete] Calling Anthropic with key length:', 
+        (process.env.ANTHROPIC_API_KEY ?? '').length);
+
+      const body = validateAICallPayload(rawBody);
+      const requestAbort = createRequestAbortController(request, response);
+      let routeTimeout = null;
+      const startedAt = Date.now();
+      const waitingLog = setInterval(() => {
+        console.log(`[api/ai/complete] still waiting on provider... ${Date.now() - startedAt}ms`);
+      }, 5_000);
+      try {
+        
+        console.log("[api/ai/complete] About to call runServerAICall with model:", body.model, "maxTokens:", body.maxTokens);
+        const result = await Promise.race([
+          runServerAICall({
+            systemPrompt: body.systemPrompt,
+            userPrompt: body.userPrompt,
+            model: body.model,
+            maxTokens: body.maxTokens,
+            temperature: body.temperature,
+            stream: false,
+            signal: requestAbort.controller.signal,
+          }),
+          new Promise((_, reject) => {
+            routeTimeout = setTimeout(() => {
+              console.error(`[api/ai/complete] route timeout fired at ${aiCompleteRouteTimeoutMs}ms`);
+              requestAbort.controller.abort();
+              reject(createHttpError(504, "AI completion timed out at proxy route."));
+            }, aiCompleteRouteTimeoutMs);
+          }),
+        ]);
+
+        console.log("[api/ai/complete] runServerAICall returned, content length:", result.content.length);
+
+        sendJson(response, 200, {
+          content: result.content,
+          provider: result.provider,
+          model: body.model,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "AI completion failed.";
+        const status = error instanceof HttpError ? error.statusCode : 500;
+        sendJson(response, status, { error: message });
+      } finally {
+        clearInterval(waitingLog);
+        if (routeTimeout) clearTimeout(routeTimeout);
+        requestAbort.cleanup();
+      }
+      return;
+    }
+
+    if (method === "POST" && pathname === "/api/ai/stream") {
+      const body = validateAICallPayload(await readBody(request, { maxBytes: MAX_BODY_BYTES * 4 }));
+      const requestAbort = createRequestAbortController(request, response);
+      response.writeHead(200, {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "Access-Control-Allow-Origin": "*",
+      });
+      response.write(": connected\n\n");
+      try {
+        
+        console.log("[api/ai/complete] About to call runServerAICall with model:", body.model, "maxTokens:", body.maxTokens);
+
+        await runServerAICall({
+          systemPrompt: body.systemPrompt,
+          userPrompt: body.userPrompt,
+          model: body.model,
+          maxTokens: body.maxTokens,
+          temperature: body.temperature,
+          stream: true,
+          signal: requestAbort.controller.signal,
+          onToken: (token) => {
+            response.write(`data: ${JSON.stringify({ token })}\n\n`);
+          },
+        });
+        console.log("[api/ai/stream] runServerAICall completed");
+
+        response.write("data: [DONE]\n\n");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "AI stream failed.";
+        response.write(`data: ${JSON.stringify({ error: message })}\n\n`);
+      } finally {
+        requestAbort.cleanup();
+        response.end();
+      }
       return;
     }
 
@@ -2321,11 +2884,94 @@ export const handleApiRequest = async (request, response) => {
       return;
     }
 
+    if (method === "GET" && pathname === "/api/synthesis/parameters") {
+      sendJson(response, 200, buildSynthesisParametersPayload());
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/synthesis/phase1") {
+      sendJson(response, 200, buildLatestSynthesisPhase1Payload());
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/synthesis/sizing") {
+      sendJson(response, 200, buildLatestTShirtSizingPayload());
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/synthesis/output") {
+      sendJson(response, 200, buildLatestSynthesisOutputPayload());
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/synthesis/metadata") {
+      sendJson(response, 200, buildLatestSynthesisMetadataPayload());
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/synthesis/narrative") {
+      sendJson(response, 200, buildSavedNarrativePayload());
+      return;
+    }
+
     if (method === "PATCH" && pathname === "/api/session/config") {
       checkRateLimit({ request, bucket: "session-config-patch", max: WRITE_RATE_LIMIT_MAX });
       const body = await readBody(request);
       const validated = validateSessionConfigPatchPayload(body);
       sendJson(response, 200, patchSessionConfig(validated));
+      return;
+    }
+
+    if (method === "PATCH" && pathname === "/api/synthesis/parameters") {
+      checkRateLimit({ request, bucket: "synthesis-parameters-patch", max: WRITE_RATE_LIMIT_MAX });
+      const body = await readBody(request);
+      const validated = validateSynthesisParametersPatchPayload(body);
+      sendJson(response, 200, patchSynthesisParameters(validated));
+      return;
+    }
+
+    if (method === "POST" && pathname === "/api/synthesis/phase1") {
+      const body = await readBody(request);
+      if (!isPlainObject(body)) {
+        throw createHttpError(400, "JSON object required.");
+      }
+      sendJson(response, 200, patchLatestSynthesisPhase1(body));
+      return;
+    }
+
+    if (method === "POST" && pathname === "/api/synthesis/sizing") {
+      const body = await readBody(request);
+      if (!isPlainObject(body)) {
+        throw createHttpError(400, "JSON object required.");
+      }
+      sendJson(response, 200, patchLatestTShirtSizing(body));
+      return;
+    }
+
+    if (method === "POST" && pathname === "/api/synthesis/output") {
+      const body = await readBody(request);
+      if (!isPlainObject(body)) {
+        throw createHttpError(400, "JSON object required.");
+      }
+      sendJson(response, 200, patchLatestSynthesisOutput(body));
+      return;
+    }
+
+    if (method === "POST" && pathname === "/api/synthesis/metadata") {
+      const body = await readBody(request);
+      if (!isPlainObject(body)) {
+        throw createHttpError(400, "JSON object required.");
+      }
+      sendJson(response, 200, patchLatestSynthesisMetadata(body));
+      return;
+    }
+
+    if (method === "POST" && pathname === "/api/synthesis/narrative") {
+      const body = await readBody(request);
+      if (!isPlainObject(body)) {
+        throw createHttpError(400, "JSON object required.");
+      }
+      sendJson(response, 200, patchSavedNarrative(body));
       return;
     }
 
@@ -2419,8 +3065,13 @@ export const handleApiRequest = async (request, response) => {
       return;
     }
 
-    if (method === "GET" && pathname === "/api/synthesis/providers/anthropic/health") {
-      sendJson(response, 200, await checkAnthropicConnectivity());
+    if (method === "GET" && pathname === "/api/synthesis/providers/health") {
+      const payload = await getAIProviderHealth();
+      sendJson(response, 200, {
+        reachable: Boolean(payload.reachable),
+        provider: payload.provider,
+        reason: payload.reason,
+      });
       return;
     }
 
@@ -2723,6 +3374,10 @@ export const handleApiRequest = async (request, response) => {
 
     sendJson(response, 404, { error: "Not found" });
   } catch (error) {
+    if (error instanceof ServerAICallError) {
+      sendJson(response, 500, { error: error.message });
+      return;
+    }
     if (error instanceof HttpError) {
       sendJson(response, error.statusCode, { error: error.message });
       return;

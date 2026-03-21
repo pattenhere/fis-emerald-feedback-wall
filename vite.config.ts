@@ -1,6 +1,10 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 
+declare const process: {
+  env: Record<string, string | undefined>;
+};
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ".", "");
   const apiBase = env.VITE_SYNTHESIS_API_BASE_URL?.trim();
@@ -12,6 +16,13 @@ export default defineConfig(({ mode }) => {
     define: {
       "process.env.EMERALD_UI_VARIANT": JSON.stringify(env.EMERALD_UI_VARIANT ?? "legacy"),
       "process.env.EMERALD_FEEDBACK_PANEL_STAY_OPEN": JSON.stringify(env.EMERALD_FEEDBACK_PANEL_STAY_OPEN ?? "false"),
+      "process.env.SYNTHESIS_API_PROVIDER": JSON.stringify(
+        env.SYNTHESIS_API_PROVIDER ??
+          env.SYNTHESIS_AI_PROVIDER ??
+          process.env.SYNTHESIS_API_PROVIDER ??
+          process.env.SYNTHESIS_AI_PROVIDER ??
+          "anthropic",
+      ),
     },
     server: {
       port: 4000,

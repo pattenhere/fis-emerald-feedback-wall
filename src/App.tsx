@@ -82,7 +82,6 @@ const App = (): JSX.Element => {
     adminTables,
     reseeding,
     reseedData,
-    refreshAdminTables,
     adminDataSource,
     adminDbEngine,
     isDataLoaded,
@@ -528,16 +527,9 @@ const App = (): JSX.Element => {
         onOpenLiveResponses={() => setShowLiveResponses(true)}
         onOpenSplash={() => setShowSplash(true)}
         onOpenSystemAdmin={() => {
-          setShowAllResponsesPage(false);
-          setShowSystemAdminPage((current) => {
-            const next = !current;
-            if (next) {
-              void refreshAdminTables();
-            }
-            return next;
-          });
+          window.location.assign("/facilitator/overview");
         }}
-        systemAdminActive={showSystemAdminPage}
+        systemAdminActive={false}
         mobileQrEnabled={mobileQrActive}
       />
       <main className={`content-shell ${showAllResponsesPage || showSystemAdminPage ? "is-admin-mode" : inProductLanding ? "is-product-landing" : drawerOpen ? "" : "is-drawer-collapsed"}`}>
@@ -576,9 +568,7 @@ const App = (): JSX.Element => {
             featureCountByProductId={featureCountByProductId}
             onSelectProduct={handleSelectProduct}
             onOpenSystemAdmin={() => {
-              setShowAllResponsesPage(false);
-              void refreshAdminTables();
-              setShowSystemAdminPage(true);
+              window.location.assign("/facilitator/overview");
             }}
           />
         ) : (

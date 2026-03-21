@@ -3,6 +3,8 @@ import type { SeedTableDefinition } from "../state/adminSeedData";
 import type { DbSeedPayload } from "../state/dbSeedPayload";
 import type { AppArea } from "../types/domain";
 import { buildSynthesisAuthHeaders } from "./synthesisAuth";
+import type { TShirtSizingResultsPayload } from "../synthesis/tshirt/sizingResultsStore";
+import type { Day2Narrative } from "./synthesisModuleApi";
 
 export interface BootstrapResponse {
   appAreas: Array<{ id: AppArea; label: string; dark?: boolean }>;
@@ -51,8 +53,29 @@ interface HealthResponse {
   dbEngine?: "sqlite" | "postgres";
 }
 
+export interface AdminBootstrapResponse {
+  sessionConfig: Record<string, unknown>;
+  synthesisParameters: {
+    parameters: Record<string, unknown>;
+    updatedAt: string | null;
+    usingDefaults: boolean;
+  };
+  inputsCount: Record<string, unknown>;
+  dedupCounts: Record<string, unknown>;
+  latestPhase1Analysis?: unknown;
+  latestTShirtSizing?: TShirtSizingResultsPayload | null;
+  savedNarrative?: Day2Narrative | null;
+  moderation: {
+    pendingCount: number;
+  };
+  loadedAt: string;
+}
+
 const jsonHeaders = { "content-type": "application/json" };
 const SESSION_STORAGE_KEY = "emerald.feedback.session_id";
+const API_BASE =
+  String(import.meta.env.VITE_SYNTHESIS_API_BASE_URL ?? "").trim().replace(/\/+$/u, "");
+const toApiUrl = (path: string): string => (API_BASE ? `${API_BASE}${path}` : path);
 
 let inMemorySessionId: string | null = null;
 const getSessionId = (): string => {
@@ -86,13 +109,18 @@ const readJson = async <T>(response: Response): Promise<T> => {
 
 export const dataApi = {
   getHealth: async (): Promise<HealthResponse> => {
-    const response = await fetch("/health");
+    const response = await fetch(toApiUrl("/health"));
     return readJson<HealthResponse>(response);
   },
 
   getBootstrap: async (): Promise<BootstrapResponse> => {
     const response = await fetch("/api/bootstrap");
     return readJson<BootstrapResponse>(response);
+  },
+
+  getAdminBootstrap: async (): Promise<AdminBootstrapResponse> => {
+    const response = await fetch("/api/bootstrap-admin");
+    return readJson<AdminBootstrapResponse>(response);
   },
 
   getAdminTables: async (): Promise<SeedTableDefinition[]> => {

@@ -5,10 +5,16 @@ import { UI_VARIANT } from "./config";
 import { NewUILayout } from "./layouts/NewUILayout";
 import { SynthesisModuleApp } from "./synthesis/SynthesisModuleApp";
 import "./styles/reset.css";
-import "./styles/styleguide.css";
 
 const pathname = typeof window === "undefined" ? "/" : window.location.pathname;
-const isSynthesisRoute = pathname === "/synthesis" || pathname.startsWith("/synthesis/");
+const isSynthesisRoute =
+  pathname === "/synthesis" ||
+  pathname.startsWith("/synthesis/") ||
+  pathname === "/facilitator" ||
+  pathname.startsWith("/facilitator/") ||
+  pathname === "/admin" ||
+  pathname.startsWith("/admin/") ||
+  pathname.startsWith("/reveal/");
 const LegacyLayout = App;
 const RootComponent = isSynthesisRoute
   ? SynthesisModuleApp

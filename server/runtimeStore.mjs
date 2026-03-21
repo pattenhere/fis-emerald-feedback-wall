@@ -8,6 +8,14 @@ const emptyStore = () => ({
   kudos: [],
   cardSortResults: [],
   moderationInputStates: {},
+  sessionConfig: {},
+  synthesisParameters: null,
+  synthesisParametersUpdatedAt: null,
+  latestPhase1Analysis: null,
+  latestTShirtSizing: null,
+  latestSynthesisOutput: null,
+  latestSynthesisMetadata: null,
+  savedNarrative: null,
 });
 
 export const initRuntimeStore = (storePath) => {

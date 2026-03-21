@@ -382,7 +382,7 @@ export const SystemAdministratorPage = memo(({
                       <tbody>
                         {pagination.pageItems.length === 0 ? (
                           <tr>
-                            <td colSpan={Math.max(columns.length, 1)}>No rows</td>
+                            <td className="empty-state" colSpan={Math.max(columns.length, 1)}>No rows</td>
                           </tr>
                         ) : (
                           pagination.pageItems.map((row, rowIndex) => (

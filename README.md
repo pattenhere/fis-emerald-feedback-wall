@@ -50,8 +50,11 @@ Environment flags:
 - `VITE_ANTHROPIC_MODEL`
 - `VITE_ANTHROPIC_BASE_URL`
 - `VITE_ANTHROPIC_VERSION`
+- `VITE_SYNTHESIS_PHASE1_TIMEOUT_MS` (client-side Phase 1 timeout, default `180000`)
 - `VITE_INSTITUTION_AI_PROVIDER` (`openai` or `anthropic`)
 - `VITE_INSTITUTION_MATCH_THRESHOLD` (default `0.6`, medium+)
+- `AI_PROVIDER_NON_STREAM_TIMEOUT_MS` (server-side end-to-end timeout for `/api/ai/complete`, default `240000`)
+- `AI_COMPLETE_ROUTE_TIMEOUT_MS` (proxy route timeout budget for `/api/ai/complete`, default `300000`)
 
 ## Styleguide
 

@@ -8,3 +8,5 @@ coverage
 
 .env.config
 .env.config.local
+# TypeScript incremental build metadata
+*.tsbuildinfo
