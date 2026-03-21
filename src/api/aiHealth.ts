@@ -10,11 +10,11 @@ export type AIProviderHealth = {
   error?: string;
 };
 
-const API_BASE =
-  String(import.meta.env.VITE_SYNTHESIS_API_BASE_URL ?? "http://localhost:8787").trim() || "http://localhost:8787";
+const API_BASE = String(import.meta.env.VITE_SYNTHESIS_API_BASE_URL ?? "").trim().replace(/\/+$/u, "");
+const toApiUrl = (path: string): string => (API_BASE ? `${API_BASE}${path}` : path);
 
 export async function getAIProviderHealth(): Promise<AIProviderHealth> {
-  const response = await fetch(`${API_BASE}/api/synthesis/providers/health`, {
+  const response = await fetch(toApiUrl("/api/synthesis/providers/health"), {
     headers: buildSynthesisAuthHeaders(),
   });
   let payload: {

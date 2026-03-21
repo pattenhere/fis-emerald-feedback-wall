@@ -29,8 +29,8 @@ export class AICallError extends Error {
   }
 }
 
-const API_BASE =
-  String(import.meta.env.VITE_SYNTHESIS_API_BASE_URL ?? "http://localhost:8787").trim() || "http://localhost:8787";
+const API_BASE = String(import.meta.env.VITE_SYNTHESIS_API_BASE_URL ?? "").trim().replace(/\/+$/u, "");
+const toApiUrl = (path: string): string => (API_BASE ? `${API_BASE}${path}` : path);
 
 const parseSse = async (response: Response, onToken?: (token: string) => void): Promise<string> => {
   if (!response.body) throw new AICallError("malformed_response", "Missing stream body.");
@@ -109,7 +109,7 @@ export async function aiCall(params: AICallParams): Promise<AICallResult> {
       systemPromptLength: String(params.systemPrompt ?? "").length,
       userPromptLength: String(params.userPrompt ?? "").length,
     });
-    const response = await fetch(`${API_BASE}${endpoint}`, {
+    const response = await fetch(toApiUrl(endpoint), {
       method: "POST",
       signal: controller.signal,
       headers: {

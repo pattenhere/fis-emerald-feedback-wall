@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIS Emerald 2026 — Project Gantt</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%23012834'/%3E%3Ctext x='16' y='23' font-family='Arial Black,sans-serif' font-size='20' font-weight='900' fill='%234BCD3E' text-anchor='middle'%3EF%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#012834;--green:#4BCD3E;--white:#FFFFFF;--off:#F9F5F1;--warm:#E8DBCB;
+  --cyan:#3BCFF0;--blue:#285BC5;--teal:#009775;--mid:#015B7E;
+  --amber:#FFC845;--orange:#FD8D62;--red:#FF1F3E;
+  --H:'Barlow Condensed','Arial Black',sans-serif;
+  --B:'Source Sans 3','Segoe UI',Arial,sans-serif;
+  --rb:rgba(255,255,255,.06);--gl:rgba(255,255,255,.05);--gm:rgba(255,255,255,.12);
+  --tc-design:#3BCFF0;--tc-workshop:#FFC845;--tc-build:#4BCD3E;
+  --tc-spec:#9B6BFF;--tc-test:#FD8D62;--tc-docs:#94b4c8;
+  --staff:#3BCFF0;
+}
+html,body{width:100%;min-height:100vh;overflow-x:hidden}
+body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px;padding:0 0 40px}
+
+/* HEADER */
+.hdr{background:linear-gradient(160deg,#015B7E,#012834);border-bottom:2px solid transparent;
+  border-image:linear-gradient(90deg,#4BCD3E,#3BCFF014) 1;
+  padding:16px 20px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.eyebrow{font-family:var(--B);font-size:10px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--green);margin-bottom:4px}
+.h1{font-family:var(--H);font-size:30px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--white);line-height:1}
+.h1 em{color:var(--green);font-style:normal}
+.sub{margin-top:4px;font-size:11px;color:var(--warm);font-family:var(--B);font-weight:400;letter-spacing:.3px}
+.stats{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;flex-shrink:0}
+.stat{background:rgba(0,0,0,.3);border:1px solid rgba(75,205,62,.2);border-radius:3px;padding:7px 13px;text-align:center;cursor:default;transition:all .15s}
+.stat.btn{cursor:pointer}
+.stat.btn:hover{border-color:rgba(75,205,62,.6);background:rgba(75,205,62,.08)}
+.stat .v{font-family:var(--H);font-size:18px;font-weight:800;color:var(--white);display:block;letter-spacing:.5px}
+.stat .l{font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);display:block;margin-top:2px;font-family:var(--B)}
+.stat.warn{background:rgba(255,31,62,.1);border-color:rgba(255,31,62,.3)}
+.stat.warn .v,.stat.warn .l{color:var(--red)}
+.bl{height:2px;background:linear-gradient(90deg,#4BCD3E,#3BCFF014)}
+
+/* TOOLBAR */
+.tb{display:flex;align-items:center;gap:10px;padding:9px 20px;border-bottom:1px solid var(--rb);flex-wrap:wrap}
+.leg{display:flex;gap:12px;flex-wrap:wrap;align-items:center;flex:1}
+.li{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--warm);font-family:var(--B);white-space:nowrap}
+.ld{width:12px;height:5px;border-radius:1px;flex-shrink:0}
+.ld.dot{border-radius:50%;width:8px;height:8px}
+.ld.dep{background:transparent;border:1px dashed var(--red);width:14px;height:8px;border-radius:1px}
+.ts{width:8px;height:8px;border-radius:1px;flex-shrink:0}
+.sep{width:1px;height:20px;background:rgba(255,255,255,.1);flex-shrink:0}
+.tbtn{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;
+  font-family:var(--B);cursor:pointer;user-select:none;white-space:nowrap;
+  background:rgba(75,205,62,.06);border:1px solid rgba(75,205,62,.2);border-radius:3px;padding:5px 10px;
+  color:rgba(75,205,62,.55);transition:all .15s}
+.tbtn:hover,.tbtn.on{border-color:rgba(75,205,62,.5);color:var(--green);background:rgba(75,205,62,.1)}
+.tbtn svg{width:12px;height:12px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.chk{width:12px;height:12px;border-radius:2px;border:1px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0}
+
+/* GANTT */
+.go{width:100%;overflow-x:auto}
+.gw{background:var(--navy);border-top:1px solid var(--rb);min-width:900px}
+
+/* week header */
+.wh{display:flex;border-bottom:1px solid rgba(255,255,255,.1);position:sticky;top:0;z-index:20;background:#013244}
+.whl{flex-shrink:0;padding:8px 10px;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--warm);font-family:var(--B);border-right:1px solid rgba(255,255,255,.1);
+  display:flex;align-items:center;gap:4px;cursor:col-resize;user-select:none}
+.whl:hover{color:var(--green)}
+.whl .rh{font-size:9px;color:rgba(255,255,255,.2);font-weight:400}
+.wht{flex-shrink:0;padding:8px 0;font-size:8px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;
+  color:rgba(232,219,203,.3);font-family:var(--B);border-right:1px solid rgba(255,255,255,.1);
+  display:flex;align-items:center;justify-content:center}
+.whws{display:flex;flex:1;overflow:hidden}
+.whwk{flex-shrink:0;padding:6px 2px;font-size:9px;font-weight:600;font-family:var(--B);
+  color:rgba(232,219,203,.4);text-align:center;border-right:1px solid var(--gl);line-height:1.3}
+.whwk.ms{color:var(--warm);border-right:1px solid var(--gm)}
+.whwk.tc{color:var(--green)}
+
+/* section header */
+.sh{display:flex;background:linear-gradient(90deg,#013244,#012030);
+  border-bottom:1px solid rgba(75,205,62,.15);border-top:1px solid rgba(255,255,255,.05);
+  cursor:pointer;user-select:none;min-height:32px}
+.sh:hover{background:linear-gradient(90deg,#014055,#012838)}
+.slc{flex-shrink:0;padding:0 10px;font-family:var(--H);font-size:11px;font-weight:800;
+  letter-spacing:2px;text-transform:uppercase;color:var(--green);
+  border-right:1px solid rgba(75,205,62,.15);display:flex;align-items:center;gap:7px}
+.arr{font-size:7px;transition:transform .2s;opacity:.7;display:inline-block}
+.arr.c{transform:rotate(-90deg)}
+
+/* summary bar (shown when collapsed) */
+.sg{position:relative;flex:1;overflow:hidden;min-height:32px}
+.sbar{position:absolute;top:50%;transform:translateY(-50%);height:10px;border-radius:2px;z-index:2;
+  display:flex;align-items:center;justify-content:space-between;padding:0 7px}
+.sdate{font-size:9px;font-weight:600;font-family:var(--B);color:rgba(255,255,255,.85);white-space:nowrap}
+
+/* task row */
+.tr{display:flex;border-bottom:1px solid var(--rb);min-height:36px;transition:background .1s}
+.tr:hover{background:rgba(59,207,240,.025)}
+.tl{flex-shrink:0;padding:0 8px 0 12px;border-right:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;overflow:hidden}
+.ttw{display:flex;flex-direction:column;justify-content:center;overflow:hidden;flex:1;min-width:0}
+.tn{font-size:12px;font-weight:600;color:var(--off);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--B)}
+.tsub{font-size:10px;font-weight:400;color:rgba(232,219,203,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--B)}
+.alloc{font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;font-family:var(--B);
+  padding:2px 6px;border-radius:2px;background:rgba(59,207,240,.1);color:var(--cyan);
+  border:1px solid rgba(59,207,240,.25);flex-shrink:0;margin-left:6px}
+.ttype{flex-shrink:0;display:flex;align-items:center;justify-content:center;border-right:1px solid rgba(255,255,255,.08)}
+.tsw{width:9px;height:9px;border-radius:1px;cursor:default}
+
+/* grid */
+.tg{position:relative;flex:1;overflow:hidden;min-height:36px}
+.gls{position:absolute;inset:0;display:flex;pointer-events:none;z-index:0}
+.gl{border-right:1px solid var(--gl);height:100%}
+.gl.ms{border-right:1px solid var(--gm)}
+.gl.td{border-right:1px solid rgba(75,205,62,.3);background:rgba(75,205,62,.02)}
+
+/* bars */
+.bar{position:absolute;top:50%;transform:translateY(-50%);height:18px;border-radius:2px;z-index:2;
+  display:flex;align-items:center;padding:0 6px;
+  font-size:10px;font-family:var(--B);font-weight:600;letter-spacing:.3px;
+  white-space:nowrap;overflow:hidden;cursor:pointer;
+  color:rgba(255,255,255,.9);text-shadow:0 1px 3px rgba(0,0,0,.5);transition:filter .15s,height .15s}
+.bar:hover{filter:brightness(1.25);height:22px;z-index:5}
+.bar.dep{outline:1px dashed rgba(255,31,62,.65);outline-offset:-1px}
+
+/* milestone */
+.msd{position:absolute;top:50%;transform:translateY(-50%) rotate(45deg);width:10px;height:10px;z-index:3;cursor:pointer;transition:transform .15s}
+.msd:hover{transform:translateY(-50%) rotate(45deg) scale(1.5);z-index:6}
+.msl{position:absolute;top:50%;transform:translateY(-50%);font-size:9px;font-family:var(--B);font-weight:600;white-space:nowrap;z-index:4;pointer-events:none}
+/* meeting */
+.mtg{position:absolute;top:50%;transform:translateY(-50%);width:12px;height:12px;border-radius:50%;z-index:3;cursor:pointer;transition:transform .15s}
+.mtg:hover{transform:translateY(-50%) scale(1.4);z-index:6}
+/* today */
+.tday{position:absolute;top:0;bottom:0;width:1px;background:var(--green);z-index:8;pointer-events:none;box-shadow:0 0 5px rgba(75,205,62,.5)}
+.tday::before{content:'TODAY';position:absolute;top:-18px;left:50%;transform:translateX(-50%);
+  font-size:8px;font-family:var(--B);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--green);white-space:nowrap}
+/* conference */
+.conf{position:absolute;top:0;bottom:0;background:rgba(255,200,69,.05);
+  border-left:1px dashed rgba(255,200,69,.35);border-right:1px dashed rgba(255,200,69,.35);z-index:1;pointer-events:none}
+/* apr27 deadline */
+.dl27{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,31,62,.45);z-index:7;pointer-events:none}
+.dl27::before{content:'APR 27';position:absolute;top:-18px;left:3px;
+  font-size:8px;font-family:var(--B);font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--red);white-space:nowrap}
+
+/* MODALS */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;backdrop-filter:blur(4px);align-items:center;justify-content:center}
+.ov.open{display:flex}
+.modal{background:linear-gradient(160deg,#015B7E,#012834);border:1px solid rgba(75,205,62,.3);
+  border-radius:4px;max-width:580px;width:90vw;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:0 20px 56px rgba(0,0,0,.7)}
+.mhdr{padding:13px 16px 11px;border-bottom:1px solid rgba(75,205,62,.2);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.mtit{font-family:var(--H);font-size:14px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--white)}
+.mx{background:none;border:none;color:rgba(255,255,255,.35);font-size:16px;cursor:pointer;
+  width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+  border-radius:2px;transition:color .15s;font-family:var(--B)}
+.mx:hover{color:var(--off)}
+.mbody{padding:12px 16px;overflow-y:auto;flex:1}
+.mi{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.mi:last-child{border-bottom:none}
+.mit{font-size:12px;font-weight:700;color:var(--white);margin-bottom:4px;font-family:var(--B)}
+.mid{font-size:11px;color:rgba(232,219,203,.75);line-height:1.65;font-family:var(--B)}
+.mm{display:flex;gap:8px;margin-top:5px;flex-wrap:wrap}
+.mp{font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;font-family:var(--B);padding:2px 7px;border-radius:2px}
+.mp.ow{background:rgba(59,207,240,.12);color:var(--cyan);border:1px solid rgba(59,207,240,.25)}
+.mp.du{background:rgba(255,200,69,.12);color:var(--amber);border:1px solid rgba(255,200,69,.25)}
+.mp.p0{background:rgba(255,31,62,.12);color:var(--red);border:1px solid rgba(255,31,62,.25)}
+
+/* TOOLTIP */
+.tip{position:fixed;background:linear-gradient(160deg,#015B7E,#012834);border:1px solid rgba(75,205,62,.3);
+  border-radius:3px;padding:11px 14px;font-size:11px;pointer-events:none;z-index:400;
+  max-width:300px;display:none;box-shadow:0 20px 56px rgba(0,0,0,.65)}
+.tip.on{display:block}
+.tit{font-family:var(--H);font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--white);margin-bottom:6px;border-bottom:1px solid rgba(75,205,62,.2);padding-bottom:5px}
+.tr2{display:flex;justify-content:space-between;gap:14px;margin-bottom:3px;font-family:var(--B)}
+.tk{color:var(--green);font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;flex-shrink:0}
+.tv{color:var(--off);font-size:11px;text-align:right}
+.tdep{margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,31,62,.25);
+  font-size:10px;font-weight:600;letter-spacing:.3px;color:var(--red);font-family:var(--B)}
+
+/* FOOTER */
+.foot{margin-top:14px;display:flex;justify-content:space-between;
+  font-size:10px;font-weight:400;font-family:var(--B);color:rgba(232,219,203,.3);padding:0 20px}
+</style>
+</head>
+<body>
+
+<!-- DELIVERABLES MODAL -->
+<div class="ov" id="del-ov" onclick="closeMod('del-ov')">
+<div class="modal" onclick="event.stopPropagation()">
+  <div class="mhdr"><div class="mtit">Deliverables</div><button class="mx" onclick="closeMod('del-ov')">✕</button></div>
+  <div class="mbody">
+    <div class="mi">
+      <div class="mit">1 · Interactive Roadmap Explorer</div>
+      <div class="mid">A strategic sales enablement and product communication tool that allows FIS sales teams, bank executives, and prospects to explore the Commercial Lending roadmap dynamically and in context.</div>
+      <div class="mm"><span class="mp du">Invoice: Apr 24</span></div>
+    </div>
+    <div class="mi">
+      <div class="mit">2 · Interactive Lending Prototype</div>
+      <div class="mid">Interactive prototype experience to show key flows for the Credit Memo and Covenants Management journeys. Includes a spotlight Journey Presentation from a client to highlight the benefits for other customers.</div>
+      <div class="mm"><span class="mp du">Invoice: May 8</span></div>
+    </div>
+    <div class="mi">
+      <div class="mit">3 · AI-Assisted Product Strategy</div>
+      <div class="mid">Leveraging the Interactive Lending Prototype, allowing customers to make recommendations on additional features through an interactive experience. These recommendations are then synthesized in near real-time into a revised interactive prototype demonstrating the speed at which FIS is moving with AI-enabled SDLC.</div>
+      <div class="mm"><span class="mp p0">Hard Deadline: Apr 27</span><span class="mp du">Invoice: May 22</span></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- OPEN QUESTIONS MODAL -->
+<div class="ov" id="oq-ov" onclick="closeMod('oq-ov')">
+<div class="modal" onclick="event.stopPropagation()">
+  <div class="mhdr"><div class="mtit">Open Questions</div><button class="mx" onclick="closeMod('oq-ov')">✕</button></div>
+  <div class="mbody" id="oq-body"></div>
+</div></div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div>
+    <div class="eyebrow">FIS × Method &nbsp;·&nbsp; Project Timeline v8</div>
+    <div class="h1">Emerald <em>2026</em></div>
+    <div class="sub">SOW: Mar 23 – May 30 &nbsp;·&nbsp; 3 Workstreams</div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="v">10</span><span class="l">Wk Build</span></div>
+    <div class="stat"><span class="v">5</span><span class="l">Team Roles</span></div>
+    <div class="stat btn" onclick="openMod('del-ov')" title="Click to view deliverables"><span class="v">3</span><span class="l">Deliverables ▾</span></div>
+    <div class="stat btn" onclick="openMod('oq-ov')" title="Click to view open questions"><span class="v" id="oqv">12</span><span class="l">Open Questions ▾</span></div>
+    <div class="stat warn" title="WS3 hard deadline. WS1 &amp; WS2 continue to May 15."><span class="v">APR 27</span><span class="l">WS3 Deadline</span></div>
+  </div>
+</div>
+<div class="bl"></div>
+
+<!-- TOOLBAR -->
+<div class="tb">
+  <button class="tbtn on" onclick="dl()" title="Download self-contained HTML — works offline in any browser">
+    <svg viewBox="0 0 16 16"><path d="M8 2v8M5 7l3 3 3-3M2 12h12"/></svg>Download
+  </button>
+  <div class="sep"></div>
+  <button class="tbtn" id="cab" onclick="toggleCA()">
+    <svg viewBox="0 0 16 16"><path d="M2 5h12M2 8h9M2 11h6"/></svg>
+    <span id="cal">Collapse All</span>
+  </button>
+  <div class="sep"></div>
+  <div class="leg">
+    <div class="li"><div class="ld dot" style="background:var(--green)"></div>Milestone</div>
+    <div class="li"><div class="ld dot" style="background:var(--cyan)"></div>FIS Meeting</div>
+    <div class="li"><div class="ld dep"></div>Has Dependency</div>
+    <div class="sep"></div>
+    <div class="li"><div class="ts" style="background:var(--tc-design)"></div>Design</div>
+    <div class="li"><div class="ts" style="background:var(--tc-workshop)"></div>Workshop</div>
+    <div class="li"><div class="ts" style="background:var(--tc-build)"></div>Build</div>
+    <div class="li"><div class="ts" style="background:var(--tc-spec)"></div>Spec</div>
+    <div class="li"><div class="ts" style="background:var(--tc-test)"></div>Test</div>
+    <div class="li"><div class="ts" style="background:var(--tc-docs)"></div>Documentation</div>
+  </div>
+  <div class="sep"></div>
+  <div class="tbtn on" id="tt-btn" onclick="togToday()">
+    <span class="chk" id="tt-chk">✓</span>Show Today
+  </div>
+</div>
+
+<!-- GANTT -->
+<div class="go"><div class="gw" id="gantt"></div></div>
+
+<div class="foot">
+  <span>FIS Emerald 2026 · FIS × Method · Confidential · v8</span>
+  <span id="gd"></span>
+</div>
+
+<!-- TOOLTIP -->
+<div class="tip" id="tip">
+  <div class="tit" id="tit"></div>
+  <div class="tr2"><span class="tk">Start</span><span class="tv" id="tts"></span></div>
+  <div class="tr2" id="tte-r"><span class="tk">End</span><span class="tv" id="tte"></span></div>
+  <div class="tr2" id="tto-r"><span class="tk">Owner</span><span class="tv" id="tto"></span></div>
+  <div class="tr2" id="ttn-r"><span class="tk">Note</span><span class="tv" id="ttn"></span></div>
+  <div class="tdep" id="ttd" style="display:none"></div>
+</div>
+
+<script>
+// DATES
+const MS=86400000;
+function d(s){const[y,m,dy]=s.split('-').map(Number);return new Date(y,m-1,dy)}
+function fmt(dt){return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'})}
+function df(a,b){return Math.round((b-a)/MS)}
+const PS=d('2026-03-23'),PE=d('2026-05-30'),TODAY=new Date(),TOTAL=df(PS,PE);
+const WKS=[];
+{let c=new Date(PS);const dw=c.getDay();c=new Date(c.getTime()-(dw===0?6:dw-1)*MS);
+ while(c<=PE){WKS.push(new Date(c));c=new Date(c.getTime()+7*MS)}}
+const NW=WKS.length;
+
+// STATE
+let LW=220,TW=30,showT=true,allC=false;
+const COLL=new Set();
+
+// TYPE COLORS
+const TC={'Design':'#3BCFF0','Workshop':'#FFC845','Build':'#4BCD3E','Spec':'#9B6BFF','Test':'#FD8D62','Docs':'#94b4c8','Documentation':'#94b4c8'};
+const SC='#3BCFF0'; // staff color
+
+// OPEN QUESTIONS
+const OQS=[
+  {q:'What are the confirmed application names and screens for WS3 Feedback Wall?',ow:'Chris Patten → Dale',due:'Mar 23',p:'P0'},
+  {q:'What does "revised prototype" mean to FIS on Day 2 — Claude-generated PRD + overnight functional build, or a visually updated interactive demo?',ow:'Chris Patten → Dale',due:'Mar 27',p:'P0'},
+  {q:'Which WS3 / Feedback Wall features are in scope for Emerald?',ow:'Chris Patten → Dale',due:'Mar 27',p:'P0'},
+  {q:'Can FIS provide seed data (screens, features, concept cards) by April 4?',ow:'Chris Patten → Dale',due:'Mar 23',p:'P0'},
+  {q:'Is the zero-cost change order for WS3 scope acceptable to FIS and Jason Rome?',ow:'Jason Rome',due:'Mar 25',p:'P0'},
+  {q:'Are wireframe-level screen representations acceptable, or does FIS expect real product UI?',ow:'Chris Patten → Dale',due:'Mar 27',p:'P1'},
+  {q:'Who is the FIS facilitator / kiosk operator at Emerald on Day 1?',ow:'Chris Patten → Dale',due:'Mar 27',p:'P1'},
+  {q:'What is the executive presentation format and cadence (SVP / EVP)?',ow:'Jason Rome → Dale',due:'Mar 27',p:'P1'},
+  {q:'Will Method have on-site presence at Emerald (May 4–7)?',ow:'Chris Patten (internal)',due:'Apr 4',p:'P1'},
+  {q:'How should the Day 2 overnight prototype be framed publicly at Emerald?',ow:'Chris Patten + Jason Rome → Dale',due:'Apr 14',p:'P1'},
+  {q:'What is FIS\'s data handling expectation for attendee feedback captured via the Feedback Wall?',ow:'Chris Patten → Dale / FIS Legal',due:'Mar 30',p:'P1'},
+  {q:'What does FIS consider "acceptance" for each milestone deliverable?',ow:'Chris Patten → Dale',due:'Mar 27',p:'P1'},
+];
+(function(){
+  const b=document.getElementById('oq-body');
+  OQS.forEach((q,i)=>{
+    const el=document.createElement('div');el.className='mi';
+    el.innerHTML=`<div class="mit">${i+1}. ${q.q}</div><div class="mm">${q.ow?`<span class="mp ow">Owner: ${q.ow}</span>`:''} ${q.due?`<span class="mp du">Due: ${q.due}</span>`:''} ${q.p==='P0'?`<span class="mp p0">P0 Critical</span>`:''}</div>`;
+    b.appendChild(el);
+  });
+  document.getElementById('oqv').textContent=OQS.length;
+})();
+
+// SECTIONS
+const SECS=[
+  {id:'staffing',label:'STAFFING PLAN',sc:SC,tasks:[
+    {name:'Jenna Stout',sub:'Associate Director, Experience Design · 100%',alloc:'100%',start:'2026-03-23',end:'2026-05-15',color:SC,owner:'Jenna Stout',note:'Sets design direction across WS1, WS2, WS3 simultaneously. Engagement ends May 15.'},
+    {name:'Xavier Salazar',sub:'Sr. Software Engineer · 100%',alloc:'100%',start:'2026-03-30',end:'2026-05-15',color:SC,owner:'Xavier Salazar',note:'Joins Mar 30. Productionizes all three prototypes. Builds WS3 AI synthesis pipeline.'},
+    {name:'Chris Patten',sub:'Principal Product Manager · 50%',alloc:'50%',start:'2026-03-23',end:'2026-05-30',color:SC,owner:'Chris Patten',note:'Day-to-day lead. Prototype builds via Claude + Codex through Mar 29. PM oversight through closeout.'},
+    {name:'Jason Rome',sub:'Principal Business Strategist · 25%',alloc:'25%',start:'2026-03-23',end:'2026-05-30',color:SC,owner:'Jason Rome',note:'Senior oversight. Strategic decisions, executive presentations, change order management.'},
+    {name:'TBD',sub:'Sr. Program Manager · 25%',alloc:'25%',start:'2026-03-30',end:'2026-05-08',color:SC,owner:'TBD',note:'Coordination support through midpoint. Name TBD — confirm by Mar 27.'},
+  ]},
+  {id:'ws1',label:'WS1 — INTERACTIVE ROADMAP EXPLORER',sc:'#285BC5',tasks:[
+    {name:'UX Design Direction',type:'Design',start:'2026-03-23',end:'2026-05-15',color:'#285BC5',note:'Navigation model, product module structure, time horizon design for roadmap explorer.'},
+    {name:'Content Definition w/ FIS',sub:'FIS must confirm scope by Mar 30',type:'Workshop',start:'2026-03-23',end:'2026-03-30',color:'#8B6500',dep:true,depNote:'FIS must confirm roadmap content scope before design can be finalized. Unblocked at Mar 30 workshop.',note:'Workshop with FIS stakeholders to define content structure and navigation model.'},
+    {name:'Initial Prototype Build',sub:'Claude + Codex · PPM-led',type:'Build',start:'2026-03-23',end:'2026-04-05',color:'#1A4A1A',note:'Rapid prototype foundation before Engineer joins Mar 30.'},
+    {name:'Engineer Productionizing',sub:'Joins Mar 30',type:'Build',start:'2026-03-30',end:'2026-05-15',color:'#285BC5',note:'Polish, performance, production-ready UI components and interactions.'},
+    {name:'Functional Specification',type:'Spec',start:'2026-03-30',end:'2026-04-11',color:'#5A35A0',note:'Functional specification for Roadmap Explorer — content structure, navigation model, interaction states.'},
+  ]},
+  {id:'ws2',label:'WS2 — INTERACTIVE LENDING PROTOTYPE',sc:'#009775',tasks:[
+    {name:'UX Design Direction',type:'Design',start:'2026-03-23',end:'2026-05-15',color:'#009775',note:'Credit Memo and Covenants Management journey design, interaction states, and spotlight Journey Presentation format.'},
+    {name:'Workflow Mapping w/ FIS',sub:'Must complete by Apr 4',type:'Workshop',start:'2026-03-30',end:'2026-04-04',color:'#8B5000',dep:true,depNote:'Workflow mapping with FIS must complete by Apr 4. Blocks engineer productionizing until sessions are done.',note:'Workshop sessions with FIS stakeholders to map Credit Memo and Covenants Management workflows.'},
+    {name:'Initial Prototype Build',sub:'Claude + Codex · PPM-led',type:'Build',start:'2026-03-23',end:'2026-04-05',color:'#004D3A',note:'Skeleton flows for Credit Memo and Covenants Management journeys.'},
+    {name:'Engineer Productionizing',sub:'Joins Mar 30',type:'Build',start:'2026-03-30',end:'2026-05-15',color:'#009775',note:'Production polish including spotlight Journey Presentation format and all interaction states.'},
+  ]},
+  {id:'ws3',label:'WS3 — AI-ASSISTED PRODUCT STRATEGY / FEEDBACK WALL',sc:'#FFC845',tasks:[
+    {name:'UX Design Direction',type:'Design',start:'2026-03-23',end:'2026-04-27',color:'#8B6500',note:'Attendee input capture experience and Day 2 reveal presentation design.'},
+    {name:'WS3 Scope Alignment w/ Dale',sub:'Week 1 — critical before Phase 2',type:'Workshop',start:'2026-03-23',end:'2026-03-27',color:'#991020',dep:true,depNote:'Must get written alignment on WS3 scope and Day 2 deliverable before Phase 2. Blocks Feedback Wall config and AI layer build.',note:'Demo Feedback Wall to Dale. Written scope alignment. Critical gate before Phase 2.'},
+    {name:'FIS Seed Data Delivery',sub:'Hard dependency — due Apr 4',type:'Workshop',start:'2026-03-23',end:'2026-04-04',color:'#7A0C1A',dep:true,depNote:'FIS must deliver product screens, feature names, and concept cards by Apr 4. Directly unblocks Feedback Wall Config + Build. Request issued at kickoff.',note:'FIS delivers product screens, feature names, AI concept cards. Required before Feedback Wall can be configured.'},
+    {name:'Feedback Wall Config + Build',sub:'Unblocked by Seed Data + WS2',type:'Build',start:'2026-04-06',end:'2026-04-27',color:'#7A5000',dep:true,depNote:'Cannot begin until (1) FIS Seed Data Delivery is complete and (2) WS2 is substantially stable. Both required by Apr 6.',note:'Configures Feedback Wall with FIS product content. Builds on WS2 as the base experience.'},
+    {name:'AI Synthesis Layer Build',sub:'Two-phase Claude API',type:'Build',start:'2026-04-06',end:'2026-04-27',color:'#CC8800',note:'Two-phase analysis + generation pipeline. Preprocessing, conflict detection, facilitator macros, streaming output.'},
+    {name:'Fallback Demo Mode',sub:'Required — conference resilience',type:'Build',start:'2026-04-06',end:'2026-04-27',color:'#991020',note:'Simulated synthesis fallback required as a parallel deliverable. Ensures conference resilience if live AI is unstable.'},
+    {name:'WS3 Weekly Rehearsal Standup',sub:'Weekly from Apr 6',type:'Test',start:'2026-04-06',end:'2026-04-22',color:'#8B4500',note:'Weekly WS3 sync: AI layer status, fallback validation, synthesis pipeline testing progress.'},
+    {name:'End-to-End Rehearsal',sub:'Full cycle before Apr 27',type:'Test',start:'2026-04-20',end:'2026-04-27',color:'#CC5500',note:'Full Day 1 input → synthesis → Day 2 overnight build cycle rehearsal before Apr 27 deadline.'},
+    {name:'WS2 + WS3 Functional Specification',type:'Spec',start:'2026-03-30',end:'2026-04-11',color:'#5A35A0',note:'Functional specifications for WS2 lending workflows and WS3 Feedback Wall input capture and synthesis pipeline.'},
+    {name:'User Workflow Documentation',type:'Documentation',start:'2026-04-14',end:'2026-04-25',color:'#5A6A7A',note:'Documentation of user workflows and system interactions across all three workstreams.'},
+    {name:'Design Artifact Packaging',sub:'Engineering handoff',type:'Documentation',start:'2026-04-21',end:'2026-04-27',color:'#485860',note:'Design artifacts packaged for FIS engineering handoff. Complete by Apr 27 deadline.'},
+    {name:'Final Documentation & Handoff',sub:'Post-conference · last 2 weeks',type:'Documentation',start:'2026-05-16',end:'2026-05-30',color:'#5A6A7A',note:'Final documentation package for FIS covering all three workstreams. Closes out the engagement.'},
+  ]},
+  {id:'reviews',label:'FIS REVIEWS & KEY MEETINGS',sc:'#4BCD3E',tasks:[
+    {name:'Project Kickoff',sub:'Mar 23 · Dale + FIS team',start:'2026-03-23',end:'2026-03-23',isMtg:true,color:'#4BCD3E',owner:'Chris Patten + Jason Rome + Dale',note:'Scope alignment, Beeline VMS confirmation, seed data request issued, review cadence set.'},
+    {name:'Feedback Wall Demo to Dale',sub:'Mar 25 · WS3 scope alignment',start:'2026-03-25',end:'2026-03-25',isMtg:true,color:'#3BCFF0',owner:'Chris Patten + Dale',note:'Demo existing Feedback Wall. Written WS3 scope and Day 2 deliverable alignment. Critical gate before Phase 2.'},
+    {name:'Zero-Cost Change Order',sub:'Target Mar 28',start:'2026-03-28',end:'2026-03-28',isMil:true,color:'#FFC845',owner:'Jason Rome + Chris Patten',note:'Change order clarifying WS3 scope. Must be agreed before Phase 2.'},
+    {name:'FIS Seed Data Deadline',sub:'Apr 4 — unblocks WS3',start:'2026-04-04',end:'2026-04-04',isMil:true,color:'#FF1F3E',owner:'FIS (Dale)',note:'Hard deadline. FIS delivers product screens, features, concept cards. Directly unblocks Feedback Wall Config + Build in WS3.'},
+    {name:'FIS Review #1',sub:'~Apr 6–8 · All 3 prototypes',start:'2026-04-06',end:'2026-04-08',isRev:true,color:'#2E9A24',owner:'Chris Patten + Jenna Stout + Dale',note:'First incremental review. All three workstreams in reviewable state. FIS feedback within 2 business days.'},
+    {name:'FIS Review #2',sub:'~Apr 14 · Near-final state',start:'2026-04-14',end:'2026-04-15',isRev:true,color:'#2E9A24',owner:'Chris Patten + Jenna Stout + Dale',note:'Near-final review before final polish. FIS feedback within 2 business days.'},
+    {name:'Executive Presentation',sub:'TBD · SVP + EVP',start:'2026-04-17',end:'2026-04-17',isMtg:true,color:'#3BCFF0',owner:'Chris Patten + Jason Rome + Dale SVP/EVP',note:'Strategic alignment. Narrative-driven demo format. Led by Jason Rome.'},
+    {name:'WS3 Code Freeze',sub:'Apr 27 · WS3 deadline only',start:'2026-04-27',end:'2026-04-27',isMil:true,color:'#FF1F3E',owner:'Full Team',note:'WS3 hard deadline. WS1 and WS2 continue to May 15.'},
+    {name:'FIS Emerald Conference',sub:'May 4–7 · Las Vegas',start:'2026-05-04',end:'2026-05-07',isConf:true,color:'#FFC845',owner:'Chris Patten + Jason Rome',note:'Live demos. WS3 Feedback Wall captures real-time attendee input. Day 2 overnight P0 prototype build.'},
+  ]},
+];
+
+// helpers
+function secSpan(sec){let mn=null,mx=null;sec.tasks.forEach(t=>{const s=d(t.start),e=d(t.end||t.start);if(!mn||s<mn)mn=s;if(!mx||e>mx)mx=e});return{s:mn,e:mx}}
+function WW(){const el=document.getElementById('gantt');const av=(el?el.offsetWidth:window.innerWidth)-LW-TW;return Math.max(28,Math.floor(av/NW))}
+function GW(){return WW()*NW}
+function tpx(ds,gw){const s=d(ds),cs=s<PS?PS:s>PE?PE:s;return(df(PS,cs)/TOTAL)*(gw||GW())}
+
+// MODALS
+function openMod(id){document.getElementById(id).classList.add('open')}
+function closeMod(id){document.getElementById(id).classList.remove('open')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.ov.open').forEach(el=>el.classList.remove('open'))});
+
+// TOGGLES
+function togToday(){showT=!showT;document.getElementById('tt-btn').classList.toggle('on',showT);document.getElementById('tt-chk').textContent=showT?'✓':'';render()}
+function toggleCA(){allC=!allC;if(allC)SECS.forEach(s=>COLL.add(s.id));else COLL.clear();document.getElementById('cal').textContent=allC?'Expand All':'Collapse All';document.getElementById('cab').classList.toggle('on',allC);render()}
+
+// DOWNLOAD
+function dl(){
+  const html=document.documentElement.outerHTML;
+  const b=new Blob([html],{type:'text/html;charset=utf-8'});
+  const u=URL.createObjectURL(b);const a=document.createElement('a');
+  a.href=u;a.download='FIS-Emerald-2026-Gantt-v8.html';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
+}
+
+// RENDER
+const GE=document.getElementById('gantt');
+
+function mkGridLines(gw,ww){
+  const gl=document.createElement('div');gl.className='gls';
+  WKS.forEach(wk=>{
+    const ln=document.createElement('div');ln.className='gl';ln.style.width=ww+'px';ln.style.flexShrink='0';
+    if(wk.getDate()<=7)ln.classList.add('ms');
+    const wkE=new Date(wk.getTime()+6*MS);
+    if(showT&&TODAY>=wk&&TODAY<=wkE)ln.classList.add('td');
+    gl.appendChild(ln);
+  });
+  return gl;
+}
+
+function mkOverlays(gc,gw){
+  const cL=tpx('2026-05-04',gw),cW=Math.max(0,((df(d('2026-05-04'),d('2026-05-07'))+1)/TOTAL)*gw);
+  const cb=document.createElement('div');cb.className='conf';cb.style.left=cL+'px';cb.style.width=cW+'px';gc.appendChild(cb);
+  if(showT){const tm=document.createElement('div');tm.className='tday';tm.style.left=(df(PS,TODAY)/TOTAL*gw)+'px';gc.appendChild(tm)}
+  const dl=document.createElement('div');dl.className='dl27';dl.style.left=tpx('2026-04-27',gw)+'px';gc.appendChild(dl);
+}
+
+function render(){
+  GE.innerHTML='';
+  const ww=WW(),gw=GW();
+  // Week header
+  const wh=document.createElement('div');wh.className='wh';
+  const whl=document.createElement('div');whl.className='whl';whl.style.width=LW+'px';
+  whl.innerHTML='Task / Resource <span class="rh">⟺</span>';mkDrag(whl);wh.appendChild(whl);
+  const wht=document.createElement('div');wht.className='wht';wht.style.width=TW+'px';wht.textContent='Type';wh.appendChild(wht);
+  const whws=document.createElement('div');whws.className='whws';whws.style.width=gw+'px';
+  WKS.forEach(wk=>{
+    const c=document.createElement('div');c.className='whwk';c.style.width=ww+'px';
+    const isM=wk.getDate()<=7;if(isM)c.classList.add('ms');
+    const wkE=new Date(wk.getTime()+6*MS);
+    if(showT&&TODAY>=wk&&TODAY<=wkE)c.classList.add('tc');
+    const mo=wk.toLocaleDateString('en-US',{month:'short'});
+    c.innerHTML=isM?`<strong>${mo}</strong><br>${wk.getDate()}`:`${mo}<br>${wk.getDate()}`;
+    whws.appendChild(c);
+  });
+  wh.appendChild(whws);GE.appendChild(wh);
+
+  SECS.forEach(sec=>{
+    const isC=COLL.has(sec.id);
+    const sh=document.createElement('div');sh.className='sh';
+    const slc=document.createElement('div');slc.className='slc';slc.style.width=(LW+TW)+'px';
+    const arr=document.createElement('span');arr.className='arr';if(isC)arr.classList.add('c');arr.textContent='▼';
+    slc.appendChild(arr);slc.appendChild(document.createTextNode(' '+sec.label));
+    sh.appendChild(slc);
+    if(isC){
+      const sg=document.createElement('div');sg.className='sg';sg.style.width=gw+'px';
+      sg.appendChild(mkGridLines(gw,ww));mkOverlays(sg,gw);
+      const {s,e}=secSpan(sec);
+      if(s&&e){
+        const sL=tpx(s.toISOString().slice(0,10),gw);
+        const sW=Math.max(24,((df(s,e)+1)/TOTAL)*gw);
+        const sb=document.createElement('div');sb.className='sbar';
+        sb.style.left=sL+'px';sb.style.width=sW+'px';
+        sb.style.background=`linear-gradient(90deg,${sec.sc}CC,${sec.sc}66)`;
+        sb.style.border=`1px solid ${sec.sc}80`;
+        const d1=document.createElement('span');d1.className='sdate';d1.textContent=fmt(s);
+        const d2=document.createElement('span');d2.className='sdate';d2.textContent=fmt(e);
+        sb.appendChild(d1);sb.appendChild(d2);sg.appendChild(sb);
+      }
+      sh.appendChild(sg);
+    } else {
+      const sf=document.createElement('div');sf.style.flex='1';sf.style.width=gw+'px';sh.appendChild(sf);
+    }
+    sh.addEventListener('click',()=>{
+      if(COLL.has(sec.id))COLL.delete(sec.id);else COLL.add(sec.id);
+      allC=COLL.size===SECS.length;
+      document.getElementById('cal').textContent=allC?'Expand All':'Collapse All';
+      document.getElementById('cab').classList.toggle('on',allC);
+      render();
+    });
+    GE.appendChild(sh);
+    if(isC)return;
+
+    sec.tasks.forEach(task=>{
+      const row=document.createElement('div');row.className='tr';
+      // label
+      const tl=document.createElement('div');tl.className='tl';tl.style.width=LW+'px';
+      const tw=document.createElement('div');tw.className='ttw';
+      const tn=document.createElement('div');tn.className='tn';tn.textContent=task.name;tw.appendChild(tn);
+      if(task.sub){const ts=document.createElement('div');ts.className='tsub';ts.textContent=task.sub;tw.appendChild(ts)}
+      tl.appendChild(tw);
+      if(task.alloc){const ab=document.createElement('span');ab.className='alloc';ab.textContent=task.alloc;tl.appendChild(ab)}
+      row.appendChild(tl);
+      // type swatch col
+      const ttc=document.createElement('div');ttc.className='ttype';ttc.style.width=TW+'px';
+      if(task.type&&TC[task.type]){
+        const sw=document.createElement('div');sw.className='tsw';sw.style.background=TC[task.type];sw.title=task.type;ttc.appendChild(sw);
+      }
+      row.appendChild(ttc);
+      // grid
+      const gc=document.createElement('div');gc.className='tg';gc.style.width=gw+'px';
+      gc.appendChild(mkGridLines(gw,ww));mkOverlays(gc,gw);
+      if(task.isMil){
+        const left=tpx(task.start,gw);
+        const ms=document.createElement('div');ms.className='msd';ms.style.left=(left-5)+'px';ms.style.background=task.color;ms.style.boxShadow=`0 0 8px ${task.color}80`;
+        const ml=document.createElement('div');ml.className='msl';ml.style.left=(left+9)+'px';ml.style.color=task.color;ml.textContent=fmt(d(task.start));
+        gc.appendChild(ms);gc.appendChild(ml);attachTip(ms,task);
+      } else if(task.isMtg){
+        const left=tpx(task.start,gw);
+        const mt=document.createElement('div');mt.className='mtg';mt.style.left=(left-6)+'px';mt.style.background=task.color;mt.style.boxShadow=`0 0 8px ${task.color}80`;
+        const ml=document.createElement('div');ml.className='msl';ml.style.left=(left+9)+'px';ml.style.color=task.color;ml.style.fontSize='9px';ml.textContent=fmt(d(task.start));
+        gc.appendChild(mt);gc.appendChild(ml);attachTip(mt,task);
+      } else {
+        const cs=d(task.start)<PS?PS:d(task.start),ce=d(task.end)>PE?PE:d(task.end);
+        const left=(df(PS,cs)/TOTAL)*gw,width=Math.max(8,((df(cs,ce)+1)/TOTAL)*gw);
+        const bar=document.createElement('div');bar.className='bar';
+        if(task.dep)bar.classList.add('dep');
+        bar.style.left=left+'px';bar.style.width=width+'px';
+        bar.style.background=task.isConf
+          ?`repeating-linear-gradient(45deg,${task.color}50,${task.color}50 4px,${task.color}20 4px,${task.color}20 8px)`
+          :(task.isRev?`linear-gradient(90deg,${task.color}BB,${task.color}77)`:`linear-gradient(90deg,${task.color}EE,${task.color}99)`);
+        bar.style.border=`1px solid ${task.color}60`;
+        if(width>60)bar.textContent=fmt(d(task.start))+' – '+fmt(d(task.end));
+        gc.appendChild(bar);attachTip(bar,task);
+      }
+      row.appendChild(gc);GE.appendChild(row);
+    });
+  });
+  document.getElementById('gd').textContent='Generated: '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})+' · v8';
+}
+
+// DRAG RESIZE
+function mkDrag(el){
+  let sx,sw;
+  el.addEventListener('mousedown',e=>{
+    sx=e.clientX;sw=LW;
+    const mm=ev=>{LW=Math.max(120,Math.min(480,sw+(ev.clientX-sx)));render()};
+    const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu)};
+    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+    e.preventDefault();
+  });
+}
+
+// TOOLTIP
+const tipEl=document.getElementById('tip');
+function attachTip(el,task){
+  el.addEventListener('mouseenter',e=>{
+    document.getElementById('tit').textContent=task.name;
+    document.getElementById('tts').textContent=fmt(d(task.start));
+    const er=document.getElementById('tte-r');
+    if(!task.isMil&&!task.isMtg&&task.end&&task.end!==task.start){er.style.display='flex';document.getElementById('tte').textContent=fmt(d(task.end))}else er.style.display='none';
+    const or=document.getElementById('tto-r');
+    if(task.owner){or.style.display='flex';document.getElementById('tto').textContent=task.owner}else or.style.display='none';
+    const nr=document.getElementById('ttn-r');
+    if(task.note){nr.style.display='flex';document.getElementById('ttn').textContent=task.note}else nr.style.display='none';
+    const dr=document.getElementById('ttd');
+    if(task.dep&&task.depNote){dr.style.display='block';dr.textContent='⚠ DEPENDENCY: '+task.depNote}else dr.style.display='none';
+    tipEl.classList.add('on');mvTip(e);
+  });
+  el.addEventListener('mousemove',mvTip);
+  el.addEventListener('mouseleave',()=>tipEl.classList.remove('on'));
+}
+function mvTip(e){
+  const x=e.clientX+14,y=e.clientY-10,tw=tipEl.offsetWidth||300,th=tipEl.offsetHeight||120;
+  tipEl.style.left=(x+tw>window.innerWidth?x-tw-24:x)+'px';
+  tipEl.style.top=(y+th>window.innerHeight?y-th:y)+'px';
+}
+
+// INIT
+render();
+let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(render,80)});
+</script>
+</body>
+</html>
