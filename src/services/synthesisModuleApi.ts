@@ -148,7 +148,19 @@ export interface Day2Narrative {
 const jsonHeaders = { "content-type": "application/json" };
 
 const readJson = async <T,>(response: Response): Promise<T> => {
-  const body = (await response.json()) as T;
+  const text = await response.text();
+  let body: unknown = {};
+  if (text) {
+    try {
+      body = JSON.parse(text) as unknown;
+    } catch {
+      if (!response.ok) {
+        const short = text.slice(0, 140).replace(/\s+/gu, " ").trim();
+        throw new Error(`Request failed (${response.status}): non-JSON response (${short || "empty body"})`);
+      }
+      throw new Error("Server returned non-JSON success response.");
+    }
+  }
   if (!response.ok) {
     const message =
       typeof body === "object" &&
@@ -159,7 +171,7 @@ const readJson = async <T,>(response: Response): Promise<T> => {
         : `Request failed (${response.status})`;
     throw new Error(message);
   }
-  return body;
+  return body as T;
 };
 
 export const synthesisModuleApi = {
