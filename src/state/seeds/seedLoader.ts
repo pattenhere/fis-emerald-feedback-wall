@@ -1,13 +1,4 @@
 import type { AppScreen, CardSortConcept, FeatureRequest, KudosQuote, ProductDefinition, ScreenFeedback } from "../../types/domain.js";
-import appAreasRaw from "./appAreas.seed.json";
-import cardSortConceptsRaw from "./cardSortConcepts.seed.json";
-import categoriesRaw from "./categories.seed.json";
-import institutionProfilesRaw from "./institutionProfiles.seed.json";
-import productFeatureCategoriesRaw from "./productFeatureCategories.seed.json";
-import productFeaturesRaw from "./productFeatures.seed.json";
-import productsRaw from "./products.seed.json";
-import screenLibraryRaw from "./screenLibrary.seed.json";
-import subcategoriesRaw from "./subcategories.seed.json";
 import {
   validateAppAreasSeed,
   validateCategoriesSeedRows,
@@ -24,6 +15,24 @@ import {
 } from "./seedValidator.js";
 
 type SeedRow = Record<string, unknown>;
+type JsonModuleMap = Record<string, unknown>;
+
+const seedModules = import.meta.glob("./*.seed.json", {
+  eager: true,
+  import: "default",
+}) as JsonModuleMap;
+
+const getSeed = (filename: string): unknown => seedModules[`./${filename}`];
+
+const appAreasRaw = getSeed("appAreas.seed.json");
+const cardSortConceptsRaw = getSeed("cardSortConcepts.seed.json");
+const categoriesRaw = getSeed("categories.seed.json");
+const institutionProfilesRaw = getSeed("institutionProfiles.seed.json");
+const productFeatureCategoriesRaw = getSeed("productFeatureCategories.seed.json");
+const productFeaturesRaw = getSeed("productFeatures.seed.json");
+const productsRaw = getSeed("products.seed.json");
+const screenLibraryRaw = getSeed("screenLibrary.seed.json");
+const subcategoriesRaw = getSeed("subcategories.seed.json");
 
 const productsRows = validateProductsSeedRows(productsRaw);
 const productDefinitions = productsRows.map((row): ProductDefinition => ({
@@ -59,16 +68,14 @@ export interface FlatSignalSeeds {
 export const getCoreSeedBundle = (): typeof coreSeedBundle => coreSeedBundle;
 
 export const loadFlatSignalSeeds = async (): Promise<FlatSignalSeeds> => {
-  const [featureRequestsRaw, kudosRaw, screenFeedbackRaw] = await Promise.all([
-    import("./featureRequests.seed.json"),
-    import("./kudos.seed.json"),
-    import("./screenFeedback.seed.json"),
-  ]);
+  const featureRequestsRaw = getSeed("featureRequests.seed.json");
+  const kudosRaw = getSeed("kudos.seed.json");
+  const screenFeedbackRaw = getSeed("screenFeedback.seed.json");
 
   return {
-    featureRequests: validateFeatureRequestsSeed(featureRequestsRaw.default),
-    kudos: validateKudosSeed(kudosRaw.default),
-    screenFeedback: validateScreenFeedbackSeed(screenFeedbackRaw.default),
+    featureRequests: validateFeatureRequestsSeed(featureRequestsRaw),
+    kudos: validateKudosSeed(kudosRaw),
+    screenFeedback: validateScreenFeedbackSeed(screenFeedbackRaw),
   };
 };
 
