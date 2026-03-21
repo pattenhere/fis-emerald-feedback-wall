@@ -30,6 +30,8 @@ let loaded = false;
 export const loadConfigEnv = () => {
   if (loaded) return;
   loaded = true;
+  const isVercelRuntime = ["1", "true"].includes(String(process.env.VERCEL ?? "").toLowerCase());
+  if (isVercelRuntime) return;
   const envFromConfig = {
     ...parseDotenvFile(path.resolve(rootDir, ".env.config")),
     ...parseDotenvFile(path.resolve(rootDir, ".env.config.local")),

@@ -1,4 +1,5 @@
 import { AI_PROVIDER_CONFIG, type AIProvider } from "../config/aiProvider";
+import { toApiUrl } from "../services/apiBase";
 
 export type AICallParams = {
   systemPrompt: string;
@@ -29,8 +30,7 @@ export class AICallError extends Error {
   }
 }
 
-const API_BASE = String(import.meta.env.VITE_SYNTHESIS_API_BASE_URL ?? "").trim().replace(/\/+$/u, "");
-const toApiUrl = (path: string): string => (API_BASE ? `${API_BASE}${path}` : path);
+const API_BASE = import.meta.env.VITE_SYNTHESIS_API_BASE_URL;
 
 const parseSse = async (response: Response, onToken?: (token: string) => void): Promise<string> => {
   if (!response.body) throw new AICallError("malformed_response", "Missing stream body.");
@@ -109,7 +109,7 @@ export async function aiCall(params: AICallParams): Promise<AICallResult> {
       systemPromptLength: String(params.systemPrompt ?? "").length,
       userPromptLength: String(params.userPrompt ?? "").length,
     });
-    const response = await fetch(toApiUrl(endpoint), {
+    const response = await fetch(toApiUrl(endpoint, API_BASE), {
       method: "POST",
       signal: controller.signal,
       headers: {

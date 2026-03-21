@@ -47,23 +47,37 @@ const dbPath = path.resolve(rootDir, process.env.FEEDBACK_DB_PATH ?? defaultDbPa
 const serverSeedDir = path.resolve(rootDir, "src/state/seeds");
 const publicAssetsDir = path.resolve(rootDir, "public/assets");
 const runtimeStorePath = path.resolve(rootDir, process.env.FLAT_RUNTIME_STORE_PATH ?? defaultRuntimeStorePath);
-const corsAllowedOrigin = String(process.env.API_ALLOWED_ORIGIN ?? "http://localhost:4000").trim() || "http://localhost:4000";
+const configuredCorsOrigins = String(process.env.API_ALLOWED_ORIGIN ?? "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+const hasPostgresUrl = String(process.env.POSTGRES_URL ?? "").trim().length > 0;
 const parseDbEngine = (value) => {
   const normalized = String(value ?? "").trim().toLowerCase();
   return normalized === "postgres" ? "postgres" : "sqlite";
 };
-const dbEngine = parseDbEngine(process.env.FEEDBACK_DB_ENGINE);
+const dbEngine = parseDbEngine(process.env.FEEDBACK_DB_ENGINE ?? (hasPostgresUrl ? "postgres" : "sqlite"));
 const parseDataSourceMode = (value) => {
   const normalized = String(value ?? "").trim().toLowerCase();
   return normalized === "db" || normalized === "database" ? "db" : "flat";
 };
-const dataSourceMode = parseDataSourceMode(
-  process.env.FEEDBACK_DATA_SOURCE ?? process.env.DATA_SOURCE ?? process.env.VITE_DATA_SOURCE,
-);
+const rawDataSourceMode =
+  process.env.FEEDBACK_DATA_SOURCE ?? process.env.DATA_SOURCE ?? process.env.VITE_DATA_SOURCE ?? (hasPostgresUrl ? "db" : "flat");
+const requestedDataSourceMode = parseDataSourceMode(rawDataSourceMode);
+const postgresConfigured = isPostgresConfigured();
+const dataSourceMode = requestedDataSourceMode === "flat"
+  ? "flat"
+  : dbEngine === "postgres" && !postgresConfigured
+    ? "flat"
+    : requestedDataSourceMode;
 const useDbDataSource = dataSourceMode === "db";
 const usePostgresDb = useDbDataSource && dbEngine === "postgres";
 const synthesisConfig = buildSynthesisConfig(process.env);
-const synthesisPin = String(process.env.SYNTHESIS_PIN ?? "").trim();
+const synthesisPin = String(
+  process.env.SYNTHESIS_PIN ??
+  process.env.VITE_SYNTHESIS_PIN ??
+  "",
+).trim();
 const DEFAULT_SYNTHESIS_SESSION_COUNTDOWN_SECONDS = 1800;
 const DEFAULT_SYNTHESIS_MIN_SIGNALS = 30;
 const toBoolEnv = (value, fallback) => {
@@ -170,23 +184,30 @@ const synthesisAuthSessionTtlMs =
   Number.isFinite(configuredAuthSessionTtlMs) && configuredAuthSessionTtlMs > 0
     ? Math.floor(configuredAuthSessionTtlMs)
     : DEFAULT_AUTH_SESSION_TTL_MS;
-const synthesisAuthSessions = new Map();
+const synthesisAuthSecret = String(process.env.SYNTHESIS_AUTH_SECRET ?? synthesisPin ?? "").trim();
+const synthesisAuthSecretKey = synthesisAuthSecret
+  ? crypto.createHash("sha256").update(synthesisAuthSecret).digest()
+  : null;
 const aiCompleteRouteTimeoutMs = toPositiveInt(process.env.AI_COMPLETE_ROUTE_TIMEOUT_MS, 300_000);
 
-const cleanupExpiredSynthesisAuthSessions = () => {
-  const now = Date.now();
-  for (const [token, expiresAt] of synthesisAuthSessions.entries()) {
-    if (expiresAt <= now) {
-      synthesisAuthSessions.delete(token);
-    }
-  }
+const toBase64Url = (value) => Buffer.from(value).toString("base64url");
+const fromBase64Url = (value) => Buffer.from(value, "base64url").toString("utf8");
+const timingSafeStringEqual = (left, right) => {
+  const leftBuffer = Buffer.from(String(left ?? ""));
+  const rightBuffer = Buffer.from(String(right ?? ""));
+  if (leftBuffer.length !== rightBuffer.length) return false;
+  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
+};
+const signSynthesisTokenPayload = (payloadSegment) => {
+  if (!synthesisAuthSecretKey) return "";
+  return crypto.createHmac("sha256", synthesisAuthSecretKey).update(payloadSegment).digest("base64url");
 };
 
 const issueSynthesisAuthToken = () => {
-  cleanupExpiredSynthesisAuthSessions();
-  const token = crypto.randomBytes(32).toString("hex");
   const expiresAt = Date.now() + synthesisAuthSessionTtlMs;
-  synthesisAuthSessions.set(token, expiresAt);
+  const payload = toBase64Url(JSON.stringify({ exp: expiresAt }));
+  const signature = signSynthesisTokenPayload(payload);
+  const token = `${payload}.${signature}`;
   return { token, expiresAt };
 };
 
@@ -207,22 +228,26 @@ const isProtectedAdminRoute = (pathname) => {
 };
 
 const hasValidSynthesisAuthToken = (request) => {
-  cleanupExpiredSynthesisAuthSessions();
+  if (!synthesisAuthSecretKey) return false;
   const token = parseBearerToken(request);
   if (!token) return false;
-  const expiresAt = synthesisAuthSessions.get(token);
-  if (!expiresAt) return false;
-  if (expiresAt <= Date.now()) {
-    synthesisAuthSessions.delete(token);
+  const [payload, signature] = token.split(".");
+  if (!payload || !signature) return false;
+  const expectedSignature = signSynthesisTokenPayload(payload);
+  if (!expectedSignature || !timingSafeStringEqual(signature, expectedSignature)) return false;
+  try {
+    const decoded = JSON.parse(fromBase64Url(payload));
+    const exp = Number(decoded?.exp);
+    return Number.isFinite(exp) && exp > Date.now();
+  } catch {
     return false;
   }
-  return true;
 };
 
 if (dbEngine === "postgres") {
-  if (!isPostgresConfigured()) {
+  if (!postgresConfigured) {
     // eslint-disable-next-line no-console
-    console.warn("[api] FEEDBACK_DB_ENGINE=postgres but POSTGRES_URL is not configured yet.");
+    console.warn("[api] FEEDBACK_DB_ENGINE=postgres but POSTGRES_URL is not configured. Falling back to flat data source.");
   } else {
     // eslint-disable-next-line no-console
     console.info("[api] FEEDBACK_DB_ENGINE=postgres detected. Postgres-backed handlers enabled for DB mode.");
@@ -1095,12 +1120,31 @@ const MAX_BODY_BYTES = Number.isFinite(configuredMaxBodyBytes) && configuredMaxB
   : 256 * 1024;
 const readBody = createJsonBodyReader(MAX_BODY_BYTES);
 
+const resolveCorsAllowOrigin = (request) => {
+  const requestOrigin = String(request?.headers?.origin ?? "").trim();
+  if (configuredCorsOrigins.length === 0) {
+    return requestOrigin || "*";
+  }
+  if (configuredCorsOrigins.includes("*")) {
+    return requestOrigin || "*";
+  }
+  if (requestOrigin && configuredCorsOrigins.includes(requestOrigin)) {
+    return requestOrigin;
+  }
+  return configuredCorsOrigins[0];
+};
+
+const buildCorsHeaders = (request, methods = "GET,POST,PATCH,DELETE,OPTIONS") => ({
+  "access-control-allow-origin": resolveCorsAllowOrigin(request),
+  "access-control-allow-methods": methods,
+  "access-control-allow-headers": "content-type,authorization",
+  vary: "origin",
+});
+
 const sendJson = (response, statusCode, payload) => {
   response.writeHead(statusCode, {
     "content-type": "application/json; charset=utf-8",
-    "access-control-allow-origin": corsAllowedOrigin,
-    "access-control-allow-methods": "GET,POST,PATCH,OPTIONS",
-    "access-control-allow-headers": "content-type,authorization",
+    ...buildCorsHeaders(response.req),
   });
   response.end(JSON.stringify(payload));
 };
@@ -2707,14 +2751,36 @@ export const handleApiRequest = async (request, response) => {
       return;
     }
 
-    if (method === "GET" && pathname === "/health") {
+    if (method === "GET" && (pathname === "/health" || pathname === "/api/health")) {
+      const warnings = [];
+      if (!synthesisPin) {
+        warnings.push("SYNTHESIS_PIN is not configured; facilitator unlock is disabled.");
+      }
+      if (!synthesisAuthSecret) {
+        warnings.push("SYNTHESIS_AUTH_SECRET is not configured; auth token signing falls back to SYNTHESIS_PIN.");
+      }
+      if (requestedDataSourceMode === "db" && dbEngine === "postgres" && !postgresConfigured) {
+        warnings.push("Postgres requested but not configured; API is running in flat mode.");
+      }
+      if (isVercelRuntime && !usePostgresDb) {
+        warnings.push("Using non-Postgres persistence on Vercel is ephemeral across instances.");
+      }
       sendJson(response, 200, {
         ok: true,
         dbPath,
         dbEngine,
         dataSourceMode,
+        requestedDataSourceMode,
+        postgresConfigured,
+        synthesisPinConfigured: synthesisPin.length > 0,
+        synthesisAuthMode: synthesisAuthSecretKey ? "stateless-signed-token" : "disabled",
+        runtimePersistence:
+          isVercelRuntime && !usePostgresDb
+            ? "ephemeral"
+            : "durable",
         synthesisProvider: synthesisConfig.provider ?? null,
         synthesisPhase1TimeoutMs: Number(synthesisConfig.PHASE1_TIMEOUT_MS ?? 0),
+        warnings,
       });
       return;
     }
@@ -2830,7 +2896,7 @@ export const handleApiRequest = async (request, response) => {
         "Content-Type": "text/event-stream; charset=utf-8",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
-        "Access-Control-Allow-Origin": "*",
+        ...buildCorsHeaders(request, "POST,OPTIONS"),
       });
       response.write(": connected\n\n");
       try {
@@ -3344,9 +3410,7 @@ export const handleApiRequest = async (request, response) => {
         "content-type": "text/event-stream; charset=utf-8",
         "cache-control": "no-cache, no-transform",
         connection: "keep-alive",
-        "access-control-allow-origin": corsAllowedOrigin,
-        "access-control-allow-methods": "POST,OPTIONS",
-        "access-control-allow-headers": "content-type,authorization",
+        ...buildCorsHeaders(request, "POST,OPTIONS"),
       });
       response.write(": connected\n\n");
       let synthesisSucceeded = false;

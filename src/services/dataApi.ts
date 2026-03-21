@@ -5,6 +5,7 @@ import type { AppArea } from "../types/domain";
 import { buildSynthesisAuthHeaders } from "./synthesisAuth";
 import type { TShirtSizingResultsPayload } from "../synthesis/tshirt/sizingResultsStore";
 import type { Day2Narrative } from "./synthesisModuleApi";
+import { toApiUrl } from "./apiBase";
 
 export interface BootstrapResponse {
   appAreas: Array<{ id: AppArea; label: string; dark?: boolean }>;
@@ -73,9 +74,7 @@ export interface AdminBootstrapResponse {
 
 const jsonHeaders = { "content-type": "application/json" };
 const SESSION_STORAGE_KEY = "emerald.feedback.session_id";
-const API_BASE =
-  String(import.meta.env.VITE_SYNTHESIS_API_BASE_URL ?? "").trim().replace(/\/+$/u, "");
-const toApiUrl = (path: string): string => (API_BASE ? `${API_BASE}${path}` : path);
+const API_BASE = import.meta.env.VITE_SYNTHESIS_API_BASE_URL;
 
 let inMemorySessionId: string | null = null;
 const getSessionId = (): string => {
@@ -109,7 +108,7 @@ const readJson = async <T>(response: Response): Promise<T> => {
 
 export const dataApi = {
   getHealth: async (): Promise<HealthResponse> => {
-    const response = await fetch(toApiUrl("/health"));
+    const response = await fetch(toApiUrl("/api/health", API_BASE));
     return readJson<HealthResponse>(response);
   },
 

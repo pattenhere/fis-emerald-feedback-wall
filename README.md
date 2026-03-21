@@ -77,6 +77,26 @@ npm run typecheck
 npm run build
 ```
 
+## Vercel Deployment Notes
+
+Set these environment variables in Vercel for preview/production deployments:
+
+- `SYNTHESIS_PIN` (or `VITE_SYNTHESIS_PIN`) for facilitator unlock
+- `SYNTHESIS_AUTH_SECRET` for signed facilitator auth tokens across serverless instances
+- `FEEDBACK_DB_ENGINE=postgres` with `FEEDBACK_DATA_SOURCE=db` for durable persistence
+- `POSTGRES_URL` (and optionally `POSTGRES_URL_NON_POOLING`) when using Postgres
+- `SYNTHESIS_API_PROVIDER` (`anthropic` or `openai`)
+- Provider key for selected provider:
+  - `ANTHROPIC_API_KEY` when using Anthropic
+  - `OPENAI_API_KEY` when using OpenAI
+
+Recommended for Vercel:
+
+- Leave `VITE_SYNTHESIS_API_BASE_URL` empty so the client uses same-origin `/api/*`.
+- Verify `GET /api/health` includes `"synthesisPinConfigured": true` after setting env vars.
+- Use server-side secrets (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`) and avoid `VITE_*` API keys in Vercel.
+- Optionally set `API_ALLOWED_ORIGIN` to a comma-separated allowlist of exact web origins.
+
 ## Data Model
 
 First table added:
