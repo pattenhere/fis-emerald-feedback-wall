@@ -1,12 +1,33 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "routes": [
+  "rewrites": [
     {
-      "handle": "filesystem"
+      "source": "/facilitator",
+      "destination": "/index.html"
     },
     {
-      "src": "/.*",
-      "dest": "/index.html"
+      "source": "/facilitator/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/synthesis",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/synthesis/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/reveal/:path*",
+      "destination": "/index.html"
     }
   ]
 }
