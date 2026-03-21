@@ -342,6 +342,10 @@ export const SynthesisModuleApp = (): JSX.Element => {
     ]);
   }, [refreshInputsCount, refreshModerationPending, refreshSessionConfig, refreshSynthesisParameters]);
 
+  const verifyProtectedDataAccess = useCallback(async (): Promise<void> => {
+    await synthesisModuleApi.getInputsCount();
+  }, []);
+
   useEffect(() => {
     if (!facilitatorRevealActive) return;
     if (/^[a-f0-9]{16}$/u.test(day2RevealState.readToken)) return;
@@ -459,6 +463,17 @@ export const SynthesisModuleApp = (): JSX.Element => {
         setPinError(result.error ?? "Invalid PIN.");
         return;
       }
+      if (!isRevealMode) {
+        try {
+          await verifyProtectedDataAccess();
+        } catch (error) {
+          clearSynthesisAuthSession();
+          setIsAuthenticated(false);
+          const message = error instanceof Error ? error.message : "Unable to load facilitator data.";
+          setPinError(`PIN accepted, but facilitator data failed to load: ${message}`);
+          return;
+        }
+      }
       setIsAuthenticated(true);
       writeSynthesisAuthFlag(true);
       setPinInput("");
@@ -472,11 +487,20 @@ export const SynthesisModuleApp = (): JSX.Element => {
     } finally {
       setAuthLoading(false);
     }
-  }, [isRevealMode, pinInput, refreshConnectivity, refreshProtectedAdminData]);
+  }, [isRevealMode, pinInput, refreshConnectivity, refreshProtectedAdminData, verifyProtectedDataAccess]);
 
   const handlePanelUnlock = useCallback(async (pin: string): Promise<boolean> => {
     const result = await synthesisModuleApi.verifyPin(pin);
     if (!result.authenticated) return false;
+    if (!isRevealMode) {
+      try {
+        await verifyProtectedDataAccess();
+      } catch {
+        clearSynthesisAuthSession();
+        setIsAuthenticated(false);
+        return false;
+      }
+    }
     setIsAuthenticated(true);
     writeSynthesisAuthFlag(true);
     if (!isRevealMode) {
@@ -484,7 +508,7 @@ export const SynthesisModuleApp = (): JSX.Element => {
       void refreshProtectedAdminData();
     }
     return true;
-  }, [isRevealMode, refreshConnectivity, refreshProtectedAdminData]);
+  }, [isRevealMode, refreshConnectivity, refreshProtectedAdminData, verifyProtectedDataAccess]);
 
   const buildPromptBody = useCallback((macros?: MacroState): string => {
     return JSON.stringify(

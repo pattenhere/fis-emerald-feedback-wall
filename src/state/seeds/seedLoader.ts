@@ -1,4 +1,4 @@
-import type { AppScreen, CardSortConcept, FeatureRequest, KudosQuote, ProductDefinition, ScreenFeedback } from "../../types/domain";
+import type { AppScreen, CardSortConcept, FeatureRequest, KudosQuote, ProductDefinition, ScreenFeedback } from "../../types/domain.js";
 import appAreasRaw from "./appAreas.seed.json";
 import cardSortConceptsRaw from "./cardSortConcepts.seed.json";
 import categoriesRaw from "./categories.seed.json";
@@ -21,7 +21,7 @@ import {
   validateScreenFeedbackSeed,
   validateScreenLibrarySeed,
   validateSubcategoriesSeedRows,
-} from "./seedValidator";
+} from "./seedValidator.js";
 
 type SeedRow = Record<string, unknown>;
 

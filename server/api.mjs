@@ -63,7 +63,10 @@ const parseDataSourceMode = (value) => {
   return normalized === "db" || normalized === "database" ? "db" : "flat";
 };
 const rawDataSourceMode =
-  process.env.FEEDBACK_DATA_SOURCE ?? process.env.DATA_SOURCE ?? process.env.VITE_DATA_SOURCE ?? "flat";
+  process.env.FEEDBACK_DATA_SOURCE ??
+  process.env.DATA_SOURCE ??
+  process.env.VITE_DATA_SOURCE ??
+  (isVercelRuntime && hasPostgresUrl ? "db" : "flat");
 const requestedDataSourceMode = parseDataSourceMode(rawDataSourceMode);
 const postgresConfigured = isPostgresConfigured();
 const dataSourceMode = requestedDataSourceMode === "flat"
@@ -2039,6 +2042,19 @@ const loadSignalsForSynthesis = async () => {
       ).rows;
       return { featureRequests, screenFeedback, kudos };
     });
+    const hasPostgresSignals =
+      signalRows.featureRequests.length > 0 ||
+      signalRows.screenFeedback.length > 0 ||
+      signalRows.kudos.length > 0;
+    if (!hasPostgresSignals) {
+      const flat = toFlatBootstrap();
+      return toSynthesisSignals(filterRowsForSynthesis({
+        featureRequests: flat.featureRequests,
+        screenFeedback: flat.screenFeedback.map((item) => ({ ...item, appLabel: appLabelFromId(item.app) })),
+        kudos: flat.kudosQuotes,
+        cardSortResults: readRuntimeStore(runtimeStorePath).cardSortResults ?? [],
+      }));
+    }
 
     return toSynthesisSignals(filterRowsForSynthesis({
       featureRequests: signalRows.featureRequests,
@@ -2232,7 +2248,7 @@ const loadSignalRowsForOverview = async () => {
   }
 
   if (usePostgresDb) {
-    return withPostgresClient(async (client) => {
+    const rows = await withPostgresClient(async (client) => {
       const featureRequests = (
         await client.query(`
           SELECT fr.feature_request_id AS id,
@@ -2261,6 +2277,8 @@ const loadSignalRowsForOverview = async () => {
         kudos,
       };
     });
+    const hasPostgresSignals = rows.featureRequests.length > 0 || rows.screenFeedback.length > 0 || rows.kudos.length > 0;
+    return hasPostgresSignals ? rows : buildFlatMergedSignals();
   }
 
   const featureRequests = db.prepare(`
@@ -2301,7 +2319,7 @@ const sortBySubmittedAtAsc = (items) => {
 };
 
 const loadAllInputsForModeration = async () => {
-  if (!useDbDataSource) {
+  const toFlatModerationInputs = () => {
     const merged = buildFlatMergedSignals();
     const featureRequests = (Array.isArray(merged.featureRequests) ? merged.featureRequests : []).map((item) => ({
       id: item.id,
@@ -2322,10 +2340,14 @@ const loadAllInputsForModeration = async () => {
       submittedAt: String(item.createdAt ?? nowIso()),
     }));
     return [...featureRequests, ...screenFeedback, ...kudos];
+  };
+
+  if (!useDbDataSource) {
+    return toFlatModerationInputs();
   }
 
   if (usePostgresDb) {
-    return withPostgresClient(async (client) => {
+    const rows = await withPostgresClient(async (client) => {
       const featureRequests = (
         await client.query(`
           SELECT feature_request_id AS id, title AS text, created_at AS "submittedAt"
@@ -2361,6 +2383,7 @@ const loadAllInputsForModeration = async () => {
       }));
       return [...featureRequests, ...screenFeedback, ...kudos];
     });
+    return rows.length > 0 ? rows : toFlatModerationInputs();
   }
 
   const featureRequests = db.prepare(`

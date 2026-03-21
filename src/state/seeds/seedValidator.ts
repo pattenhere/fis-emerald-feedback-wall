@@ -1,4 +1,4 @@
-import type { AppArea, AppScreen, CardSortConcept, FeatureRequest, KudosQuote, ScreenFeedback } from "../../types/domain";
+import type { AppArea, AppScreen, CardSortConcept, FeatureRequest, KudosQuote, ScreenFeedback } from "../../types/domain.js";
 
 type SeedRecord = Record<string, unknown>;
 
