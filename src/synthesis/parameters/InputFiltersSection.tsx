@@ -28,7 +28,7 @@ export const InputFiltersSection = ({
   const [multiplierError, setMultiplierError] = useState<string | null>(null);
   const [competingEachDraft, setCompetingEachDraft] = useState(String(parameters.competingMinEach));
   const [competingEachError, setCompetingEachError] = useState<string | null>(null);
-  const [ratioDraft, setRatioDraft] = useState(parameters.competingMinSplitRatio.toFixed(2));
+  const [ratioDraft, setRatioDraft] = useState(String(Math.round(parameters.competingMinSplitRatio * 100)));
   const [ratioError, setRatioError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export const InputFiltersSection = ({
   }, [parameters.competingMinEach]);
 
   useEffect(() => {
-    setRatioDraft(parameters.competingMinSplitRatio.toFixed(2));
+    setRatioDraft(String(Math.round(parameters.competingMinSplitRatio * 100)));
   }, [parameters.competingMinSplitRatio]);
 
   const isExcludeEnabled = parameters.excludeBelowN != null;
@@ -53,7 +53,7 @@ export const InputFiltersSection = ({
   const ratioPercentLabel = useMemo(() => {
     const value = Number(ratioDraft);
     if (!Number.isFinite(value)) return "";
-    return `${Math.round(value * 100)}%`;
+    return `${Math.round(value)}%`;
   }, [ratioDraft]);
 
   return (
@@ -88,6 +88,7 @@ export const InputFiltersSection = ({
             <label htmlFor="exclude-n">N</label>
             <input
               id="exclude-n"
+              className="synthesis-params-number-input"
               type="number"
               min={1}
               max={10}
@@ -108,11 +109,12 @@ export const InputFiltersSection = ({
                   setExcludeError("Must be between 1 and 10.");
                   return;
                 }
+                setExcludeDraft(String(parsed));
               }}
             />
           </div>
         )}
-        {excludeError && <p className="synthesis-params-error">{excludeError}</p>}
+        {isExcludeEnabled && excludeError && <p className="synthesis-params-error">{excludeError}</p>}
       </article>
 
       <article className="synthesis-params-card">
@@ -166,6 +168,7 @@ export const InputFiltersSection = ({
             <label>
               Multiplier
               <input
+                className="synthesis-params-number-input"
                 type="number"
                 min={2}
                 max={4}
@@ -186,6 +189,7 @@ export const InputFiltersSection = ({
                     setMultiplierError("Must be between 2 and 4.");
                     return;
                   }
+                  setMultiplierDraft(String(parsed));
                 }}
               />
             </label>
@@ -194,15 +198,21 @@ export const InputFiltersSection = ({
         {showMultiplierWarning && (
           <p className="synthesis-params-warning">High multipliers may skew output. Recommended: 2.</p>
         )}
-        {multiplierError && <p className="synthesis-params-error">{multiplierError}</p>}
+        {isUpweightEnabled && multiplierError && <p className="synthesis-params-error">{multiplierError}</p>}
       </article>
 
       <article className="synthesis-params-card">
         <h4>Competing perspectives detection</h4>
-        <div className="synthesis-params-grid synthesis-params-competing-grid">
-          <label>
-            Minimum submissions per polarity
+        <div className="synthesis-params-competing-grid">
+          <div className="synthesis-params-field-row">
+            <div className="synthesis-params-field-copy">
+              <label htmlFor="competing-min-each">Minimum submissions per polarity</label>
+              <small>Both polarities need at least this many submissions for a screen to be flagged.</small>
+              {competingEachError && <p className="synthesis-params-error">Must be 2–10.</p>}
+            </div>
             <input
+              id="competing-min-each"
+              className="synthesis-params-number-input"
               type="number"
               min={2}
               max={10}
@@ -220,49 +230,51 @@ export const InputFiltersSection = ({
               onBlur={() => {
                 const parsed = Number(competingEachDraft);
                 if (!Number.isInteger(parsed) || parsed < 2 || parsed > 10) {
-                  setCompetingEachError("Must be 2–10.");
+                  setCompetingEachError("invalid");
                   return;
                 }
+                setCompetingEachDraft(String(parsed));
               }}
             />
-            <small>
-              Both polarities need at least this many submissions for a screen to be flagged.
-            </small>
-          </label>
+          </div>
 
-          <label>
-            Minimum split ratio
+          <div className="synthesis-params-field-row">
+            <div className="synthesis-params-field-copy">
+              <label htmlFor="competing-split-ratio">Minimum split ratio (%)</label>
+              {ratioPercentLabel && <small>Interpretation: {ratioPercentLabel}</small>}
+              <small>
+                The minority side must represent at least this share of the majority side to flag a conflict.
+              </small>
+              {ratioError && <p className="synthesis-params-error">Must be 20%–100%.</p>}
+            </div>
             <input
+              id="competing-split-ratio"
+              className="synthesis-params-number-input"
               type="number"
-              min={0.2}
-              max={0.8}
-              step={0.05}
+              min={20}
+              max={100}
+              step={1}
               value={ratioDraft}
               onChange={(event) => {
                 setRatioError(null);
                 const next = event.target.value;
                 setRatioDraft(next);
                 const parsed = Number(next);
-                if (Number.isFinite(parsed) && parsed >= 0.2 && parsed <= 0.8) {
-                  onPatch({ competingMinSplitRatio: Number(parsed.toFixed(2)) });
+                if (Number.isFinite(parsed) && parsed >= 20 && parsed <= 100) {
+                  onPatch({ competingMinSplitRatio: Number((parsed / 100).toFixed(2)) });
                 }
               }}
               onBlur={() => {
                 const parsed = Number(ratioDraft);
-                if (!Number.isFinite(parsed) || parsed < 0.2 || parsed > 0.8) {
-                  setRatioError("Must be 20%–80%.");
+                if (!Number.isFinite(parsed) || parsed < 20 || parsed > 100) {
+                  setRatioError("invalid");
                   return;
                 }
+                setRatioDraft(String(Math.round(parsed)));
               }}
             />
-            {ratioPercentLabel && <small>Interpretation: {ratioPercentLabel}</small>}
-            <small>
-              The minority side must represent at least this share of the majority side to flag a conflict.
-            </small>
-          </label>
+          </div>
         </div>
-        {competingEachError && <p className="synthesis-params-error">{competingEachError}</p>}
-        {ratioError && <p className="synthesis-params-error">{ratioError}</p>}
       </article>
     </div>
   );

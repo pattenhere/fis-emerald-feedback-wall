@@ -15,6 +15,7 @@ const emptyStore = () => ({
   latestTShirtSizing: null,
   latestSynthesisOutput: null,
   latestSynthesisMetadata: null,
+  synthesisHistory: [],
   savedNarrative: null,
 });
 
@@ -48,6 +49,10 @@ export const readRuntimeStore = (storePath) => {
         parsed && typeof parsed.moderationInputStates === "object" && parsed.moderationInputStates
           ? parsed.moderationInputStates
           : {},
+      synthesisHistory:
+        parsed && Array.isArray(parsed.synthesisHistory)
+          ? parsed.synthesisHistory
+          : [],
     };
   } catch {
     return emptyStore();

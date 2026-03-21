@@ -24,71 +24,180 @@
     "p0FocusOnly": false,
     "emphasiseQuotes": false,
     "maxQuotes": 6,
-    "competingMinEach": 2,
+    "competingMinEach": 3,
     "competingMinSplitRatio": 0.2
   },
-  "synthesisParametersUpdatedAt": "2026-03-20T14:34:15.205Z",
+  "synthesisParametersUpdatedAt": "2026-03-21T17:01:14.546Z",
   "latestPhase1Analysis": {
     "p0Items": [
       {
-        "title": "Support role-based defaults for smoother syndication workflows",
-        "rationale": "High score and votes indicate strong demand for improving syndication workflows, which can enhance throughput during peak workloads.",
+        "title": "Configurable alert thresholds across workflow and servicing screens",
+        "rationale": "Two distinct feature requests (scores 27 each) call for configurable alert thresholds — one in Document/Funding Transition and one in Policy Controls/Amortization/Accruals. Amortization/Accruals carries 54 screen submissions with 27 suggestions and a 69% negative-leaning split, indicating active friction. The theme recurs across servicing and syndication sections, which together represent the highest section volume (256 + 121 = 377 submissions).",
         "evidenceSources": [
-          "Feature Request 1"
+          "Feature request score=27: configurable alert thresholds (Document/Funding Transition, screen 24)",
+          "Feature request 9 votes: configurable alert thresholds (Amortization/Accruals)",
+          "Screen feedback: Amortization/Accruals 54 submissions, 27 suggestions",
+          "Competing perspectives: Amortization/Accruals 69% negative split"
         ],
-        "feasibilityNote": "Implementation complexity likely manageable given existing role-based systems.",
+        "feasibilityNote": "Threshold configuration is typically a settings-layer change; complexity depends on how alerts are currently hardcoded. Cross-screen recurrence suggests a shared infrastructure gap rather than isolated UI work.",
+        "conflictContext": "Amortization/Accruals has the highest positive-to-negative ratio among contested screens (69% negative), yet 11 positive voices exist — some users may prefer current behavior. Rollout should preserve defaults for those users.",
+        "roleContext": "Ops and exec roles surface in private sentiment pool; exec kudos reference Document/Funding Transition tightening policy adherence for syndication teams."
+      },
+      {
+        "title": "Context-rich handoff summaries for risk review and multi-team coordination",
+        "rationale": "Two scored feature requests (score=27 each) explicitly request handoff summaries — one for Exceptions/Amendments and one for Agented Loan Support. Agented Loan Support has a 21% positive split (4 positive, 19 negative), the second-worst sentiment ratio in the dataset. Exceptions/Amendments also shows negative majority (79% negative split). Combined, these screens sit within monitoring-controls and syndication-complex-lending, both high-volume sections.",
+        "evidenceSources": [
+          "Feature request score=27: context-rich handoff summaries (Exceptions/Amendments, screen 38)",
+          "Feature request score=27: context-rich handoff summaries (Agented Loan Support, screen 42)",
+          "Competing perspectives: Agented Loan Support 21% positive split",
+          "Competing perspectives: Exceptions/Amendments 79% negative split",
+          "Section volumes: monitoring-controls 164, syndication-complex-lending 121"
+        ],
+        "feasibilityNote": "Handoff summary generation likely requires surfacing existing data fields into a structured view; no new data capture implied unless paired with approval rationale feature. Scope is bounded.",
+        "conflictContext": "Exceptions/Amendments has the highest positive share among contested screens (79% negative means 21% positive — but raw counts show 11 positive vs 14 negative, a closer split than ratio implies). Some users find current state workable; summaries should be additive, not replacing existing detail.",
+        "roleContext": "Ops role kudos reference Exceptions/Amendments smoothing cross-team execution for finance oversight."
+      },
+      {
+        "title": "Inquiry / Transaction History — portfolio visibility and cross-team execution improvements",
+        "rationale": "Inquiry/Transaction History has the second-worst sentiment ratio in the dataset at 25% positive (5 positive, 20 negative). It generates 47 screen submissions with 22 suggestions. Multiple exec and product kudos specifically praise improvements to this screen for portfolio visibility and ownership clarity, indicating high leadership attention. The analytics-inquiry section (112 submissions) is mid-tier by volume but the sentiment gap is severe.",
+        "evidenceSources": [
+          "Competing perspectives: Inquiry/Transaction History 25% positive split",
+          "Screen feedback: 47 submissions, 22 suggestions",
+          "Public kudos: exec — Inquiry/Transaction History improved portfolio visibility for finance oversight",
+          "Public kudos: product — Inquiry/Transaction History made ownership clearer for finance oversight",
+          "Public kudos: product — Inquiry/Transaction History smoothed cross-team execution for origination flow"
+        ],
+        "feasibilityNote": "Specific improvement scope is not defined in the signal; suggestions tag (22) is high relative to submission count, implying users have concrete ideas. Discovery sprint recommended before scoping.",
         "conflictContext": null,
-        "roleContext": null
+        "roleContext": "Exec and product roles are the primary kudos sources for this screen; finance oversight is the named beneficiary in multiple quotes."
       }
     ],
     "p1Items": [
       {
-        "title": "Add approval rationale capture for multi-team coordination",
-        "rationale": "Facilitates clear ownership across teams, crucial for workflow management.",
+        "title": "Role-based defaults for syndication workflows (Covenants/Compliance)",
+        "rationale": "Highest composite score feature request (score=45, 15 votes) targeting Covenants/Compliance, which also has 68 screen submissions, 37 suggestions, and a 63% negative split. Multiple kudos from exec, ops, and product roles praise Covenants/Compliance improvements. Strong cross-signal convergence.",
+        "signalCount": 15
+      },
+      {
+        "title": "Approval rationale capture for multi-team coordination (Workflow Engine)",
+        "rationale": "Score=27 feature request with 9 votes on Workflow Engine screen. Workflow Engine has 46 submissions, 17 suggestions, and a 61% negative split. Ownership clarity is a recurring theme across kudos and feature requests.",
         "signalCount": 9
       },
       {
-        "title": "Add configurable alert thresholds for tighter control operations",
-        "rationale": "Helps maintain governance while reducing onboarding friction.",
+        "title": "Structured amendment pathways for high-volume exception lanes (Self-Service)",
+        "rationale": "9-vote feature request on Self-Service screen within digital-experience. Self-Service has a 39% positive split (9 positive, 23 negative), indicating meaningful friction. Digital-experience is the third-highest section by volume (168 submissions).",
         "signalCount": 9
+      },
+      {
+        "title": "Guided exception handling for multi-team coordination (Pricing/Approval)",
+        "rationale": "9-vote feature request. Exception handling is a cross-cutting theme appearing in multiple feature requests and screen feedback. Multi-team coordination is a recurring workflow pain point across sections.",
+        "signalCount": 9
+      },
+      {
+        "title": "EIR Fees screen — friction reduction",
+        "rationale": "EIR Fees has the worst positive sentiment ratio in the dataset at 26% (6 positive, 23 negative). No feature request directly targets it in the top 10, but the severity of sentiment warrants P1 investigation.",
+        "signalCount": 29
       }
     ],
     "p2Themes": [
       {
-        "theme": "Workflow Optimization",
-        "description": "Multiple feature requests focus on improving workflow efficiency and clarity, indicating a need for better coordination and control mechanisms."
+        "theme": "Syndication and agented loan complexity",
+        "description": "Syndication-complex-lending section (121 submissions) shows persistent friction across Syndicated Servicing (60% negative), Agented Loan Support (21% positive — worst in section), and Multi-Party Administration (67% negative). Feature requests for role-based defaults and handoff summaries both target syndication workflows. Private sentiment pool includes ops and exec roles consistent with this theme."
+      },
+      {
+        "theme": "Credit risk tooling gaps",
+        "description": "Credit-risk section (147 submissions) spans three screens all with negative majorities: Credit Assessment (44% positive), Risk Rating (43% positive), and Exposure Visibility (60% negative). No top-10 feature request directly targets credit risk screens, suggesting users may not yet have a clear solution in mind — discovery work warranted."
+      },
+      {
+        "theme": "Origination-to-servicing handoff friction",
+        "description": "Application Workflow (57% negative, 76 submissions, 40 suggestions) and Onboarding to Servicing (38% positive) both show friction at the origination boundary. Feature requests for handoff summaries and approval rationale capture are directionally relevant. Ops kudos reference Application Workflow keeping workflow intent obvious for product planning."
+      },
+      {
+        "theme": "Analytics and reporting divergence",
+        "description": "Reporting screen has the best sentiment ratio in the dataset (89% positive, 8 vs 9 negative — nearly balanced but positive-leaning). Inquiry/Transaction History is the inverse at 25% positive. This divergence suggests reporting output is valued but transaction-level inquiry tooling is underserving users."
       }
     ],
     "crossCuttingInsights": [
       {
-        "insight": "Improvement in portfolio visibility is a recurring positive theme across multiple sections.",
+        "insight": "Multi-team coordination and ownership clarity is the dominant workflow theme, appearing in feature requests for approval rationale capture, handoff summaries, role-based defaults, and guided exception handling across at least five distinct screens.",
+        "rolesAffected": [
+          "ops",
+          "exec",
+          "product",
+          "finance"
+        ],
+        "screenCount": 5
+      },
+      {
+        "insight": "Suggestion tags dominate screen feedback across all top-10 screens — pain point, confusing, missing, and works-well tags all register zero. This may indicate a tagging or collection methodology artifact; if accurate, it means qualitative friction signals are entirely suggestion-framed, limiting severity triage.",
         "rolesAffected": null,
+        "screenCount": 10
+      },
+      {
+        "insight": "Screens with the worst sentiment ratios (Agented Loan Support 21%, EIR Fees 26%, Inquiry/Transaction History 25%) are distributed across three different sections (syndication, servicing, analytics), indicating systemic rather than section-specific quality issues.",
+        "rolesAffected": [
+          "ops",
+          "exec",
+          "finance"
+        ],
         "screenCount": 3
+      },
+      {
+        "insight": "Exec-role kudos are concentrated on portfolio visibility and ownership clarity themes across Covenants/Compliance, Application Workflow, Booking/Maintenance, and Inquiry/Transaction History — signaling that leadership is tracking these areas as strategic priorities.",
+        "rolesAffected": [
+          "exec"
+        ],
+        "screenCount": 4
       }
     ],
     "selectedQuotes": [
+      {
+        "text": "Strong results from how Covenants / Compliance kept workflow intent obvious for product planning. This directly improves our day-to-day execution.",
+        "role": "ops"
+      },
       {
         "text": "Strong results from how Inquiry / Transaction History improved portfolio visibility for finance oversight. This aligns tightly with how our teams operate.",
         "role": "exec"
       },
       {
-        "text": "Excellent progress in how Payments / Billing / Payoff improved portfolio visibility for syndication teams. This gives leadership a stronger line of sight.",
-        "role": "exec"
-      },
-      {
-        "text": "Really impressed by how Covenants / Compliance made ownership clearer for analytics partners. This simplifies complex work without losing control.",
-        "role": "product"
+        "text": "The walkthrough showed how Exceptions / Amendments smoothed cross-team execution for finance oversight. This aligns tightly with how our teams operate.",
+        "role": "ops"
       }
     ],
     "competingPerspectivesNotes": [
       {
+        "screenName": "Inquiry / Transaction History (analytics-inquiry)",
+        "interpretation": "25% positive split with 20 negative vs 5 positive is the clearest negative consensus in the analytics section. The 22 suggestions out of 47 submissions (47% suggestion rate) indicates users are engaged and have ideas, not just complaints.",
+        "recommendation": "Prioritize a structured discovery session targeting the suggestion content on this screen. Exec and product kudos confirm leadership visibility; translate that attention into a defined improvement sprint."
+      },
+      {
+        "screenName": "Agented Loan Support (syndication-complex-lending)",
+        "interpretation": "21% positive split (4 vs 19) is the second-worst ratio in the dataset. A score=27 feature request for handoff summaries directly targets this screen. The gap between positive and negative voices is large enough to treat as near-consensus friction.",
+        "recommendation": "Treat as P0-adjacent. Pair the handoff summary feature request with direct user interviews from the 19 negative respondents to validate root cause before building."
+      },
+      {
+        "screenName": "EIR Fees (servicing)",
+        "interpretation": "26% positive split (6 vs 23) with no corresponding top-10 feature request suggests users are experiencing friction but have not yet articulated a solution. Servicing is the highest-volume section (256 submissions).",
+        "recommendation": "Add EIR Fees to the next discovery cycle. The absence of a feature request may mean the problem is poorly understood rather than low priority."
+      },
+      {
+        "screenName": "Application Workflow (origination)",
+        "interpretation": "57% negative split with the highest suggestion count in the dataset (40 suggestions, 76 submissions — 53% suggestion rate) indicates high user engagement and a strong desire for improvement. Multiple kudos reference this screen positively, suggesting recent progress is noticed but not yet sufficient.",
+        "recommendation": "Review the 40 suggestions for clustering. The combination of high suggestion volume and exec kudos makes this a high-visibility screen where incremental improvements will be noticed."
+      },
+      {
         "screenName": "Reporting (analytics-inquiry)",
-        "interpretation": "Feedback is mixed with a slight negative tilt, indicating potential usability or functionality issues.",
-        "recommendation": "Conduct a detailed review to identify specific pain points and address them to improve user satisfaction."
+        "interpretation": "89% positive split is the strongest in the dataset. This is an outlier worth understanding — the design or workflow patterns here may be transferable to lower-performing screens in the same section.",
+        "recommendation": "Document what makes Reporting work well and assess applicability to Inquiry/Transaction History, which sits in the same section but has inverse sentiment."
+      },
+      {
+        "screenName": "Exceptions / Amendments (monitoring-controls)",
+        "interpretation": "Raw counts show 11 positive vs 14 negative — a closer split than the 79% negative label implies. The 79% figure appears to represent the negative share of the total, not a ratio. Ops kudos specifically praise this screen for cross-team execution.",
+        "recommendation": "Validate the sentiment calculation methodology. If the split is closer to 56% negative (14 of 25), this screen may be lower urgency than the ratio suggests. The handoff summary feature request remains relevant regardless."
       }
     ],
     "macroApplicationLog": [
-      "Excluded screens with fewer than 4 submissions as per macro instructions."
+      "No macros active — no macro logic applied."
     ]
   },
   "latestTShirtSizing": {
@@ -120,18 +229,401 @@
     ],
     "savedAt": "2026-03-20T02:16:42.064Z"
   },
-  "latestSynthesisOutput": "## Overview\nThis Product Requirements Document outlines the development of enhancements to improve syndication workflows, multi-team coordination, and control operations. The focus is on implementing features that support role-based defaults, approval rationale capture, and configurable alert thresholds. These improvements aim to optimize workflow efficiency and enhance portfolio visibility.\n\n## Problem Statement\nCurrent syndication workflows experience bottlenecks during peak workloads due to a lack of role-based defaults. There is also a need for clearer ownership and communication across teams, and existing control mechanisms could benefit from configurable alert thresholds to maintain governance without increasing onboarding friction. These issues hinder overall workflow efficiency and visibility.\n\n## Scope — Tonight's Build\n- Implement role-based defaults for syndication workflows.\n- Add approval rationale capture functionality for multi-team coordination.\n- Introduce configurable alert thresholds for control operations.\n\n## Out of Scope\n- Any screens with fewer than 4 submissions.\n- Detailed usability review of the Reporting (analytics-inquiry) screen as it requires a separate in-depth analysis.\n\n## User Stories\n1. As a syndication manager, I want role-based workflow defaults so that I can handle peak workloads more efficiently.\n2. As a team lead, I want to capture approval rationales, so that I can ensure clear ownership of tasks across different teams.\n3. As an operations manager, I want configurable alert thresholds, so that I can maintain tight control without increasing onboarding complexity.\n4. As an executive, I want improved portfolio visibility, so that I can have a better oversight of financial operations.\n5. As a product manager, I want clearer ownership in analytics, so that I can simplify complex tasks without sacrificing control.\n\n## Acceptance Criteria\n- **Support role-based defaults for smoother syndication workflows:** \n  - Ability to define and apply role-based defaults within the syndication workflow.\n  - Successful application of defaults should reduce processing time during peak workloads.\n  \n## Design Guidance\n- Ensure the user interface for role-based defaults is intuitive and integrates seamlessly with existing systems.\n- Approval rationale capture should be easy to use and accessible to all relevant team members.\n- Configurable alert thresholds should be visibly adjustable and provide clear feedback on current settings.\n\n## Success Metrics\n- Reduction in processing time during peak workloads by 20% as a result of role-based defaults.\n- Increase in cross-team task completion rate by 15% due to approval rationale capture.\n- User satisfaction with control operations measured by a 30% decrease in onboarding-related queries.",
+  "latestSynthesisOutput": "# Emerald Feedback Wall — Product Requirements Document\n\n**Version:** 1.0 | **Source:** Phase 1 Synthesis | **Priority Tier Coverage:** P0 (primary), P1 (scoped), P2 (noted)\n\n---\n\n## Overview\n\nThis PRD defines requirements for the next build cycle based on synthesized feedback from the Emerald Feedback Wall. Three P0 items drive the core scope: configurable alert thresholds across workflow and servicing screens, context-rich handoff summaries for risk review and multi-team coordination, and portfolio visibility improvements to the Inquiry/Transaction History screen. These items were selected on the basis of feature request vote scores, screen-level sentiment ratios, submission volume, and cross-role signal convergence. Five P1 items are defined for parallel discovery or near-term queuing. Four P2 themes are documented for roadmap awareness.\n\n---\n\n## Problem Statement\n\nUsers across servicing, syndication, and analytics workflows are experiencing systemic friction concentrated in three areas:\n\n**1. Alert thresholds are not configurable.** Two independent feature requests (each scoring 27) target configurable alert thresholds — one on the Document/Funding Transition screen and one on the Amortization/Accruals screen. Amortization/Accruals alone generates 54 screen submissions with 27 suggestions and a 69% negative-leaning sentiment split, the highest negative ratio among contested screens. The recurrence of this request across servicing and syndication sections (377 combined submissions) indicates a shared infrastructure gap rather than an isolated UI issue. Ops and exec roles are represented in the affected sentiment pool; exec feedback specifically references policy adherence for syndication teams as a beneficiary of improvement.\n\n**2. Handoff context is lost at team boundaries.** Two scored feature requests (each scoring 27) call for context-rich handoff summaries — one targeting Exceptions/Amendments and one targeting Agented Loan Support. Agented Loan Support has a 21% positive sentiment split (4 positive, 19 negative), the second-worst ratio in the dataset. Exceptions/Amendments carries a negative majority. Both screens sit within high-volume sections (monitoring-controls at 164 submissions, syndication-complex-lending at 121 submissions). Ops-role kudos explicitly reference Exceptions/Amendments as a friction point for cross-team execution in finance oversight contexts.\n\n**3. Inquiry/Transaction History underserves portfolio visibility needs.** This screen has a 25% positive sentiment split (5 positive, 20 negative), the second-worst ratio in the analytics section, with 47 submissions and 22 suggestions (a 47% suggestion rate indicating users have concrete ideas, not only complaints). Despite this friction, multiple exec- and product-role kudos specifically praise improvements to this screen for portfolio visibility and ownership clarity — signaling high leadership attention and a gap between current state and user expectations.\n\nAcross all three problem areas, the dominant cross-cutting theme is **multi-team coordination and ownership clarity**, which appears in feature requests across at least five distinct screens and affects ops, exec, product, and finance roles.\n\n---\n\n## Scope — Tonight's Build\n\n### P0-1 · Configurable Alert Thresholds (Document/Funding Transition + Amortization/Accruals)\n\nDeliver a settings-layer mechanism allowing authorized users to configure alert threshold values on the Document/Funding Transition screen (screen 24) and the Amortization/Accruals screen. Current hardcoded thresholds are the inferred root cause. The implementation should expose threshold parameters through a configuration interface without requiring code changes per adjustment. Default values must be preserved on rollout to protect the minority of users (11 positive voices on Amortization/Accruals) who may prefer current behavior.\n\n**Screens in scope:** Document/Funding Transition (screen 24), Amortization/Accruals\n**Sections affected:** servicing, syndication\n\n### P0-2 · Context-Rich Handoff Summaries (Exceptions/Amendments + Agented Loan Support)\n\nDeliver a structured handoff summary view on the Exceptions/Amendments screen (screen 38) and the Agented Loan Support screen (screen 42). Summaries should surface existing data fields into a consolidated, readable format relevant to the receiving team at handoff. No new data capture is required for this scope unless explicitly linked to the P1 approval rationale capture item. Summaries must be additive — existing detail views must remain accessible and unmodified.\n\n**Screens in scope:** Exceptions/Amendments (screen 38), Agented Loan Support (screen 42)\n**Sections affected:** monitoring-controls, syndication-complex-lending\n\n### P0-3 · Inquiry/Transaction History — Discovery Sprint and Initial Improvement Delivery\n\nGiven that specific improvement scope is not yet defined in the signal (22 suggestions exist but have not been clustered), this P0 item is structured in two parts:\n\n- **Part A (tonight):** Conduct a structured review of the 22 suggestion-tagged submissions on the Inquiry/Transaction History screen to identify clusters. Produce a ranked shortlist of no more than three discrete improvements.\n- **Part B (next cycle):** Deliver the highest-ranked improvement from Part A. Exec and product kudos confirm leadership visibility on this screen; at minimum one visible, measurable improvement must ship to close the gap between stated leadership priority and user experience.\n\n**Screen in scope:** Inquiry/Transaction History\n**Section affected:** analytics-inquiry\n\n---\n\n## Out of Scope\n\nThe following items are explicitly excluded from tonight's build. They are documented to prevent scope creep and to support future planning.\n\n| Item | Reason for Exclusion |\n|---|---|\n| EIR Fees friction reduction (P1) | No top-10 feature request targets this screen; root cause is undefined. Requires discovery before scoping. Sentiment data (26% positive, 23 negative) warrants P1 investigation, not immediate build. |\n| Role-based defaults for Covenants/Compliance (P1) | Highest composite feature request score (45, 15 votes) but requires role-permission architecture review before implementation. Queued for next sprint. |\n| Approval rationale capture — Workflow Engine (P1) | Score=27 feature request; directionally relevant to P0-2 handoff summaries but distinct in scope. Must not be conflated with handoff summary delivery. |\n| Structured amendment pathways — Self-Service (P1) | 9-vote feature request; digital-experience section friction is real (168 submissions) but not at P0 severity. |\n| Guided exception handling — Pricing/Approval (P1) | 9-vote feature request; cross-cutting exception theme is noted but screen-level evidence is thinner than P0 items. |\n| Credit risk tooling improvements (P2) | No top-10 feature request targets credit-risk screens; users have not yet articulated solutions. Discovery work required. |\n| Origination-to-servicing handoff — Application Workflow (P2) | High suggestion volume (40 suggestions, 53% suggestion rate) warrants a dedicated review, but exec kudos suggest recent progress is being noticed. Not urgent enough to displace P0 scope tonight. |\n| Reporting screen design pattern documentation (P2) | 89% positive sentiment is an asset to understand and transfer, but this is a research task, not a build task. |\n| Any changes to feedback collection methodology or tagging taxonomy | Cross-cutting insight flags that all top-10 screen feedback is suggestion-tagged with zero pain-point, confusing, missing, or works-well tags. This may be a collection artifact. Investigation is warranted but is a process task, not a product build task. |\n\n---\n\n## User Stories\n\n**US-1 — Threshold Configuration (Ops, Servicing)**\nAs an **ops user managing amortization and accruals workflows**, I want to **set custom alert threshold values for my team's context** so that **I receive alerts calibrated to our actual risk tolerance rather than a hardcoded default that generates noise or misses real issues**.\n\n**US-2 — Threshold Preservation (All existing users)**\nAs an **existing user who has not requested threshold changes**, I want **my current alert behavior to remain unchanged after the configuration feature ships** so that **I am not disrupted by a change I did not request**.\n\n**US-3 — Handoff Summary Access (Ops, Finance)**\nAs an **ops or finance team member receiving a loan exception or agented loan handoff**, I want to **view a structured summary of the key context, decisions, and status at the point of handoff** so that **I can act on the handoff immediately without reconstructing context from scattered detail screens**.\n\n**US-4 — Handoff Summary Additive (All existing users)**\nAs a **user who currently relies on the full detail view in Exceptions/Amendments or Agented Loan Support**, I want **the handoff summary to be an additional view, not a replacement for existing detail** so that **my current workflow is not broken by the new feature**.\n\n**US-5 — Portfolio Visibility (Exec, Finance)**\nAs an **exec or finance oversight user**, I want **Inquiry/Transaction History to clearly surface portfolio-level visibility and ownership context** so that **I can perform finance oversight tasks without switching between screens or reconstructing ownership chains manually**.\n\n**US-6 — Suggestion Cluster Review (Product Team)**\nAs a **product team member responsible for the Inquiry/Transaction History screen**, I want to **review and cluster the 22 suggestion-tagged submissions** so that **I can prioritize the highest-impact improvement for the next build cycle with evidence rather than assumption**.\n\n**US-7 — Cross-Team Coordination (Ops, Exec, Syndication)**\nAs a **team member coordinating across ops, finance, and syndication on complex or agented loans**, I want **alert thresholds and handoff summaries to reflect the actual state of my workflow at each stage** so that **I spend less time on coordination overhead and more time on execution**.\n\n---\n\n## Acceptance Criteria\n\n### P0-1 · Configurable Alert Thresholds\n\n**AC-1.1** A configuration interface is accessible to authorized users on both the Document/Funding Transition screen (screen 24) and the Amortization/Accruals screen, allowing threshold values to be set without a code deployment.\n\n**AC-1.2** On first deployment, all threshold values default to their current hardcoded values. No user experiences a change in alert behavior unless they or an authorized administrator explicitly modifies a threshold.\n\n**AC-1.3** Changes to threshold values are logged with a timestamp and the identity of the user who made the change, supporting audit and policy adherence requirements referenced in exec-role feedback.\n\n**AC-1.4** The configuration interface is accessible to ops-role users at minimum. Role-based access control for threshold modification is defined and documented prior to release.\n\n**AC-1.5** Alerts fire correctly against the configured threshold values immediately after a threshold is saved, with no requirement for page reload or system restart.\n\n**AC-1.6** The feature is validated on both target screens independently; a defect on one screen does not block release of the other.\n\n---\n\n### P0-2 · Context-Rich Handoff Summaries\n\n**AC-2.1** A handoff summary view is available on both the Exceptions/Amendments screen (screen 38) and the Agented Loan Support screen (screen 42).\n\n**AC-2.2** The summary surfaces, at minimum: current status, key decision points or exceptions logged, responsible party or team, and next required action. All fields are populated from existing data — no new data entry is required from users to generate a summary.\n\n**AC-2.3** The existing full detail view on both screens remains fully accessible and unmodified. The summary is presented as an additional view (e.g., a collapsible panel, tab, or summary card), not as a replacement.\n\n**AC-2.4** The summary is visible to users in receiving-team roles at the point of handoff without requiring navigation away from the screen.\n\n**AC-2.5** On Agented Loan Support, the summary is validated against at least one scenario representative of the 19 negative-sentiment submissions (i.e., a multi-party agented loan handoff with exception history).\n\n**AC-2.6** The feature ships as additive on both screens simultaneously. A staged rollout that enables one screen without the other is acceptable only if a critical defect requires it, and must be documented as a known gap.\n\n---\n\n### P0-3 · Inquiry/Transaction History Discovery Sprint\n\n**AC-3.1** All 22 suggestion-tagged submissions on the Inquiry/Transaction History screen are reviewed and assigned to clusters by the end of the discovery sprint. Clusters are documented in a shared artifact accessible to exec and product stakeholders.\n\n**AC-3.2** The cluster artifact ranks identified improvement opportunities by frequency of suggestion signal and estimated user impact. A minimum of three clusters are identified; a maximum of five are documented.\n\n**AC-3.3** A single highest-priority improvement is nominated from the cluster review, with rationale documented against the Phase 1 evidence (25% positive split, exec/product kudos referencing portfolio visibility and ownership clarity).\n\n**AC-3.4** The nominated improvement is scoped with acceptance criteria and added to the next build cycle backlog before the discovery sprint closes.\n\n**AC-3.5** The nominated improvement, when delivered in the next cycle, must be measurable against the 25% positive sentiment baseline established in Phase 1.\n\n---\n\n## Design Guidance\n\n**Threshold configuration UI**\nThe configuration interface should be positioned within an existing settings or administration layer rather than embedded inline on the alert-generating screen. Inline editing of thresholds on the workflow screen itself risks accidental modification during normal use. A clear save/confirm action and visible display of the currently active threshold value on the workflow screen (read-only) is recommended. Given that 11 positive voices exist on Amortization/Accruals, consider surfacing a \"restore default\" action alongside custom threshold controls.\n\n**Handoff summary layout**\nThe summary should be scannable in under 30 seconds for a user arriving at a screen cold. Prioritize status, owner, and next action above the fold. Supporting detail (exception history, amendment log) should be one interaction away but not the default view. On Agented Loan Support, where the sentiment gap is the most severe (21% positive), the summary must address multi-party context explicitly — a single responsible party field is insufficient for agented loan workflows.\n\n**Inquiry/Transaction History**\nDo not redesign this screen prior to completing the Part A discovery sprint. Any visual or structural changes made before the 22 suggestions are clustered risk solving the wrong problem. Exec and product kudos reference portfolio visibility and ownership clarity as specific themes — ensure the Part A cluster review specifically codes suggestions against these two dimensions.\n\n**Cross-screen consistency**\nConfigurable threshold controls and handoff summary components will appear on multiple screens. Establish a shared component pattern for each before building screen-specific instances. This reduces implementation variance and supports the P2 roadmap items (Application Workflow, Covenants/Compliance) that are directionally aligned with the same patterns.\n\n**Defaults and non-disruption**\nBoth P0-1 and P0-2 carry explicit non-disruption requirements (threshold defaults preserved; detail views not replaced). These are not optional UX considerations — they are evidence-backed requirements reflecting the presence of positive-sentiment minorities on both sets of screens. Design review should include a checklist item confirming that existing user paths remain intact.\n\n---\n\n## Success Metrics\n\nMetrics are defined per P0 item. Baseline values are drawn from Phase 1 analysis. Measurement approach assumes the Feedback Wall continues to collect screen-level sentiment and submission data post-release.\n\n### P0-1 · Configurable Alert Thresholds\n\n| Metric | Baseline | Target | Measurement |\n|---|---|---|---|\n| Amortization/Accruals negative sentiment share | 69% negative | ≤ 55% negative | Screen-level sentiment split, next feedback cycle |\n| Amortization/Accruals suggestion submissions | 27 suggestions / 54 total | Reduction in threshold-related suggestions | Qualitative review of suggestion content |\n| Document/Funding Transition feature request recurrence | Score 27 (open) | Feature request closed or score not re-submitted | Feature request tracking |\n| Threshold-related support or escalation volume | Not baselined | Establish baseline in first 30 days post-release | Support log tagging |\n\n### P0-2 · Context-Rich Handoff Summaries\n\n| Metric | Baseline | Target | Measurement |\n|---|---|---|---|\n| Agented Loan Support positive sentiment split | 21% positive (4 of 23) | ≥ 35% positive | Screen-level sentiment split, next feedback cycle |\n| Exceptions/Amendments negative sentiment share | Negative majority (14 of 25) | Negative share reduced; positive voices ≥ 15 of next cycle | Screen-level sentiment split |\n| Handoff summary feature request recurrence | Score 27 × 2 (open) | Feature requests closed or not re-submitted | Feature request tracking |\n| Ops-role negative sentiment on both screens | Present in private pool | Reduction in ops-role negative signal | Role-segmented sentiment, next cycle |\n\n### P0-3 · Inquiry/Transaction History\n\n| Metric | Baseline | Target | Measurement |\n|---|---|---|---|\n| Screen positive sentiment split | 25% positive (5 of 25) | ≥ 40% positive after Part B delivery | Screen-level sentiment split, next feedback cycle |\n| Suggestion submission rate | 22 of 47 (47%) | Reduction in suggestion rate as improvements land | Submission tag distribution |\n| Discovery sprint output | 0 clusters documented | ≥ 3 clusters documented, 1 improvement scoped | Internal artifact review |\n| Exec/product kudos continuity | Multiple kudos referencing portfolio visibility | Kudos maintained or increased in next cycle | Kudos role-segmented tracking |\n\n### Cross-Cutting\n\n| Metric | Baseline | Target |\n|---|---|---|\n| Multi-team coordination theme recurrence across feature requests | Appears across ≥ 5 screens | Reduction to ≤ 3 screens after P0 and P1 delivery | \n| Overall negative-majority screens in dataset | EIR Fees 26%, Agented Loan 21%, Inquiry/Transaction 25% as worst three | None of the three P0-targeted screens remain in bottom three by next cycle |\n\n---\n\n*This PRD is generated entirely from Phase 1 synthesized signal. No requirements have been inferred beyond the evidence supplied. Items marked for discovery (P0-3 Part A, P1 EIR Fees, P2 credit risk) reflect genuine signal gaps, not omissions.*",
   "latestSynthesisMetadata": {
-    "generatedAt": "2026-03-20T12:57:20.984Z",
+    "generatedAt": "2026-03-21T23:23:01.716Z",
     "outputMode": "prd",
     "macrosActive": [
-      "Excluded screens with fewer than 4 submissions as per macro instructions."
+      "No macros active — no macro logic applied."
     ],
-    "phase1DurationMs": 7509,
-    "phase2DurationMs": 7075,
-    "totalTokensPhase1": 2542,
-    "estimatedTokensPhase2": 643
+    "phase1DurationMs": 65456,
+    "phase2DurationMs": 95693,
+    "totalTokensPhase1": 3284,
+    "estimatedTokensPhase2": 3862
   },
+  "synthesisHistory": [
+    {
+      "id": "synth-2026-03-21T23-23-01-716Z",
+      "outputMode": "prd",
+      "output": "# Emerald Feedback Wall — Product Requirements Document\n\n**Version:** 1.0 | **Source:** Phase 1 Synthesis | **Priority Tier Coverage:** P0 (primary), P1 (scoped), P2 (noted)\n\n---\n\n## Overview\n\nThis PRD defines requirements for the next build cycle based on synthesized feedback from the Emerald Feedback Wall. Three P0 items drive the core scope: configurable alert thresholds across workflow and servicing screens, context-rich handoff summaries for risk review and multi-team coordination, and portfolio visibility improvements to the Inquiry/Transaction History screen. These items were selected on the basis of feature request vote scores, screen-level sentiment ratios, submission volume, and cross-role signal convergence. Five P1 items are defined for parallel discovery or near-term queuing. Four P2 themes are documented for roadmap awareness.\n\n---\n\n## Problem Statement\n\nUsers across servicing, syndication, and analytics workflows are experiencing systemic friction concentrated in three areas:\n\n**1. Alert thresholds are not configurable.** Two independent feature requests (each scoring 27) target configurable alert thresholds — one on the Document/Funding Transition screen and one on the Amortization/Accruals screen. Amortization/Accruals alone generates 54 screen submissions with 27 suggestions and a 69% negative-leaning sentiment split, the highest negative ratio among contested screens. The recurrence of this request across servicing and syndication sections (377 combined submissions) indicates a shared infrastructure gap rather than an isolated UI issue. Ops and exec roles are represented in the affected sentiment pool; exec feedback specifically references policy adherence for syndication teams as a beneficiary of improvement.\n\n**2. Handoff context is lost at team boundaries.** Two scored feature requests (each scoring 27) call for context-rich handoff summaries — one targeting Exceptions/Amendments and one targeting Agented Loan Support. Agented Loan Support has a 21% positive sentiment split (4 positive, 19 negative), the second-worst ratio in the dataset. Exceptions/Amendments carries a negative majority. Both screens sit within high-volume sections (monitoring-controls at 164 submissions, syndication-complex-lending at 121 submissions). Ops-role kudos explicitly reference Exceptions/Amendments as a friction point for cross-team execution in finance oversight contexts.\n\n**3. Inquiry/Transaction History underserves portfolio visibility needs.** This screen has a 25% positive sentiment split (5 positive, 20 negative), the second-worst ratio in the analytics section, with 47 submissions and 22 suggestions (a 47% suggestion rate indicating users have concrete ideas, not only complaints). Despite this friction, multiple exec- and product-role kudos specifically praise improvements to this screen for portfolio visibility and ownership clarity — signaling high leadership attention and a gap between current state and user expectations.\n\nAcross all three problem areas, the dominant cross-cutting theme is **multi-team coordination and ownership clarity**, which appears in feature requests across at least five distinct screens and affects ops, exec, product, and finance roles.\n\n---\n\n## Scope — Tonight's Build\n\n### P0-1 · Configurable Alert Thresholds (Document/Funding Transition + Amortization/Accruals)\n\nDeliver a settings-layer mechanism allowing authorized users to configure alert threshold values on the Document/Funding Transition screen (screen 24) and the Amortization/Accruals screen. Current hardcoded thresholds are the inferred root cause. The implementation should expose threshold parameters through a configuration interface without requiring code changes per adjustment. Default values must be preserved on rollout to protect the minority of users (11 positive voices on Amortization/Accruals) who may prefer current behavior.\n\n**Screens in scope:** Document/Funding Transition (screen 24), Amortization/Accruals\n**Sections affected:** servicing, syndication\n\n### P0-2 · Context-Rich Handoff Summaries (Exceptions/Amendments + Agented Loan Support)\n\nDeliver a structured handoff summary view on the Exceptions/Amendments screen (screen 38) and the Agented Loan Support screen (screen 42). Summaries should surface existing data fields into a consolidated, readable format relevant to the receiving team at handoff. No new data capture is required for this scope unless explicitly linked to the P1 approval rationale capture item. Summaries must be additive — existing detail views must remain accessible and unmodified.\n\n**Screens in scope:** Exceptions/Amendments (screen 38), Agented Loan Support (screen 42)\n**Sections affected:** monitoring-controls, syndication-complex-lending\n\n### P0-3 · Inquiry/Transaction History — Discovery Sprint and Initial Improvement Delivery\n\nGiven that specific improvement scope is not yet defined in the signal (22 suggestions exist but have not been clustered), this P0 item is structured in two parts:\n\n- **Part A (tonight):** Conduct a structured review of the 22 suggestion-tagged submissions on the Inquiry/Transaction History screen to identify clusters. Produce a ranked shortlist of no more than three discrete improvements.\n- **Part B (next cycle):** Deliver the highest-ranked improvement from Part A. Exec and product kudos confirm leadership visibility on this screen; at minimum one visible, measurable improvement must ship to close the gap between stated leadership priority and user experience.\n\n**Screen in scope:** Inquiry/Transaction History\n**Section affected:** analytics-inquiry\n\n---\n\n## Out of Scope\n\nThe following items are explicitly excluded from tonight's build. They are documented to prevent scope creep and to support future planning.\n\n| Item | Reason for Exclusion |\n|---|---|\n| EIR Fees friction reduction (P1) | No top-10 feature request targets this screen; root cause is undefined. Requires discovery before scoping. Sentiment data (26% positive, 23 negative) warrants P1 investigation, not immediate build. |\n| Role-based defaults for Covenants/Compliance (P1) | Highest composite feature request score (45, 15 votes) but requires role-permission architecture review before implementation. Queued for next sprint. |\n| Approval rationale capture — Workflow Engine (P1) | Score=27 feature request; directionally relevant to P0-2 handoff summaries but distinct in scope. Must not be conflated with handoff summary delivery. |\n| Structured amendment pathways — Self-Service (P1) | 9-vote feature request; digital-experience section friction is real (168 submissions) but not at P0 severity. |\n| Guided exception handling — Pricing/Approval (P1) | 9-vote feature request; cross-cutting exception theme is noted but screen-level evidence is thinner than P0 items. |\n| Credit risk tooling improvements (P2) | No top-10 feature request targets credit-risk screens; users have not yet articulated solutions. Discovery work required. |\n| Origination-to-servicing handoff — Application Workflow (P2) | High suggestion volume (40 suggestions, 53% suggestion rate) warrants a dedicated review, but exec kudos suggest recent progress is being noticed. Not urgent enough to displace P0 scope tonight. |\n| Reporting screen design pattern documentation (P2) | 89% positive sentiment is an asset to understand and transfer, but this is a research task, not a build task. |\n| Any changes to feedback collection methodology or tagging taxonomy | Cross-cutting insight flags that all top-10 screen feedback is suggestion-tagged with zero pain-point, confusing, missing, or works-well tags. This may be a collection artifact. Investigation is warranted but is a process task, not a product build task. |\n\n---\n\n## User Stories\n\n**US-1 — Threshold Configuration (Ops, Servicing)**\nAs an **ops user managing amortization and accruals workflows**, I want to **set custom alert threshold values for my team's context** so that **I receive alerts calibrated to our actual risk tolerance rather than a hardcoded default that generates noise or misses real issues**.\n\n**US-2 — Threshold Preservation (All existing users)**\nAs an **existing user who has not requested threshold changes**, I want **my current alert behavior to remain unchanged after the configuration feature ships** so that **I am not disrupted by a change I did not request**.\n\n**US-3 — Handoff Summary Access (Ops, Finance)**\nAs an **ops or finance team member receiving a loan exception or agented loan handoff**, I want to **view a structured summary of the key context, decisions, and status at the point of handoff** so that **I can act on the handoff immediately without reconstructing context from scattered detail screens**.\n\n**US-4 — Handoff Summary Additive (All existing users)**\nAs a **user who currently relies on the full detail view in Exceptions/Amendments or Agented Loan Support**, I want **the handoff summary to be an additional view, not a replacement for existing detail** so that **my current workflow is not broken by the new feature**.\n\n**US-5 — Portfolio Visibility (Exec, Finance)**\nAs an **exec or finance oversight user**, I want **Inquiry/Transaction History to clearly surface portfolio-level visibility and ownership context** so that **I can perform finance oversight tasks without switching between screens or reconstructing ownership chains manually**.\n\n**US-6 — Suggestion Cluster Review (Product Team)**\nAs a **product team member responsible for the Inquiry/Transaction History screen**, I want to **review and cluster the 22 suggestion-tagged submissions** so that **I can prioritize the highest-impact improvement for the next build cycle with evidence rather than assumption**.\n\n**US-7 — Cross-Team Coordination (Ops, Exec, Syndication)**\nAs a **team member coordinating across ops, finance, and syndication on complex or agented loans**, I want **alert thresholds and handoff summaries to reflect the actual state of my workflow at each stage** so that **I spend less time on coordination overhead and more time on execution**.\n\n---\n\n## Acceptance Criteria\n\n### P0-1 · Configurable Alert Thresholds\n\n**AC-1.1** A configuration interface is accessible to authorized users on both the Document/Funding Transition screen (screen 24) and the Amortization/Accruals screen, allowing threshold values to be set without a code deployment.\n\n**AC-1.2** On first deployment, all threshold values default to their current hardcoded values. No user experiences a change in alert behavior unless they or an authorized administrator explicitly modifies a threshold.\n\n**AC-1.3** Changes to threshold values are logged with a timestamp and the identity of the user who made the change, supporting audit and policy adherence requirements referenced in exec-role feedback.\n\n**AC-1.4** The configuration interface is accessible to ops-role users at minimum. Role-based access control for threshold modification is defined and documented prior to release.\n\n**AC-1.5** Alerts fire correctly against the configured threshold values immediately after a threshold is saved, with no requirement for page reload or system restart.\n\n**AC-1.6** The feature is validated on both target screens independently; a defect on one screen does not block release of the other.\n\n---\n\n### P0-2 · Context-Rich Handoff Summaries\n\n**AC-2.1** A handoff summary view is available on both the Exceptions/Amendments screen (screen 38) and the Agented Loan Support screen (screen 42).\n\n**AC-2.2** The summary surfaces, at minimum: current status, key decision points or exceptions logged, responsible party or team, and next required action. All fields are populated from existing data — no new data entry is required from users to generate a summary.\n\n**AC-2.3** The existing full detail view on both screens remains fully accessible and unmodified. The summary is presented as an additional view (e.g., a collapsible panel, tab, or summary card), not as a replacement.\n\n**AC-2.4** The summary is visible to users in receiving-team roles at the point of handoff without requiring navigation away from the screen.\n\n**AC-2.5** On Agented Loan Support, the summary is validated against at least one scenario representative of the 19 negative-sentiment submissions (i.e., a multi-party agented loan handoff with exception history).\n\n**AC-2.6** The feature ships as additive on both screens simultaneously. A staged rollout that enables one screen without the other is acceptable only if a critical defect requires it, and must be documented as a known gap.\n\n---\n\n### P0-3 · Inquiry/Transaction History Discovery Sprint\n\n**AC-3.1** All 22 suggestion-tagged submissions on the Inquiry/Transaction History screen are reviewed and assigned to clusters by the end of the discovery sprint. Clusters are documented in a shared artifact accessible to exec and product stakeholders.\n\n**AC-3.2** The cluster artifact ranks identified improvement opportunities by frequency of suggestion signal and estimated user impact. A minimum of three clusters are identified; a maximum of five are documented.\n\n**AC-3.3** A single highest-priority improvement is nominated from the cluster review, with rationale documented against the Phase 1 evidence (25% positive split, exec/product kudos referencing portfolio visibility and ownership clarity).\n\n**AC-3.4** The nominated improvement is scoped with acceptance criteria and added to the next build cycle backlog before the discovery sprint closes.\n\n**AC-3.5** The nominated improvement, when delivered in the next cycle, must be measurable against the 25% positive sentiment baseline established in Phase 1.\n\n---\n\n## Design Guidance\n\n**Threshold configuration UI**\nThe configuration interface should be positioned within an existing settings or administration layer rather than embedded inline on the alert-generating screen. Inline editing of thresholds on the workflow screen itself risks accidental modification during normal use. A clear save/confirm action and visible display of the currently active threshold value on the workflow screen (read-only) is recommended. Given that 11 positive voices exist on Amortization/Accruals, consider surfacing a \"restore default\" action alongside custom threshold controls.\n\n**Handoff summary layout**\nThe summary should be scannable in under 30 seconds for a user arriving at a screen cold. Prioritize status, owner, and next action above the fold. Supporting detail (exception history, amendment log) should be one interaction away but not the default view. On Agented Loan Support, where the sentiment gap is the most severe (21% positive), the summary must address multi-party context explicitly — a single responsible party field is insufficient for agented loan workflows.\n\n**Inquiry/Transaction History**\nDo not redesign this screen prior to completing the Part A discovery sprint. Any visual or structural changes made before the 22 suggestions are clustered risk solving the wrong problem. Exec and product kudos reference portfolio visibility and ownership clarity as specific themes — ensure the Part A cluster review specifically codes suggestions against these two dimensions.\n\n**Cross-screen consistency**\nConfigurable threshold controls and handoff summary components will appear on multiple screens. Establish a shared component pattern for each before building screen-specific instances. This reduces implementation variance and supports the P2 roadmap items (Application Workflow, Covenants/Compliance) that are directionally aligned with the same patterns.\n\n**Defaults and non-disruption**\nBoth P0-1 and P0-2 carry explicit non-disruption requirements (threshold defaults preserved; detail views not replaced). These are not optional UX considerations — they are evidence-backed requirements reflecting the presence of positive-sentiment minorities on both sets of screens. Design review should include a checklist item confirming that existing user paths remain intact.\n\n---\n\n## Success Metrics\n\nMetrics are defined per P0 item. Baseline values are drawn from Phase 1 analysis. Measurement approach assumes the Feedback Wall continues to collect screen-level sentiment and submission data post-release.\n\n### P0-1 · Configurable Alert Thresholds\n\n| Metric | Baseline | Target | Measurement |\n|---|---|---|---|\n| Amortization/Accruals negative sentiment share | 69% negative | ≤ 55% negative | Screen-level sentiment split, next feedback cycle |\n| Amortization/Accruals suggestion submissions | 27 suggestions / 54 total | Reduction in threshold-related suggestions | Qualitative review of suggestion content |\n| Document/Funding Transition feature request recurrence | Score 27 (open) | Feature request closed or score not re-submitted | Feature request tracking |\n| Threshold-related support or escalation volume | Not baselined | Establish baseline in first 30 days post-release | Support log tagging |\n\n### P0-2 · Context-Rich Handoff Summaries\n\n| Metric | Baseline | Target | Measurement |\n|---|---|---|---|\n| Agented Loan Support positive sentiment split | 21% positive (4 of 23) | ≥ 35% positive | Screen-level sentiment split, next feedback cycle |\n| Exceptions/Amendments negative sentiment share | Negative majority (14 of 25) | Negative share reduced; positive voices ≥ 15 of next cycle | Screen-level sentiment split |\n| Handoff summary feature request recurrence | Score 27 × 2 (open) | Feature requests closed or not re-submitted | Feature request tracking |\n| Ops-role negative sentiment on both screens | Present in private pool | Reduction in ops-role negative signal | Role-segmented sentiment, next cycle |\n\n### P0-3 · Inquiry/Transaction History\n\n| Metric | Baseline | Target | Measurement |\n|---|---|---|---|\n| Screen positive sentiment split | 25% positive (5 of 25) | ≥ 40% positive after Part B delivery | Screen-level sentiment split, next feedback cycle |\n| Suggestion submission rate | 22 of 47 (47%) | Reduction in suggestion rate as improvements land | Submission tag distribution |\n| Discovery sprint output | 0 clusters documented | ≥ 3 clusters documented, 1 improvement scoped | Internal artifact review |\n| Exec/product kudos continuity | Multiple kudos referencing portfolio visibility | Kudos maintained or increased in next cycle | Kudos role-segmented tracking |\n\n### Cross-Cutting\n\n| Metric | Baseline | Target |\n|---|---|---|\n| Multi-team coordination theme recurrence across feature requests | Appears across ≥ 5 screens | Reduction to ≤ 3 screens after P0 and P1 delivery | \n| Overall negative-majority screens in dataset | EIR Fees 26%, Agented Loan 21%, Inquiry/Transaction 25% as worst three | None of the three P0-targeted screens remain in bottom three by next cycle |\n\n---\n\n*This PRD is generated entirely from Phase 1 synthesized signal. No requirements have been inferred beyond the evidence supplied. Items marked for discovery (P0-3 Part A, P1 EIR Fees, P2 credit risk) reflect genuine signal gaps, not omissions.*",
+      "phase1Analysis": {
+        "p0Items": [
+          {
+            "title": "Configurable alert thresholds across workflow and servicing screens",
+            "rationale": "Two distinct feature requests (scores 27 each) call for configurable alert thresholds — one in Document/Funding Transition and one in Policy Controls/Amortization/Accruals. Amortization/Accruals carries 54 screen submissions with 27 suggestions and a 69% negative-leaning split, indicating active friction. The theme recurs across servicing and syndication sections, which together represent the highest section volume (256 + 121 = 377 submissions).",
+            "evidenceSources": [
+              "Feature request score=27: configurable alert thresholds (Document/Funding Transition, screen 24)",
+              "Feature request 9 votes: configurable alert thresholds (Amortization/Accruals)",
+              "Screen feedback: Amortization/Accruals 54 submissions, 27 suggestions",
+              "Competing perspectives: Amortization/Accruals 69% negative split"
+            ],
+            "feasibilityNote": "Threshold configuration is typically a settings-layer change; complexity depends on how alerts are currently hardcoded. Cross-screen recurrence suggests a shared infrastructure gap rather than isolated UI work.",
+            "conflictContext": "Amortization/Accruals has the highest positive-to-negative ratio among contested screens (69% negative), yet 11 positive voices exist — some users may prefer current behavior. Rollout should preserve defaults for those users.",
+            "roleContext": "Ops and exec roles surface in private sentiment pool; exec kudos reference Document/Funding Transition tightening policy adherence for syndication teams."
+          },
+          {
+            "title": "Context-rich handoff summaries for risk review and multi-team coordination",
+            "rationale": "Two scored feature requests (score=27 each) explicitly request handoff summaries — one for Exceptions/Amendments and one for Agented Loan Support. Agented Loan Support has a 21% positive split (4 positive, 19 negative), the second-worst sentiment ratio in the dataset. Exceptions/Amendments also shows negative majority (79% negative split). Combined, these screens sit within monitoring-controls and syndication-complex-lending, both high-volume sections.",
+            "evidenceSources": [
+              "Feature request score=27: context-rich handoff summaries (Exceptions/Amendments, screen 38)",
+              "Feature request score=27: context-rich handoff summaries (Agented Loan Support, screen 42)",
+              "Competing perspectives: Agented Loan Support 21% positive split",
+              "Competing perspectives: Exceptions/Amendments 79% negative split",
+              "Section volumes: monitoring-controls 164, syndication-complex-lending 121"
+            ],
+            "feasibilityNote": "Handoff summary generation likely requires surfacing existing data fields into a structured view; no new data capture implied unless paired with approval rationale feature. Scope is bounded.",
+            "conflictContext": "Exceptions/Amendments has the highest positive share among contested screens (79% negative means 21% positive — but raw counts show 11 positive vs 14 negative, a closer split than ratio implies). Some users find current state workable; summaries should be additive, not replacing existing detail.",
+            "roleContext": "Ops role kudos reference Exceptions/Amendments smoothing cross-team execution for finance oversight."
+          },
+          {
+            "title": "Inquiry / Transaction History — portfolio visibility and cross-team execution improvements",
+            "rationale": "Inquiry/Transaction History has the second-worst sentiment ratio in the dataset at 25% positive (5 positive, 20 negative). It generates 47 screen submissions with 22 suggestions. Multiple exec and product kudos specifically praise improvements to this screen for portfolio visibility and ownership clarity, indicating high leadership attention. The analytics-inquiry section (112 submissions) is mid-tier by volume but the sentiment gap is severe.",
+            "evidenceSources": [
+              "Competing perspectives: Inquiry/Transaction History 25% positive split",
+              "Screen feedback: 47 submissions, 22 suggestions",
+              "Public kudos: exec — Inquiry/Transaction History improved portfolio visibility for finance oversight",
+              "Public kudos: product — Inquiry/Transaction History made ownership clearer for finance oversight",
+              "Public kudos: product — Inquiry/Transaction History smoothed cross-team execution for origination flow"
+            ],
+            "feasibilityNote": "Specific improvement scope is not defined in the signal; suggestions tag (22) is high relative to submission count, implying users have concrete ideas. Discovery sprint recommended before scoping.",
+            "conflictContext": null,
+            "roleContext": "Exec and product roles are the primary kudos sources for this screen; finance oversight is the named beneficiary in multiple quotes."
+          }
+        ],
+        "p1Items": [
+          {
+            "title": "Role-based defaults for syndication workflows (Covenants/Compliance)",
+            "rationale": "Highest composite score feature request (score=45, 15 votes) targeting Covenants/Compliance, which also has 68 screen submissions, 37 suggestions, and a 63% negative split. Multiple kudos from exec, ops, and product roles praise Covenants/Compliance improvements. Strong cross-signal convergence.",
+            "signalCount": 15
+          },
+          {
+            "title": "Approval rationale capture for multi-team coordination (Workflow Engine)",
+            "rationale": "Score=27 feature request with 9 votes on Workflow Engine screen. Workflow Engine has 46 submissions, 17 suggestions, and a 61% negative split. Ownership clarity is a recurring theme across kudos and feature requests.",
+            "signalCount": 9
+          },
+          {
+            "title": "Structured amendment pathways for high-volume exception lanes (Self-Service)",
+            "rationale": "9-vote feature request on Self-Service screen within digital-experience. Self-Service has a 39% positive split (9 positive, 23 negative), indicating meaningful friction. Digital-experience is the third-highest section by volume (168 submissions).",
+            "signalCount": 9
+          },
+          {
+            "title": "Guided exception handling for multi-team coordination (Pricing/Approval)",
+            "rationale": "9-vote feature request. Exception handling is a cross-cutting theme appearing in multiple feature requests and screen feedback. Multi-team coordination is a recurring workflow pain point across sections.",
+            "signalCount": 9
+          },
+          {
+            "title": "EIR Fees screen — friction reduction",
+            "rationale": "EIR Fees has the worst positive sentiment ratio in the dataset at 26% (6 positive, 23 negative). No feature request directly targets it in the top 10, but the severity of sentiment warrants P1 investigation.",
+            "signalCount": 29
+          }
+        ],
+        "p2Themes": [
+          {
+            "theme": "Syndication and agented loan complexity",
+            "description": "Syndication-complex-lending section (121 submissions) shows persistent friction across Syndicated Servicing (60% negative), Agented Loan Support (21% positive — worst in section), and Multi-Party Administration (67% negative). Feature requests for role-based defaults and handoff summaries both target syndication workflows. Private sentiment pool includes ops and exec roles consistent with this theme."
+          },
+          {
+            "theme": "Credit risk tooling gaps",
+            "description": "Credit-risk section (147 submissions) spans three screens all with negative majorities: Credit Assessment (44% positive), Risk Rating (43% positive), and Exposure Visibility (60% negative). No top-10 feature request directly targets credit risk screens, suggesting users may not yet have a clear solution in mind — discovery work warranted."
+          },
+          {
+            "theme": "Origination-to-servicing handoff friction",
+            "description": "Application Workflow (57% negative, 76 submissions, 40 suggestions) and Onboarding to Servicing (38% positive) both show friction at the origination boundary. Feature requests for handoff summaries and approval rationale capture are directionally relevant. Ops kudos reference Application Workflow keeping workflow intent obvious for product planning."
+          },
+          {
+            "theme": "Analytics and reporting divergence",
+            "description": "Reporting screen has the best sentiment ratio in the dataset (89% positive, 8 vs 9 negative — nearly balanced but positive-leaning). Inquiry/Transaction History is the inverse at 25% positive. This divergence suggests reporting output is valued but transaction-level inquiry tooling is underserving users."
+          }
+        ],
+        "crossCuttingInsights": [
+          {
+            "insight": "Multi-team coordination and ownership clarity is the dominant workflow theme, appearing in feature requests for approval rationale capture, handoff summaries, role-based defaults, and guided exception handling across at least five distinct screens.",
+            "rolesAffected": [
+              "ops",
+              "exec",
+              "product",
+              "finance"
+            ],
+            "screenCount": 5
+          },
+          {
+            "insight": "Suggestion tags dominate screen feedback across all top-10 screens — pain point, confusing, missing, and works-well tags all register zero. This may indicate a tagging or collection methodology artifact; if accurate, it means qualitative friction signals are entirely suggestion-framed, limiting severity triage.",
+            "rolesAffected": null,
+            "screenCount": 10
+          },
+          {
+            "insight": "Screens with the worst sentiment ratios (Agented Loan Support 21%, EIR Fees 26%, Inquiry/Transaction History 25%) are distributed across three different sections (syndication, servicing, analytics), indicating systemic rather than section-specific quality issues.",
+            "rolesAffected": [
+              "ops",
+              "exec",
+              "finance"
+            ],
+            "screenCount": 3
+          },
+          {
+            "insight": "Exec-role kudos are concentrated on portfolio visibility and ownership clarity themes across Covenants/Compliance, Application Workflow, Booking/Maintenance, and Inquiry/Transaction History — signaling that leadership is tracking these areas as strategic priorities.",
+            "rolesAffected": [
+              "exec"
+            ],
+            "screenCount": 4
+          }
+        ],
+        "selectedQuotes": [
+          {
+            "text": "Strong results from how Covenants / Compliance kept workflow intent obvious for product planning. This directly improves our day-to-day execution.",
+            "role": "ops"
+          },
+          {
+            "text": "Strong results from how Inquiry / Transaction History improved portfolio visibility for finance oversight. This aligns tightly with how our teams operate.",
+            "role": "exec"
+          },
+          {
+            "text": "The walkthrough showed how Exceptions / Amendments smoothed cross-team execution for finance oversight. This aligns tightly with how our teams operate.",
+            "role": "ops"
+          }
+        ],
+        "competingPerspectivesNotes": [
+          {
+            "screenName": "Inquiry / Transaction History (analytics-inquiry)",
+            "interpretation": "25% positive split with 20 negative vs 5 positive is the clearest negative consensus in the analytics section. The 22 suggestions out of 47 submissions (47% suggestion rate) indicates users are engaged and have ideas, not just complaints.",
+            "recommendation": "Prioritize a structured discovery session targeting the suggestion content on this screen. Exec and product kudos confirm leadership visibility; translate that attention into a defined improvement sprint."
+          },
+          {
+            "screenName": "Agented Loan Support (syndication-complex-lending)",
+            "interpretation": "21% positive split (4 vs 19) is the second-worst ratio in the dataset. A score=27 feature request for handoff summaries directly targets this screen. The gap between positive and negative voices is large enough to treat as near-consensus friction.",
+            "recommendation": "Treat as P0-adjacent. Pair the handoff summary feature request with direct user interviews from the 19 negative respondents to validate root cause before building."
+          },
+          {
+            "screenName": "EIR Fees (servicing)",
+            "interpretation": "26% positive split (6 vs 23) with no corresponding top-10 feature request suggests users are experiencing friction but have not yet articulated a solution. Servicing is the highest-volume section (256 submissions).",
+            "recommendation": "Add EIR Fees to the next discovery cycle. The absence of a feature request may mean the problem is poorly understood rather than low priority."
+          },
+          {
+            "screenName": "Application Workflow (origination)",
+            "interpretation": "57% negative split with the highest suggestion count in the dataset (40 suggestions, 76 submissions — 53% suggestion rate) indicates high user engagement and a strong desire for improvement. Multiple kudos reference this screen positively, suggesting recent progress is noticed but not yet sufficient.",
+            "recommendation": "Review the 40 suggestions for clustering. The combination of high suggestion volume and exec kudos makes this a high-visibility screen where incremental improvements will be noticed."
+          },
+          {
+            "screenName": "Reporting (analytics-inquiry)",
+            "interpretation": "89% positive split is the strongest in the dataset. This is an outlier worth understanding — the design or workflow patterns here may be transferable to lower-performing screens in the same section.",
+            "recommendation": "Document what makes Reporting work well and assess applicability to Inquiry/Transaction History, which sits in the same section but has inverse sentiment."
+          },
+          {
+            "screenName": "Exceptions / Amendments (monitoring-controls)",
+            "interpretation": "Raw counts show 11 positive vs 14 negative — a closer split than the 79% negative label implies. The 79% figure appears to represent the negative share of the total, not a ratio. Ops kudos specifically praise this screen for cross-team execution.",
+            "recommendation": "Validate the sentiment calculation methodology. If the split is closer to 56% negative (14 of 25), this screen may be lower urgency than the ratio suggests. The handoff summary feature request remains relevant regardless."
+          }
+        ],
+        "macroApplicationLog": [
+          "No macros active — no macro logic applied."
+        ]
+      },
+      "metadata": {
+        "generatedAt": "2026-03-21T23:23:01.716Z",
+        "outputMode": "prd",
+        "macrosActive": [
+          "No macros active — no macro logic applied."
+        ],
+        "phase1DurationMs": 65456,
+        "phase2DurationMs": 95693,
+        "totalTokensPhase1": 3284,
+        "estimatedTokensPhase2": 3862
+      },
+      "macrosActive": "No macros active — no macro logic applied.",
+      "parametersSnapshot": {
+        "excludeBelowN": null,
+        "upweightSection": null,
+        "upweightMultiplier": 2,
+        "p0FocusOnly": false,
+        "emphasiseQuotes": false,
+        "maxQuotes": 6,
+        "competingMinEach": 3,
+        "competingMinSplitRatio": 0.2
+      },
+      "generatedAt": "2026-03-21T23:23:01.716Z"
+    },
+    {
+      "id": "synth-2026-03-21T23-19-00-151Z",
+      "outputMode": "roadmap",
+      "output": "# Emerald Feedback Wall — Synthesis Roadmap\n\n---\n\n## P0 — Build Tonight\n\n### Configurable alert thresholds and handoff summaries for multi-team coordination\n\n**What to build:** Introduce user-configurable alert thresholds across servicing, syndication, and monitoring-controls workflows, paired with context-rich handoff summaries that carry ownership and status information across team boundaries.\n\n**Why:** Six high-vote feature requests (#3, #4, #5, #8, #9, #10 — 9 votes each, impact=3) converge on this need. Competing-perspectives data confirms acute dissatisfaction in the screens most affected: Agented Loan Support sits at 21% positive split (the second-lowest in the dataset) and EIR Fees at 26%. Suggestion tag density is highest on Application Workflow (40 tags) and Covenants/Compliance (37 tags), reinforcing urgency. Section submission volumes — servicing at 256 and monitoring-controls at 164 — indicate this is a high-traffic, high-friction area. Ops and finance private sentiment independently corroborates operational pain in these flows.\n\n**Feasibility:** Threshold configurability is a platform-services concern; handoff summaries require workflow engine integration. Both touch multiple screens, indicating a coordinated cross-team effort is required rather than a single-team fix. Scoping should treat these as related but separable workstreams.\n\n**Competing needs:** Exceptions/Amendments shows a 79% positive split, suggesting handoff improvements in that screen are already partially effective. Investment should be directed first toward Agented Loan Support and EIR Fees, where dissatisfaction is highest and existing improvements have not yet reached users. Do not dilute effort by re-investing in screens that are already performing well.\n\n---\n\n### Structured amendment pathways and approval rationale capture for high-volume exception lanes\n\n**What to build:** Implement structured amendment pathways for exception-lane processing and add approval rationale capture fields to the amendment and application workflow screens.\n\n**Why:** Feature requests #2 (approval rationale capture, 9 votes, impact=3) and #6 (structured amendment pathways, 9 votes) directly target this gap. Application Workflow carries the highest suggestion density of any screen (40 suggestions across 76 submissions) and a 57% negative competing-perspectives split — the worst origination-screen ratio in the dataset. Origination ranks second by section volume at 182 submissions, confirming this is not a low-traffic edge case. Gaps here create downstream risk in credit-risk and monitoring-controls workflows. Product and ops kudos cite Application Workflow improvements; exec kudos reference portfolio visibility gains, indicating leadership is watching this flow.\n\n**Feasibility:** Approval rationale capture is a Workflow Engine enhancement. Structured amendment pathways intersect with monitoring-controls. Scoping should determine whether these are separate tickets or a unified exception-management module before sprint planning.\n\n**Competing needs:** Onboarding to Servicing shows a 38% positive split, indicating the origination-to-servicing handoff is a compounding issue. Amendment pathways must be designed to carry state forward into servicing; a solution scoped only to origination will leave downstream friction unresolved.\n\n---\n\n## P1 — Next Sprint\n\n**Role-based defaults for syndication workflows (Covenants/Compliance, Agented Loan Support)**\nFeature request #1 is the highest composite-score item in the dataset (score 45, 15 votes, impact=3). The syndication-complex-lending section generated 121 submissions; Agented Loan Support's 21% positive split signals that repeat clarifications are a persistent, unresolved burden. Role-based defaults would reduce that friction at the point of entry rather than downstream.\n\n**Guided exception handling for Pricing/Approval multi-team coordination**\nFeature request #7 targets guided exception handling. The credit-risk section produced 147 submissions; Credit Assessment sits at 44% positive and Risk Rating at 43% positive in competing perspectives. These low satisfaction scores indicate exception-handling gaps are actively degrading risk review quality across teams.\n\n**Inquiry/Transaction History usability improvements for analytics and finance oversight**\nThis screen holds a 25% positive competing-perspectives split — second lowest overall — across 47 submissions and 22 suggestions. Exec and product kudos explicitly praise portfolio visibility improvements on this screen, creating a clear gap between leadership perception and the majority user experience. The dissatisfaction is broad: 20 negative perspectives recorded. Investigate whether improvements are role-gated or feature-flagged before declaring the screen resolved.\n\n**Self-Service screen redesign to reduce exception volume**\nSelf-Service shows a 39% positive split with 23 negative perspectives. Feature request #6 targets structured amendment pathways specifically for self-service high-volume exception lanes. The digital-experience section ranks third by volume at 168 submissions, making this a meaningful surface area for exception reduction.\n\n---\n\n## P2 — Backlog\n\n**APIs/Integrations and platform-services gaps**\nAPIs/Integrations shows a 42% positive split; the Workflow Engine carries a 61% negative split with 17 suggestions across 46 submissions. The platform-services section (110 submissions) generates disproportionate suggestion density relative to its volume, pointing to systemic integration friction that will recur across roadmap items if left unaddressed.\n\n**Syndication complexity and multi-party administration**\nMulti-Party Administration shows a 67% negative split; Syndicated Servicing at 60% negative. These signals are consistent with feature requests #1 and #5 but sit at lower raw submission volume (121 section total). Address after P1 syndication defaults are in place and validated.\n\n**EIR Fees operational friction**\nEIR Fees carries a 26% positive split with 23 negative perspectives but does not surface in top feature requests, suggesting users are dissatisfied without yet articulating specific solutions. Conduct targeted discovery sessions with servicing users before committing to a feature roadmap item.\n\n**Reporting as a design reference**\nReporting shows an 89% positive split — the highest satisfaction signal in the dataset. This is not a build item; it is a benchmark. Document its UX and workflow patterns and apply them as a reference model when redesigning lower-performing analytics and inquiry screens.\n\n---\n\n## Patterns & Insights\n\n**Handoff clarity is a platform-wide design problem, not a screen-specific bug.**\nFeature requests, competing perspectives, and kudos independently converge on handoff ownership and context loss across origination, servicing, monitoring-controls, and syndication screens — six screens in total, affecting ops, exec, product, and finance roles. Any solution scoped to a single screen will only partially resolve this. The roadmap should treat handoff architecture as a platform-services concern requiring a shared design pattern.\n\n**Raw submission volume systematically under-prioritizes the highest-dissatisfaction screens.**\nThe three lowest positive competing-perspectives splits — Agented Loan Support (21%), Inquiry/Transaction History (25%), and EIR Fees (26%) — do not rank highest in submission volume. Relying on volume metrics alone would have deprioritized all three. Competing-perspectives split ratios must be used alongside volume as a parallel severity signal, particularly for screens serving specialized user segments such as syndication ops and finance.\n\n**Uniform suggestion tagging limits diagnostic precision.**\nSuggestion tags dominate all top-10 screens; no pain-point, confusing, missing, or works-well tags are recorded anywhere in the dataset. This means severity tiers cannot be distinguished from tag data alone — competing-perspectives splits are currently the only proxy for severity. Introducing structured tag categories in a future feedback collection cycle would materially improve the ability to triage without requiring competing-perspectives analysis as a workaround.\n\n---\n\n## Marketing Moments\n\n> \"Strong results from how Covenants / Compliance kept workflow intent obvious for product planning. This directly improves our day-to-day execution.\" — Ops\n\n> \"Strong results from how Inquiry / Transaction History improved portfolio visibility for finance oversight. This aligns tightly with how our teams operate.\" — Exec\n\n> \"The walkthrough showed how Exceptions / Amendments smoothed cross-team execution for finance oversight. This aligns tightly with how our teams operate.\" — Ops",
+      "phase1Analysis": {
+        "p0Items": [
+          {
+            "title": "Configurable alert thresholds and handoff summaries for multi-team coordination",
+            "rationale": "Multiple high-vote feature requests (items 3, 4, 5, 8, 9, 10) converge on alert configurability and context-rich handoffs across servicing, syndication, and monitoring-controls screens. Competing perspectives show Agented Loan Support at 21% positive split and EIR Fees at 26%, indicating acute dissatisfaction in these areas. Suggestion tags are dense on Application Workflow (40) and Covenants/Compliance (37), reinforcing urgency.",
+            "evidenceSources": [
+              "Feature requests #3, #4, #5, #8, #9, #10 (9 votes each, impact=3)",
+              "Competing perspectives: Agented Loan Support 21% positive, EIR Fees 26% positive",
+              "Screen feedback: Application Workflow 40 suggestions, Covenants/Compliance 37 suggestions",
+              "Section volumes: servicing 256, monitoring-controls 164"
+            ],
+            "feasibilityNote": "Threshold configurability is typically a platform-services concern; handoff summaries require workflow engine integration. Both touch multiple screens, suggesting coordinated effort across teams.",
+            "conflictContext": "Exceptions/Amendments shows 79% positive split, suggesting handoff improvements in that screen are already partially effective; investment should prioritize Agented Loan Support and EIR Fees where dissatisfaction is highest.",
+            "roleContext": "Exec and ops kudos explicitly reference Covenants/Compliance and Exceptions/Amendments for cross-team execution and policy adherence; private sentiment from ops and finance roles reinforces operational pain."
+          },
+          {
+            "title": "Structured amendment pathways and approval rationale capture for high-volume exception lanes",
+            "rationale": "Feature requests #2 and #6 target approval rationale capture and structured amendment pathways. Application Workflow has the highest suggestion density (40) among top screens and a 57% negative competing-perspectives split. Origination section ranks second by volume (182). These gaps create downstream risk in credit-risk and monitoring-controls workflows.",
+            "evidenceSources": [
+              "Feature request #2: Add approval rationale capture (9 votes, impact=3)",
+              "Feature request #6: Structured amendment pathways (9 votes)",
+              "Competing perspectives: Application Workflow 57% negative split",
+              "Screen feedback: Application Workflow 76 submissions, 40 suggestions",
+              "Section volume: origination 182"
+            ],
+            "feasibilityNote": "Approval rationale capture is a Workflow Engine enhancement; structured amendment pathways intersect with monitoring-controls. Scoping should confirm whether these are separate tickets or a unified exception-management module.",
+            "conflictContext": "Onboarding to Servicing shows 38% positive split, suggesting origination-to-servicing handoff is a compounding issue; amendment pathways must account for downstream servicing state.",
+            "roleContext": "Product and ops roles cited Application Workflow improvements in kudos; exec roles noted portfolio visibility gains, indicating leadership attention to this flow."
+          }
+        ],
+        "p1Items": [
+          {
+            "title": "Role-based defaults for syndication workflows (Covenants/Compliance, Agented Loan Support)",
+            "rationale": "Feature request #1 is the highest composite-score item (45) with 15 votes and impact=3. Syndication-complex-lending section has 121 feedback submissions; Agented Loan Support sits at 21% positive split. Role-based defaults would reduce repeat clarifications noted in the workflow description.",
+            "signalCount": 15
+          },
+          {
+            "title": "Guided exception handling for Pricing/Approval multi-team coordination",
+            "rationale": "Feature request #7 targets guided exception handling. Credit-risk section (147 submissions) and competing perspectives on Credit Assessment (44% positive) and Risk Rating (43% positive) indicate exception handling gaps affect risk review quality.",
+            "signalCount": 9
+          },
+          {
+            "title": "Inquiry/Transaction History usability improvements for analytics and finance oversight",
+            "rationale": "Inquiry/Transaction History has a 25% positive competing-perspectives split—second lowest overall—with 47 submissions and 22 suggestions. Exec and product kudos explicitly praise this screen's portfolio visibility improvements, suggesting the gap between current state and user expectations is large and recognized at leadership level.",
+            "signalCount": 47
+          },
+          {
+            "title": "Self-Service screen redesign to reduce exception volume",
+            "rationale": "Self-Service shows 39% positive split with 23 negative perspectives. Feature request #6 targets structured amendment pathways specifically for self-service high-volume exception lanes. Digital-experience section ranks third by volume (168).",
+            "signalCount": 9
+          }
+        ],
+        "p2Themes": [
+          {
+            "theme": "APIs/Integrations and platform-services gaps",
+            "description": "APIs/Integrations shows 42% positive split; Workflow Engine 61% negative split with 17 suggestions across 46 submissions. Platform-services section (110 submissions) generates disproportionate suggestion density relative to volume, indicating systemic integration friction."
+          },
+          {
+            "theme": "Syndication complexity and multi-party administration",
+            "description": "Multi-Party Administration shows 67% negative split; Syndicated Servicing 60% negative. Combined with feature requests #1 and #5 targeting syndication workflows, this theme is consistent but lower in raw submission volume (121 section total)."
+          },
+          {
+            "theme": "Reporting satisfaction as a relative bright spot",
+            "description": "Reporting screen shows 89% positive split—highest of all screens with competing perspectives. This is a signal of what is working and may offer design patterns transferable to lower-performing screens."
+          },
+          {
+            "theme": "EIR Fees operational friction",
+            "description": "EIR Fees has a 26% positive split with 23 negative perspectives but does not appear in top feature requests or high submission counts, suggesting pain is concentrated among a specific user segment rather than broadly distributed."
+          }
+        ],
+        "crossCuttingInsights": [
+          {
+            "insight": "Handoff clarity and ownership visibility are recurring gaps across origination, servicing, monitoring-controls, and syndication screens. Feature requests, competing perspectives, and kudos all reference this theme independently, indicating it is not screen-specific but a platform-wide workflow design issue.",
+            "rolesAffected": [
+              "ops",
+              "exec",
+              "product",
+              "finance"
+            ],
+            "screenCount": 6
+          },
+          {
+            "insight": "Suggestion tags dominate all top-10 screens with zero pain-point, confusing, missing, or works-well tags recorded. This uniform tag distribution limits diagnostic precision; the suggestion signal alone cannot distinguish severity tiers without competing-perspectives data as a proxy.",
+            "rolesAffected": null,
+            "screenCount": 10
+          },
+          {
+            "insight": "Screens with the lowest positive competing-perspectives splits (Agented Loan Support 21%, Inquiry/Transaction History 25%, EIR Fees 26%) do not consistently rank highest in submission volume, meaning raw volume metrics alone would under-prioritize these high-dissatisfaction areas.",
+            "rolesAffected": [
+              "ops",
+              "exec",
+              "finance"
+            ],
+            "screenCount": 3
+          },
+          {
+            "insight": "Exec-role kudos are concentrated on Covenants/Compliance, Application Workflow, Booking/Maintenance, and Inquiry/Transaction History—screens that also appear in the top competing-perspectives conflict list. Leadership is aware of both the progress and the remaining gaps in these areas.",
+            "rolesAffected": [
+              "exec"
+            ],
+            "screenCount": 4
+          }
+        ],
+        "selectedQuotes": [
+          {
+            "text": "Strong results from how Covenants / Compliance kept workflow intent obvious for product planning. This directly improves our day-to-day execution. This version preserves intent while staying distinct.",
+            "role": "ops"
+          },
+          {
+            "text": "Strong results from how Inquiry / Transaction History improved portfolio visibility for finance oversight. This aligns tightly with how our teams operate. The phrasing was adjusted to avoid collisions.",
+            "role": "exec"
+          },
+          {
+            "text": "The walkthrough showed how Exceptions / Amendments smoothed cross-team execution for finance oversight. This aligns tightly with how our teams operate. The phrasing was adjusted to avoid collisions.",
+            "role": "ops"
+          }
+        ],
+        "competingPerspectivesNotes": [
+          {
+            "screenName": "Agented Loan Support (syndication-complex-lending)",
+            "interpretation": "21% positive split with 19 negative perspectives is the lowest positive ratio among syndication screens and second lowest overall. Feature request #5 directly targets handoff summaries for this screen. Dissatisfaction is broad, not marginal.",
+            "recommendation": "Prioritize context-rich handoff summaries and role-based defaults for Agented Loan Support as a near-term deliverable; validate with syndication ops users before release."
+          },
+          {
+            "screenName": "Inquiry / Transaction History (analytics-inquiry)",
+            "interpretation": "25% positive split despite exec and product kudos praising portfolio visibility improvements suggests the praised improvements are either recent, partial, or experienced differently across roles. The 20 negative perspectives indicate a majority of users are not yet benefiting.",
+            "recommendation": "Investigate whether visibility improvements are role-gated or feature-flagged; broaden access or complete rollout before declaring this screen resolved."
+          },
+          {
+            "screenName": "EIR Fees (servicing)",
+            "interpretation": "26% positive split with 23 negative perspectives but no corresponding top feature requests suggests users are dissatisfied but not yet articulating specific solutions. This may indicate confusion about what is possible rather than a clear unmet need.",
+            "recommendation": "Conduct targeted discovery sessions with servicing users on EIR Fees to surface latent requirements before committing to a feature roadmap item."
+          },
+          {
+            "screenName": "Application Workflow (origination)",
+            "interpretation": "57% negative split with the highest suggestion count (40) of any screen in the dataset. This combination of volume and dissatisfaction makes it the highest-priority origination screen.",
+            "recommendation": "Treat Application Workflow as a P0-adjacent item for origination; approval rationale capture and structured amendment pathways (feature requests #2, #6) should be scoped here first."
+          },
+          {
+            "screenName": "Reporting (analytics-inquiry)",
+            "interpretation": "89% positive split is the strongest satisfaction signal in the dataset. This screen's design and workflow patterns represent a benchmark.",
+            "recommendation": "Document Reporting screen UX patterns and apply them as a reference model when redesigning lower-performing analytics and inquiry screens."
+          },
+          {
+            "screenName": "Exceptions / Amendments (monitoring-controls)",
+            "interpretation": "79% positive split is the second-highest satisfaction score. Kudos from ops and unspecified roles confirm cross-team execution improvements are landing. Remaining 21% negative perspectives warrant monitoring but not immediate escalation.",
+            "recommendation": "Maintain current trajectory; use as a case study for how handoff summary improvements translate to user satisfaction in monitoring-controls context."
+          }
+        ],
+        "macroApplicationLog": [
+          "No macros active. No macro logic applied to this analysis."
+        ]
+      },
+      "metadata": {
+        "generatedAt": "2026-03-21T23:19:00.151Z",
+        "outputMode": "roadmap",
+        "macrosActive": [
+          "No macros active. No macro logic applied to this analysis."
+        ],
+        "phase1DurationMs": 57144,
+        "phase2DurationMs": 45849,
+        "totalTokensPhase1": 3284,
+        "estimatedTokensPhase2": 3390
+      },
+      "macrosActive": "No macros active. No macro logic applied to this analysis.",
+      "parametersSnapshot": {
+        "excludeBelowN": null,
+        "upweightSection": null,
+        "upweightMultiplier": 2,
+        "p0FocusOnly": false,
+        "emphasiseQuotes": false,
+        "maxQuotes": 6,
+        "competingMinEach": 3,
+        "competingMinSplitRatio": 0.2
+      },
+      "generatedAt": "2026-03-21T23:19:00.151Z"
+    }
+  ],
   "savedNarrative": {
     "opening": "Good morning, and welcome back to Emerald 2026. It is 9:00 AM on Day 2 here in Orlando, and we want to start by saying thank you — 2,455 of you took the time yesterday to tell us exactly what you need. We heard you, we got to work, and we are here to show you what happened overnight. We're so excited!",
     "what_we_heard": "Across your inputs, three signals rose to the top. You told us that alert thresholds need to be configurable — not fixed — so teams can govern their own workflows in servicing and beyond. You told us that handoffs between teams break down when context is missing, especially in risk review and multi-team coordination. And your highest-scored request, with 15 votes and a top impact rating, was clear: role-based defaults for syndication and covenant workflows need to exist out of the box.",

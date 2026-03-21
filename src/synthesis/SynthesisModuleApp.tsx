@@ -4,13 +4,13 @@ import { clearSynthesisAuthSession, readSynthesisAuthFlag, writeSynthesisAuthFla
 import { formatCountdown } from "../utils/time";
 import { SynthesisOverviewPage } from "./SynthesisOverviewPage";
 import { SynthesisModerationPage } from "./SynthesisModerationPage";
-import { SynthesisPlaceholderPage } from "./SynthesisPlaceholderPage";
 import { SynthesisSessionConfigPage } from "./SynthesisSessionConfigPage";
 import { SynthesisParametersPage } from "./SynthesisParametersPage";
 import { SynthesisCompetingViewsPage } from "./SynthesisCompetingViewsPage";
 import { SynthesisTShirtSizingPage } from "./SynthesisTShirtSizingPage";
 import { SynthesisCeremonyPage } from "./SynthesisCeremonyPage";
 import { SynthesisDay2RevealPage } from "./SynthesisDay2RevealPage";
+import { SynthesisTablesPage } from "./SynthesisTablesPage";
 import { readCompetingPerspectivesCache } from "./competingViewsCache";
 import { readThemeSnapshots } from "../themeSnapshots/store";
 import { readAdminBootstrapCache } from "./adminBootstrapCache";
@@ -32,9 +32,9 @@ import {
 } from "./synthesisRoutes";
 import { AI_PROVIDER_CONFIG } from "../config/aiProvider";
 import type { AppArea, SynthesisMode } from "../types/domain";
-import type { ExportRecord } from "../state/useWallState";
 import type { MacroState } from "../types/domain";
 import type { ThemeSnapshot } from "../themeSnapshots/types";
+import type { Cap11ExportRecord } from "../services/synthesisModuleApi";
 import "../styles/synthesis.css";
 
 type ConnectivityState = "reachable" | "unreachable";
@@ -527,8 +527,9 @@ export const SynthesisModuleApp = (): JSX.Element => {
     );
   }, [kudosCount, readinessThreshold, screenFeedbackCount, totalInputs, totalVotesCast]);
 
-  const exportRecords = useCallback((): ExportRecord[] => {
-    return [];
+  const exportRecords = useCallback(async (): Promise<Cap11ExportRecord[]> => {
+    const payload = await synthesisModuleApi.getExportRecords();
+    return Array.isArray(payload.records) ? payload.records : [];
   }, []);
 
   if (isRevealMode) {
@@ -819,7 +820,7 @@ export const SynthesisModuleApp = (): JSX.Element => {
             screenFeedbackRecords={wallScreenFeedback}
           />
         ) : activeRoute.id === "tables" ? (
-          <SynthesisPlaceholderPage title={routeInfo.title} description={routeInfo.description} />
+          <SynthesisTablesPage />
         ) : (
           <section className="synthesis-page-card">
             <h2>{routeInfo.title}</h2>

@@ -2003,6 +2003,193 @@ const filterRowsForSynthesis = (rows) => {
   };
 };
 
+const toNullableString = (value) => {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text ? text : null;
+};
+
+const normalizeConsentPublic = (value) => {
+  if (typeof value === "boolean") return value;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return numeric > 0;
+  const lowered = String(value ?? "").trim().toLowerCase();
+  if (lowered === "true" || lowered === "yes") return true;
+  if (lowered === "false" || lowered === "no") return false;
+  return false;
+};
+
+const createdAtEpoch = (value) => {
+  const epoch = new Date(String(value ?? "")).getTime();
+  return Number.isFinite(epoch) ? epoch : Number.MAX_SAFE_INTEGER;
+};
+
+const buildCap11ExportRecords = ({ featureRequests, screenFeedback, kudos, cardSortResults }) => {
+  const timestampedRecords = [];
+
+  for (const request of Array.isArray(featureRequests) ? featureRequests : []) {
+    if (isInputSoftDeleted("feature_request", request.id)) continue;
+    timestampedRecords.push({
+      type: "feature_request",
+      id: request.id,
+      title: toNullableString(request.title),
+      description: toNullableString(request.description),
+      workflow_context: toNullableString(request.workflowContext),
+      votes: Math.max(0, toInteger(request.votes, 0)),
+      status: toNullableString(request.status),
+      origin: toNullableString(request.origin),
+      role: toNullableString(request.role),
+      created_at: toNullableString(request.createdAt),
+    });
+  }
+
+  for (const feedback of Array.isArray(screenFeedback) ? screenFeedback : []) {
+    if (isInputSoftDeleted("screen_feedback", feedback.id)) continue;
+    timestampedRecords.push({
+      type: "screen_feedback",
+      id: feedback.id,
+      app_section: toNullableString(feedback.app),
+      screen_name: toNullableString(feedback.screenName),
+      feedback_type: toNullableString(feedback.type),
+      text: toNullableString(feedback.text),
+      role: toNullableString(feedback.role),
+      created_at: toNullableString(feedback.createdAt),
+    });
+  }
+
+  for (const quote of Array.isArray(kudos) ? kudos : []) {
+    if (isInputSoftDeleted("kudos", quote.id)) continue;
+    timestampedRecords.push({
+      type: "kudos",
+      id: quote.id,
+      text: toNullableString(quote.text),
+      role: toNullableString(quote.role),
+      consent_public: normalizeConsentPublic(quote.consentPublic),
+      created_at: toNullableString(quote.createdAt),
+    });
+  }
+
+  timestampedRecords.sort((left, right) => createdAtEpoch(left.created_at) - createdAtEpoch(right.created_at));
+
+  const cardSortExportRecords = (Array.isArray(cardSortResults) ? cardSortResults : []).map((result) => ({
+    type: "card_sort",
+    concept_title: toNullableString(result.conceptTitle),
+    reaction: toNullableString(result.reaction),
+    tier: toNullableString(result.tier),
+    role: toNullableString(result.sessionRole),
+  }));
+
+  return [...timestampedRecords, ...cardSortExportRecords];
+};
+
+const loadCap11ExportRecords = async () => {
+  const runtimeCardSortResults = readRuntimeStore(runtimeStorePath).cardSortResults ?? [];
+
+  if (!useDbDataSource) {
+    const merged = buildFlatMergedSignals();
+    return buildCap11ExportRecords({
+      featureRequests: merged.featureRequests,
+      screenFeedback: merged.screenFeedback,
+      kudos: merged.kudos,
+      cardSortResults: runtimeCardSortResults,
+    });
+  }
+
+  if (usePostgresDb) {
+    const dbRows = await withPostgresClient(async (client) => {
+      const featureRequests = (
+        await client.query(`
+          SELECT fr.feature_request_id AS id,
+            fr.title AS title,
+            fr.description AS description,
+            fr.workflow_context AS "workflowContext",
+            fr.status AS status,
+            fr.origin AS origin,
+            NULL::text AS role,
+            fr.created_at AS "createdAt",
+            COALESCE(SUM(frv.vote_value), 0)::int AS votes
+          FROM feature_requests fr
+          LEFT JOIN feature_request_votes frv ON frv.feature_request_id = fr.feature_request_id
+          GROUP BY fr.feature_request_id
+        `)
+      ).rows;
+
+      const screenFeedback = (
+        await client.query(`
+          SELECT feedback_id AS id,
+            app_area AS app,
+            screen_name AS "screenName",
+            feedback_type AS type,
+            feedback_text AS text,
+            role AS role,
+            created_at AS "createdAt"
+          FROM feedback
+        `)
+      ).rows;
+
+      const kudos = (
+        await client.query(`
+          SELECT kudos_id AS id,
+            quote_text AS text,
+            role AS role,
+            consent_public AS "consentPublic",
+            created_at AS "createdAt"
+          FROM kudos
+        `)
+      ).rows;
+
+      return { featureRequests, screenFeedback, kudos };
+    });
+
+    return buildCap11ExportRecords({
+      featureRequests: dbRows.featureRequests,
+      screenFeedback: dbRows.screenFeedback,
+      kudos: dbRows.kudos,
+      cardSortResults: runtimeCardSortResults,
+    });
+  }
+
+  const featureRequests = db.prepare(`
+    SELECT fr.FEATURE_REQUEST_ID AS id,
+      fr.TITLE AS title,
+      fr.DESCRIPTION AS description,
+      fr.WORKFLOW_CONTEXT AS workflowContext,
+      fr.STATUS AS status,
+      fr.ORIGIN AS origin,
+      NULL AS role,
+      fr.CREATED_AT AS createdAt,
+      COALESCE(SUM(frv.VOTE_VALUE), 0) AS votes
+    FROM feature_requests fr
+    LEFT JOIN feature_request_votes frv ON frv.FEATURE_REQUEST_ID = fr.FEATURE_REQUEST_ID
+    GROUP BY fr.FEATURE_REQUEST_ID
+  `).all();
+  const screenFeedback = db.prepare(`
+    SELECT FEEDBACK_ID AS id,
+      APP_AREA AS app,
+      SCREEN_NAME AS screenName,
+      FEEDBACK_TYPE AS type,
+      FEEDBACK_TEXT AS text,
+      ROLE AS role,
+      CREATED_AT AS createdAt
+    FROM feedback
+  `).all();
+  const kudos = db.prepare(`
+    SELECT KUDOS_ID AS id,
+      QUOTE_TEXT AS text,
+      ROLE AS role,
+      CONSENT_PUBLIC AS consentPublic,
+      CREATED_AT AS createdAt
+    FROM kudos
+  `).all();
+
+  return buildCap11ExportRecords({
+    featureRequests,
+    screenFeedback,
+    kudos,
+    cardSortResults: runtimeCardSortResults,
+  });
+};
+
 const loadSignalsForSynthesis = async () => {
   if (!useDbDataSource) {
     const flat = toFlatBootstrap();
@@ -2537,6 +2724,56 @@ const buildSavedNarrativePayload = () => {
   };
 };
 
+const SYNTHESIS_HISTORY_LIMIT = 50;
+
+const toSynthesisHistoryRecord = (value) => {
+  if (!value || typeof value !== "object") return null;
+  const outputMode = value.outputMode === "prd" ? "prd" : value.outputMode === "roadmap" ? "roadmap" : null;
+  if (!outputMode) return null;
+  const output = typeof value.output === "string" ? value.output : "";
+  const generatedAt = typeof value.generatedAt === "string" ? value.generatedAt : nowIso();
+  const id = typeof value.id === "string" && value.id.trim() ? value.id.trim() : `synth-${generatedAt}`;
+  const phase1Analysis = value.phase1Analysis && typeof value.phase1Analysis === "object" ? value.phase1Analysis : null;
+  const metadata = value.metadata && typeof value.metadata === "object" ? value.metadata : null;
+  const macrosActive = typeof value.macrosActive === "string" ? value.macrosActive : "none";
+  const parametersSnapshot =
+    value.parametersSnapshot && typeof value.parametersSnapshot === "object" ? value.parametersSnapshot : null;
+  return {
+    id,
+    outputMode,
+    output,
+    phase1Analysis,
+    metadata,
+    macrosActive,
+    parametersSnapshot,
+    generatedAt,
+  };
+};
+
+const readSynthesisHistory = () => {
+  const runtime = readRuntimeStore(runtimeStorePath);
+  const list = Array.isArray(runtime.synthesisHistory) ? runtime.synthesisHistory : [];
+  return list
+    .map((row) => toSynthesisHistoryRecord(row))
+    .filter((row) => row != null)
+    .sort((a, b) => new Date(String(b.generatedAt ?? "")).getTime() - new Date(String(a.generatedAt ?? "")).getTime());
+};
+
+const writeSynthesisHistory = (runtime, records) => {
+  runtime.synthesisHistory = records.slice(0, SYNTHESIS_HISTORY_LIMIT);
+};
+
+const buildSynthesisHistoryPayload = () => {
+  const records = readSynthesisHistory();
+  return { records, total: records.length };
+};
+
+const buildSynthesisHistoryRecordPayload = (id) => {
+  const records = readSynthesisHistory();
+  const record = records.find((row) => String(row.id) === String(id));
+  return record ?? null;
+};
+
 const isPlainObject = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
 const patchLatestSynthesisPhase1 = (body) => {
@@ -2593,6 +2830,47 @@ const patchLatestSynthesisMetadata = (body) => {
 
   const runtime = readRuntimeStore(runtimeStorePath);
   runtime.latestSynthesisMetadata = metadata ?? null;
+  if (metadata && typeof runtime.latestSynthesisOutput === "string" && runtime.latestSynthesisOutput.trim()) {
+    const generatedAtRaw =
+      typeof metadata.generatedAt === "string" && Number.isFinite(new Date(metadata.generatedAt).getTime())
+        ? metadata.generatedAt
+        : nowIso();
+    const generatedAt = new Date(generatedAtRaw).toISOString();
+    const outputMode = metadata.outputMode === "prd" ? "prd" : "roadmap";
+    const macrosArray = Array.isArray(metadata.macrosActive)
+      ? metadata.macrosActive.filter((item) => typeof item === "string" && item.trim())
+      : [];
+    const macrosActive = macrosArray.length > 0 ? macrosArray.join(" | ") : "none";
+    const parametersSnapshot = {
+      excludeBelowN: synthesisParametersState.excludeBelowN,
+      upweightSection: synthesisParametersState.upweightSection,
+      upweightMultiplier: synthesisParametersState.upweightMultiplier,
+      p0FocusOnly: synthesisParametersState.p0FocusOnly,
+      emphasiseQuotes: synthesisParametersState.emphasiseQuotes,
+      maxQuotes: synthesisParametersState.maxQuotes,
+      competingMinEach: synthesisParametersState.competingMinEach,
+      competingMinSplitRatio: synthesisParametersState.competingMinSplitRatio,
+    };
+    const id = `synth-${generatedAt.replace(/[:.]/gu, "-")}`;
+    const historyRecord = toSynthesisHistoryRecord({
+      id,
+      outputMode,
+      output: runtime.latestSynthesisOutput,
+      phase1Analysis: runtime.latestPhase1Analysis ?? null,
+      metadata,
+      macrosActive,
+      parametersSnapshot,
+      generatedAt,
+    });
+    if (historyRecord) {
+      const existing = Array.isArray(runtime.synthesisHistory) ? runtime.synthesisHistory : [];
+      const normalized = existing.map((row) => toSynthesisHistoryRecord(row)).filter((row) => row != null);
+      const deduped = normalized.filter((row) => row.id !== historyRecord.id);
+      const next = [historyRecord, ...deduped]
+        .sort((a, b) => new Date(String(b.generatedAt ?? "")).getTime() - new Date(String(a.generatedAt ?? "")).getTime());
+      writeSynthesisHistory(runtime, next);
+    }
+  }
   writeRuntimeStore(runtimeStorePath, runtime);
   return {
     metadata: runtime.latestSynthesisMetadata,
@@ -3028,6 +3306,31 @@ export const handleApiRequest = async (request, response) => {
 
     if (method === "GET" && pathname === "/api/synthesis/narrative") {
       sendJson(response, 200, buildSavedNarrativePayload());
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/synthesis/history") {
+      sendJson(response, 200, buildSynthesisHistoryPayload());
+      return;
+    }
+
+    if (method === "GET" && pathname.startsWith("/api/synthesis/history/")) {
+      const id = decodeURIComponent(pathname.slice("/api/synthesis/history/".length));
+      if (!id) {
+        sendJson(response, 400, { error: "History id is required." });
+        return;
+      }
+      const record = buildSynthesisHistoryRecordPayload(id);
+      if (!record) {
+        sendJson(response, 404, { error: "Synthesis history record not found." });
+        return;
+      }
+      sendJson(response, 200, { record });
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/synthesis/export/records") {
+      sendJson(response, 200, { records: await loadCap11ExportRecords() });
       return;
     }
 

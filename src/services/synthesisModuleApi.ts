@@ -145,6 +145,38 @@ export interface Day2Narrative {
   updatedAt?: string;
 }
 
+export interface Cap11ExportRecord {
+  type: "feature_request" | "screen_feedback" | "kudos" | "card_sort";
+  id?: string | number;
+  created_at?: string | null;
+  app_section?: string | null;
+  screen_name?: string | null;
+  feedback_type?: string | null;
+  title?: string | null;
+  description?: string | null;
+  text?: string | null;
+  votes?: number | null;
+  workflow_context?: string | null;
+  role?: string | null;
+  consent_public?: boolean | null;
+  reaction?: string | null;
+  tier?: string | null;
+  origin?: string | null;
+  status?: string | null;
+  concept_title?: string | null;
+}
+
+export interface SynthesisHistoryRecord {
+  id: string;
+  outputMode: "roadmap" | "prd";
+  output: string;
+  phase1Analysis: Phase1Analysis | null;
+  metadata: SynthesisMetadata | null;
+  macrosActive: string;
+  parametersSnapshot: SynthesisParametersResponse["parameters"] | null;
+  generatedAt: string;
+}
+
 const jsonHeaders = { "content-type": "application/json" };
 
 const readJson = async <T,>(response: Response): Promise<T> => {
@@ -354,6 +386,23 @@ export const synthesisModuleApi = {
       body: JSON.stringify({ savedNarrative }),
     });
     return readJson<{ savedNarrative: Day2Narrative }>(response);
+  },
+
+  getExportRecords: async (): Promise<{ records: Cap11ExportRecord[] }> => {
+    const response = await fetch("/api/synthesis/export/records", { headers: buildSynthesisAuthHeaders() });
+    return readJson<{ records: Cap11ExportRecord[] }>(response);
+  },
+
+  getSynthesisHistory: async (): Promise<{ records: SynthesisHistoryRecord[]; total: number }> => {
+    const response = await fetch("/api/synthesis/history", { headers: buildSynthesisAuthHeaders() });
+    return readJson<{ records: SynthesisHistoryRecord[]; total: number }>(response);
+  },
+
+  getSynthesisHistoryRecord: async (id: string): Promise<{ record: SynthesisHistoryRecord }> => {
+    const response = await fetch(`/api/synthesis/history/${encodeURIComponent(id)}`, {
+      headers: buildSynthesisAuthHeaders(),
+    });
+    return readJson<{ record: SynthesisHistoryRecord }>(response);
   },
 
 };

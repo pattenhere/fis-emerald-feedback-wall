@@ -2,11 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { generateDay2Narrative, type Day2NarrativeContext, type Day2NarrativeSections } from "../api/day2Narrative";
 import { APP_AREAS } from "../state/seedData";
 import type { AppArea, FeatureRequest, MacroState, ScreenFeedback, SignalSummary, SynthesisMode } from "../types/domain";
-import type { ExportRecord } from "../state/useWallState";
 import type { ThemeSnapshot } from "../themeSnapshots/types";
 import { SynthesisPanel } from "../modules/synthesis/SynthesisPanel";
 import { synthesisModuleApi } from "../services/synthesisModuleApi";
-import type { Day2Narrative } from "../services/synthesisModuleApi";
+import type { Cap11ExportRecord, Day2Narrative } from "../services/synthesisModuleApi";
 import type { TShirtSizingResultsPayload } from "./tshirt/sizingResultsStore";
 import { patchAdminBootstrapCache } from "./adminBootstrapCache";
 
@@ -28,7 +27,7 @@ interface SynthesisCeremonyPageProps {
   onOutputChange: (next: string) => void;
   buildPromptBody: (macros?: MacroState) => string;
   onClearOutput: () => void;
-  exportRecords: () => ExportRecord[];
+  exportRecords: () => Promise<Cap11ExportRecord[]>;
   activeParametersSummary: string[];
   exportMetadata: {
     eventName?: string;

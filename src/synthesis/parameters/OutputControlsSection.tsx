@@ -89,6 +89,7 @@ export const OutputControlsSection = ({
             <label htmlFor="max-quotes">Maximum quotes to include</label>
             <input
               id="max-quotes"
+              className="synthesis-params-number-input"
               type="number"
               min={3}
               max={10}
@@ -109,11 +110,12 @@ export const OutputControlsSection = ({
                   setMaxQuotesError("Must be 3–10.");
                   return;
                 }
+                setMaxQuotesDraft(String(parsed));
               }}
             />
           </div>
         )}
-        {maxQuotesError && <p className="synthesis-params-error">{maxQuotesError}</p>}
+        {parameters.emphasiseQuotes && maxQuotesError && <p className="synthesis-params-error">{maxQuotesError}</p>}
       </article>
 
       <article className="synthesis-params-card">
