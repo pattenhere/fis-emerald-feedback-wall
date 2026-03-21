@@ -16,11 +16,15 @@ import {
 
 type SeedRow = Record<string, unknown>;
 type JsonModuleMap = Record<string, unknown>;
+type ImportMetaGlob = (
+  pattern: string,
+  options?: { eager?: boolean; import?: string },
+) => Record<string, unknown>;
 
-const seedModules = import.meta.glob("./*.seed.json", {
+const seedModules = ((import.meta as unknown as { glob?: ImportMetaGlob }).glob?.("./*.seed.json", {
   eager: true,
   import: "default",
-}) as JsonModuleMap;
+}) ?? {}) as JsonModuleMap;
 
 const getSeed = (filename: string): unknown => seedModules[`./${filename}`];
 

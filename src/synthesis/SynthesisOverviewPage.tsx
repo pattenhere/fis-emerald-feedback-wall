@@ -76,7 +76,16 @@ export const SynthesisOverviewPage = (): JSX.Element => {
   const refreshOverviewData = useCallback(async (): Promise<void> => {
     const nextUpdatedAt = new Date();
     try {
-      const [featureCount, screenCount, kudosCount, dedupCounts, sessionConfig, synthesisParameters] = await Promise.all([
+      const [
+        totalsResult,
+        featureCountResult,
+        screenCountResult,
+        kudosCountResult,
+        dedupCountsResult,
+        sessionConfigResult,
+        synthesisParametersResult,
+      ] = await Promise.allSettled([
+        synthesisModuleApi.getInputsCount(),
         synthesisModuleApi.getInputsCountByType("feature_request"),
         synthesisModuleApi.getInputsCountByType("screen_feedback"),
         synthesisModuleApi.getInputsCountByType("kudos"),
@@ -85,26 +94,38 @@ export const SynthesisOverviewPage = (): JSX.Element => {
         synthesisModuleApi.getSynthesisParameters(),
       ]);
 
+      const totals = totalsResult.status === "fulfilled" ? totalsResult.value : null;
+      const featureCount = featureCountResult.status === "fulfilled" ? featureCountResult.value : null;
+      const screenCount = screenCountResult.status === "fulfilled" ? screenCountResult.value : null;
+      const kudosCount = kudosCountResult.status === "fulfilled" ? kudosCountResult.value : null;
+      const dedupCounts = dedupCountsResult.status === "fulfilled" ? dedupCountsResult.value : null;
+      const sessionConfig = sessionConfigResult.status === "fulfilled" ? sessionConfigResult.value : null;
+      const synthesisParameters = synthesisParametersResult.status === "fulfilled" ? synthesisParametersResult.value : null;
+
       setStats((current) => ({
         ...current,
-        featureRequestsTotal: toInteger(featureCount.count),
-        featureRequestsUnique: toInteger(dedupCounts.uniqueFeatureRequests),
-        screenFeedbackTotal: toInteger(screenCount.count),
-        distinctScreensCovered: toInteger(dedupCounts.distinctScreensCovered),
-        kudosTotal: toInteger(kudosCount.count),
-        consentApprovedKudos: toInteger(dedupCounts.consentApprovedKudos),
-        totalVotesCast: toInteger(dedupCounts.totalVotesCast),
-        uniqueInputs: toInteger(dedupCounts.uniqueInputs),
-        synthesisMinSignals: Math.max(1, toInteger(sessionConfig.synthesisMinSignals ?? current.synthesisMinSignals)),
+        featureRequestsTotal: toInteger(featureCount?.count ?? totals?.featureRequests ?? current.featureRequestsTotal),
+        featureRequestsUnique: toInteger(dedupCounts?.uniqueFeatureRequests ?? current.featureRequestsUnique),
+        screenFeedbackTotal: toInteger(screenCount?.count ?? totals?.screenFeedback ?? current.screenFeedbackTotal),
+        distinctScreensCovered: toInteger(dedupCounts?.distinctScreensCovered ?? current.distinctScreensCovered),
+        kudosTotal: toInteger(kudosCount?.count ?? totals?.kudos ?? current.kudosTotal),
+        consentApprovedKudos: toInteger(dedupCounts?.consentApprovedKudos ?? current.consentApprovedKudos),
+        totalVotesCast: toInteger(dedupCounts?.totalVotesCast ?? totals?.totalVotesCast ?? current.totalVotesCast),
+        uniqueInputs: toInteger(dedupCounts?.uniqueInputs ?? totals?.totalInputs ?? current.uniqueInputs),
+        synthesisMinSignals: Math.max(1, toInteger(sessionConfig?.synthesisMinSignals ?? current.synthesisMinSignals)),
       }));
-      setWallWindowOpen(Boolean(sessionConfig.wallWindowOpen ?? true));
-      setEventName(String(sessionConfig.eventName ?? ""));
-      setThemeSnapshotThresholds({
-        minEach: Math.max(1, toInteger(synthesisParameters.parameters.competingMinEach ?? 3)),
-        minSplitRatio: Number.isFinite(Number(synthesisParameters.parameters.competingMinSplitRatio))
-          ? Number(synthesisParameters.parameters.competingMinSplitRatio)
-          : 0.4,
-      });
+      if (sessionConfig) {
+        setWallWindowOpen(Boolean(sessionConfig.wallWindowOpen ?? true));
+        setEventName(String(sessionConfig.eventName ?? ""));
+      }
+      if (synthesisParameters) {
+        setThemeSnapshotThresholds({
+          minEach: Math.max(1, toInteger(synthesisParameters.parameters.competingMinEach ?? 3)),
+          minSplitRatio: Number.isFinite(Number(synthesisParameters.parameters.competingMinSplitRatio))
+            ? Number(synthesisParameters.parameters.competingMinSplitRatio)
+            : 0.4,
+        });
+      }
       setLastUpdatedLabel(nextUpdatedAt.toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
