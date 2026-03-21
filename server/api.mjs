@@ -2015,33 +2015,40 @@ const loadSignalsForSynthesis = async () => {
   }
 
   if (usePostgresDb) {
-    const signalRows = await withPostgresClient(async (client) => {
-      const featureRequests = (
-        await client.query(`
-          SELECT fr.feature_request_id AS id, fr.title AS title, fr.workflow_context AS "workflowContext",
-            fr.origin AS origin, COALESCE(SUM(frv.vote_value), 0) AS votes
-          FROM feature_requests fr
-          LEFT JOIN feature_request_votes frv ON frv.feature_request_id = fr.feature_request_id
-          GROUP BY fr.feature_request_id
-        `)
-      ).rows;
+    let signalRows;
+    try {
+      signalRows = await withPostgresClient(async (client) => {
+        const featureRequests = (
+          await client.query(`
+            SELECT fr.feature_request_id AS id, fr.title AS title, fr.workflow_context AS "workflowContext",
+              fr.origin AS origin, COALESCE(SUM(frv.vote_value), 0) AS votes
+            FROM feature_requests fr
+            LEFT JOIN feature_request_votes frv ON frv.feature_request_id = fr.feature_request_id
+            GROUP BY fr.feature_request_id
+          `)
+        ).rows;
 
-      const screenFeedback = (
-        await client.query(`
-          SELECT feedback_id AS id, app_area AS app, screen_name AS "screenName", feedback_type AS type,
-            feedback_text AS text, role AS role
-          FROM feedback
-        `)
-      ).rows.map((row) => ({ ...row, appLabel: appLabelFromId(row.app) }));
+        const screenFeedback = (
+          await client.query(`
+            SELECT feedback_id AS id, app_area AS app, screen_name AS "screenName", feedback_type AS type,
+              feedback_text AS text, role AS role
+            FROM feedback
+          `)
+        ).rows.map((row) => ({ ...row, appLabel: appLabelFromId(row.app) }));
 
-      const kudos = (
-        await client.query(`
-          SELECT kudos_id AS id, quote_text AS text, role AS role, consent_public AS "consentPublic"
-          FROM kudos
-        `)
-      ).rows;
-      return { featureRequests, screenFeedback, kudos };
-    });
+        const kudos = (
+          await client.query(`
+            SELECT kudos_id AS id, quote_text AS text, role AS role, consent_public AS "consentPublic"
+            FROM kudos
+          `)
+        ).rows;
+        return { featureRequests, screenFeedback, kudos };
+      });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn("[api] Postgres synthesis signal query failed; falling back to flat seeds.", error);
+      signalRows = { featureRequests: [], screenFeedback: [], kudos: [] };
+    }
     const hasPostgresSignals =
       signalRows.featureRequests.length > 0 ||
       signalRows.screenFeedback.length > 0 ||
@@ -2248,35 +2255,42 @@ const loadSignalRowsForOverview = async () => {
   }
 
   if (usePostgresDb) {
-    const rows = await withPostgresClient(async (client) => {
-      const featureRequests = (
-        await client.query(`
-          SELECT fr.feature_request_id AS id,
-            fr.title AS title,
-            COALESCE(SUM(frv.vote_value), 0)::int AS votes
-          FROM feature_requests fr
-          LEFT JOIN feature_request_votes frv ON frv.feature_request_id = fr.feature_request_id
-          GROUP BY fr.feature_request_id
-        `)
-      ).rows;
-      const screenFeedback = (
-        await client.query(`
-          SELECT feedback_id AS id, screen_name AS "screenName", feedback_type AS type, feedback_text AS text, role AS role
-          FROM feedback
-        `)
-      ).rows;
-      const kudos = (
-        await client.query(`
-          SELECT kudos_id AS id, quote_text AS text, role AS role, consent_public AS "consentPublic"
-          FROM kudos
-        `)
-      ).rows;
-      return {
-        featureRequests,
-        screenFeedback,
-        kudos,
-      };
-    });
+    let rows;
+    try {
+      rows = await withPostgresClient(async (client) => {
+        const featureRequests = (
+          await client.query(`
+            SELECT fr.feature_request_id AS id,
+              fr.title AS title,
+              COALESCE(SUM(frv.vote_value), 0)::int AS votes
+            FROM feature_requests fr
+            LEFT JOIN feature_request_votes frv ON frv.feature_request_id = fr.feature_request_id
+            GROUP BY fr.feature_request_id
+          `)
+        ).rows;
+        const screenFeedback = (
+          await client.query(`
+            SELECT feedback_id AS id, screen_name AS "screenName", feedback_type AS type, feedback_text AS text, role AS role
+            FROM feedback
+          `)
+        ).rows;
+        const kudos = (
+          await client.query(`
+            SELECT kudos_id AS id, quote_text AS text, role AS role, consent_public AS "consentPublic"
+            FROM kudos
+          `)
+        ).rows;
+        return {
+          featureRequests,
+          screenFeedback,
+          kudos,
+        };
+      });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn("[api] Postgres overview query failed; falling back to flat seeds.", error);
+      rows = { featureRequests: [], screenFeedback: [], kudos: [] };
+    }
     const hasPostgresSignals = rows.featureRequests.length > 0 || rows.screenFeedback.length > 0 || rows.kudos.length > 0;
     return hasPostgresSignals ? rows : buildFlatMergedSignals();
   }
@@ -2347,42 +2361,49 @@ const loadAllInputsForModeration = async () => {
   }
 
   if (usePostgresDb) {
-    const rows = await withPostgresClient(async (client) => {
-      const featureRequests = (
-        await client.query(`
-          SELECT feature_request_id AS id, title AS text, created_at AS "submittedAt"
-          FROM feature_requests
-        `)
-      ).rows.map((row) => ({
-        id: row.id,
-        type: "feature_request",
-        text: String(row.text ?? ""),
-        submittedAt: String(row.submittedAt ?? nowIso()),
-      }));
-      const screenFeedback = (
-        await client.query(`
-          SELECT feedback_id AS id, feedback_text AS text, created_at AS "submittedAt"
-          FROM feedback
-        `)
-      ).rows.map((row) => ({
-        id: row.id,
-        type: "screen_feedback",
-        text: String(row.text ?? ""),
-        submittedAt: String(row.submittedAt ?? nowIso()),
-      }));
-      const kudos = (
-        await client.query(`
-          SELECT kudos_id AS id, quote_text AS text, created_at AS "submittedAt"
-          FROM kudos
-        `)
-      ).rows.map((row) => ({
-        id: row.id,
-        type: "kudos",
-        text: String(row.text ?? ""),
-        submittedAt: String(row.submittedAt ?? nowIso()),
-      }));
-      return [...featureRequests, ...screenFeedback, ...kudos];
-    });
+    let rows;
+    try {
+      rows = await withPostgresClient(async (client) => {
+        const featureRequests = (
+          await client.query(`
+            SELECT feature_request_id AS id, title AS text, created_at AS "submittedAt"
+            FROM feature_requests
+          `)
+        ).rows.map((row) => ({
+          id: row.id,
+          type: "feature_request",
+          text: String(row.text ?? ""),
+          submittedAt: String(row.submittedAt ?? nowIso()),
+        }));
+        const screenFeedback = (
+          await client.query(`
+            SELECT feedback_id AS id, feedback_text AS text, created_at AS "submittedAt"
+            FROM feedback
+          `)
+        ).rows.map((row) => ({
+          id: row.id,
+          type: "screen_feedback",
+          text: String(row.text ?? ""),
+          submittedAt: String(row.submittedAt ?? nowIso()),
+        }));
+        const kudos = (
+          await client.query(`
+            SELECT kudos_id AS id, quote_text AS text, created_at AS "submittedAt"
+            FROM kudos
+          `)
+        ).rows.map((row) => ({
+          id: row.id,
+          type: "kudos",
+          text: String(row.text ?? ""),
+          submittedAt: String(row.submittedAt ?? nowIso()),
+        }));
+        return [...featureRequests, ...screenFeedback, ...kudos];
+      });
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn("[api] Postgres moderation query failed; falling back to flat seeds.", error);
+      rows = [];
+    }
     return rows.length > 0 ? rows : toFlatModerationInputs();
   }
 
