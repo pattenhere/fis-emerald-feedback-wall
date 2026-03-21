@@ -11,6 +11,7 @@ import { runServerTextCompletion } from "./ai/providerClients.mjs";
 import { getAIProviderHealth } from "./api/aiHealth.mjs";
 import { aiCall as runServerAICall, AICallError as ServerAICallError } from "./api/aiCall.mjs";
 import { loadConfigEnv } from "./config/loadConfigEnv.mjs";
+import { BUNDLED_SEEDS } from "./bundledSeeds.mjs";
 import {
   HttpError,
   createHttpError,
@@ -62,7 +63,7 @@ const parseDataSourceMode = (value) => {
   return normalized === "db" || normalized === "database" ? "db" : "flat";
 };
 const rawDataSourceMode =
-  process.env.FEEDBACK_DATA_SOURCE ?? process.env.DATA_SOURCE ?? process.env.VITE_DATA_SOURCE ?? (hasPostgresUrl ? "db" : "flat");
+  process.env.FEEDBACK_DATA_SOURCE ?? process.env.DATA_SOURCE ?? process.env.VITE_DATA_SOURCE ?? "flat";
 const requestedDataSourceMode = parseDataSourceMode(rawDataSourceMode);
 const postgresConfigured = isPostgresConfigured();
 const dataSourceMode = requestedDataSourceMode === "flat"
@@ -356,6 +357,12 @@ const loadJsonSeed = (filename) => {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
+    const bundled = BUNDLED_SEEDS[filename];
+    if (Array.isArray(bundled)) {
+      // eslint-disable-next-line no-console
+      console.warn(`[api] failed to load seed file ${filePath}; using bundled fallback for ${filename}.`);
+      return bundled;
+    }
     // eslint-disable-next-line no-console
     console.warn(`[api] failed to load seed file ${filePath}`, error);
     return [];

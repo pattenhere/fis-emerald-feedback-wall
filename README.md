@@ -93,6 +93,7 @@ Set these environment variables in Vercel for preview/production deployments:
 Recommended for Vercel:
 
 - Leave `VITE_SYNTHESIS_API_BASE_URL` empty so the client uses same-origin `/api/*`.
+- Set `FEEDBACK_DATA_SOURCE=flat` unless you have migrated + seeded Postgres and explicitly want DB mode.
 - Verify `GET /api/health` includes `"synthesisPinConfigured": true` after setting env vars.
 - Use server-side secrets (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`) and avoid `VITE_*` API keys in Vercel.
 - Optionally set `API_ALLOWED_ORIGIN` to a comma-separated allowlist of exact web origins.
