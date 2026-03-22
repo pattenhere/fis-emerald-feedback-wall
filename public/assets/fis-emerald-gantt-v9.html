@@ -209,6 +209,11 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
       <div class="mid">Leveraging the Interactive Lending Prototype, allowing customers to make recommendations on additional features through an interactive experience. These recommendations are then synthesized in near real-time into a revised interactive prototype demonstrating the speed at which FIS is moving with AI-enabled SDLC.</div>
       <div class="mm"><span class="mp p0">Hard Deadline: Apr 27</span><span class="mp du">Invoice: May 22</span></div>
     </div>
+    <div class="mi">
+      <div class="mit">4 · AI Enablement Workshops</div>
+      <div class="mid">A structured 8-week AI enablement engagement covering Use Case Identification, Architecture & Data Readiness, and Proof of Value planning. Method facilitates cross-functional workshops to help FIS identify, prioritize, and architect AI use cases — delivering a prioritized use case roadmap, architecture readiness assessment, data readiness assessment, and a Proof of Value PRD with narrative prototype for the top-priority use case.</div>
+      <div class="mm"><span class="mp ow">Owner: Chris Patten + Jason Rome</span><span class="mp du">Mar 23 – May 15</span></div>
+    </div>
   </div>
 </div></div>
 
@@ -222,14 +227,14 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
 <!-- HEADER -->
 <div class="hdr">
   <div>
-    <div class="eyebrow">FIS × Method &nbsp;·&nbsp; Project Timeline v8</div>
+    <div class="eyebrow">FIS × Method &nbsp;·&nbsp; Project Timeline v9</div>
     <div class="h1">Emerald <em>2026</em></div>
-    <div class="sub">SOW: Mar 23 – May 30 &nbsp;·&nbsp; 3 Workstreams</div>
+    <div class="sub">SOW: Mar 23 – May 30 &nbsp;·&nbsp; 4 Workstreams</div>
   </div>
   <div class="stats">
     <div class="stat"><span class="v">10</span><span class="l">Wk Build</span></div>
     <div class="stat"><span class="v">5</span><span class="l">Team Roles</span></div>
-    <div class="stat btn" onclick="openMod('del-ov')" title="Click to view deliverables"><span class="v">3</span><span class="l">Deliverables ▾</span></div>
+    <div class="stat btn" onclick="openMod('del-ov')" title="Click to view deliverables"><span class="v">4</span><span class="l">Deliverables ▾</span></div>
     <div class="stat btn" onclick="openMod('oq-ov')" title="Click to view open questions"><span class="v" id="oqv">12</span><span class="l">Open Questions ▾</span></div>
     <div class="stat warn" title="WS3 hard deadline. WS1 &amp; WS2 continue to May 15."><span class="v">APR 27</span><span class="l">WS3 Deadline</span></div>
   </div>
@@ -269,7 +274,7 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
 <div class="go"><div class="gw" id="gantt"></div></div>
 
 <div class="foot">
-  <span>FIS Emerald 2026 · FIS × Method · Confidential · v8</span>
+  <span>FIS Emerald 2026 · FIS × Method · Confidential · v9</span>
   <span id="gd"></span>
 </div>
 
@@ -364,6 +369,20 @@ const SECS=[
     {name:'Design Artifact Packaging',sub:'Engineering handoff',type:'Documentation',start:'2026-04-21',end:'2026-04-27',color:'#485860',note:'Design artifacts packaged for FIS engineering handoff. Complete by Apr 27 deadline.'},
     {name:'Final Documentation & Handoff',sub:'Post-conference · last 2 weeks',type:'Documentation',start:'2026-05-16',end:'2026-05-30',color:'#5A6A7A',note:'Final documentation package for FIS covering all three workstreams. Closes out the engagement.'},
   ]},
+  {id:'ws4',label:'WS4 — AI ENABLEMENT WORKSHOPS',sc:'#FD8D62',tasks:[
+    // M1: Use Case Identification (Mar 23 – Apr 4)
+    {name:'Use Case Workshop — Guardrails & Governance',type:'Workshop',start:'2026-03-23',end:'2026-03-27',color:'#C05A20',owner:'Chris Patten + Jason Rome',note:'M1 Phase — Identify FIS stakeholders. Align on current AI state and strategy. Provide portfolio-level AI education to establish guardrails. Introduce rubric categories: Monetization & ROI Intent, Adoption & Change Impact, Design Pattern, Agency & Control, Product Impact.'},
+    {name:'Use Case Workshop — Business & Use Cases',type:'Workshop',start:'2026-03-30',end:'2026-04-10',color:'#D06830',owner:'Chris Patten + Jason Rome',note:'M1 Phase — Perform value stream and outcome mapping. Identify highly repetitive, structured, and painful tasks as agent candidates. Prioritize Jobs to Be Done by need, feasibility, and viability. Apply monetization and revenue protection frameworks to candidate use cases.'},
+    {name:'Use Case Architecture Workshop',type:'Workshop',start:'2026-03-30',end:'2026-04-10',color:'#B84A18',owner:'Chris Patten + Jason Rome',note:'M1 Phase — Review AI landscape of solutions for identified use cases. Assess architecture readiness, data readiness, and dependencies. Determine where Agents fit vs. automation, AI assistance, or analytical AI. Map API and architecture implications including modularity, security, and human-in-the-loop design.'},
+    // M2: Detailed Architecture & Design (Apr 13 – May 1)
+    {name:'Rapid Validation — Solution Landscape Review',type:'Workshop',start:'2026-04-13',end:'2026-04-17',color:'#E07030',owner:'Chris Patten + Jason Rome',dep:true,depNote:'Depends on completion of Use Case workshops (M1). Cannot assess solutions without prioritized use case list.',note:'M2 Phase — Review landscape of AI solutions for top-priority use cases. Conduct customer and stakeholder research. Assess risk, regulatory constraints, and dependencies for each candidate use case.'},
+    {name:'Detailed Architecture — Data Readiness Assessment',type:'Spec',start:'2026-04-20',end:'2026-04-24',color:'#A03010',owner:'Chris Patten + Jason Rome',note:'M2 Phase — Assess FIS data readiness for AI initiatives: proprietary data moats, volume and scale, relevance, structured and enriched data, and interconnection across datasets. Identify data gaps that must be resolved before production launch.'},
+    {name:'Detailed Architecture — Architecture Readiness Assessment',type:'Spec',start:'2026-04-20',end:'2026-04-27',color:'#8B2800',owner:'Chris Patten + Jason Rome',note:'M2 Phase — Assess API and architecture readiness: modularity, tenant configuration, security, access controls, idempotency, observability, and context and memory design. Map integration requirements and modernization dependencies.'},
+    {name:'Process Re-Engineering & Task Decomposition',type:'Workshop',start:'2026-04-27',end:'2026-05-01',color:'#C04820',owner:'Chris Patten + Jason Rome',note:'M2 Phase — Decompose prioritized use case jobs into tasks and subtasks to draw agent boundaries. Determine whether individual or team-of-agents architecture applies. Map process homogeneity across customer segments for scalable agent deployment.'},
+    // M3: Proof of Value & MVP Plan (May 4 – May 15)
+    {name:'Proof of Value — PRD & Iterative Roadmap',type:'Spec',start:'2026-05-04',end:'2026-05-08',color:'#D05010',owner:'Chris Patten + Jason Rome',note:'M3 Phase — Develop Product Requirements Document for top P0 use case. Define iterative roadmap with phased milestones. Estimate level of effort across product, design, engineering, and QA. Incorporate monetization strategy and business case.'},
+    {name:'Proof of Value — Narrative Prototype & Workflows',type:'Build',start:'2026-05-11',end:'2026-05-15',color:'#E06020',owner:'Chris Patten + Jason Rome',note:'M3 Phase — Develop narrative prototype demonstrating the AI-enabled use case for stakeholder alignment. Document workflows for target agentic capabilities. Define Agent Operations plan: GTM, pricing and bundling, agent development, monitoring and observability, and governance configuration.'},
+  ]},
   {id:'reviews',label:'FIS REVIEWS & KEY MEETINGS',sc:'#4BCD3E',tasks:[
     {name:'Project Kickoff',sub:'Mar 23 · Dale + FIS team',start:'2026-03-23',end:'2026-03-23',isMtg:true,color:'#4BCD3E',owner:'Chris Patten + Jason Rome + Dale',note:'Scope alignment, Beeline VMS confirmation, seed data request issued, review cadence set.'},
     {name:'Feedback Wall Demo to Dale',sub:'Mar 25 · WS3 scope alignment',start:'2026-03-25',end:'2026-03-25',isMtg:true,color:'#3BCFF0',owner:'Chris Patten + Dale',note:'Demo existing Feedback Wall. Written WS3 scope and Day 2 deliverable alignment. Critical gate before Phase 2.'},
@@ -397,7 +416,7 @@ function dl(){
   const html=document.documentElement.outerHTML;
   const b=new Blob([html],{type:'text/html;charset=utf-8'});
   const u=URL.createObjectURL(b);const a=document.createElement('a');
-  a.href=u;a.download='FIS-Emerald-2026-Gantt-v8.html';
+  a.href=u;a.download='FIS-Emerald-2026-Gantt-v9.html';
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
 }
 
@@ -524,7 +543,7 @@ function render(){
       row.appendChild(gc);GE.appendChild(row);
     });
   });
-  document.getElementById('gd').textContent='Generated: '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})+' · v8';
+  document.getElementById('gd').textContent='Generated: '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})+' · v9';
 }
 
 // DRAG RESIZE

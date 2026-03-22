@@ -4,6 +4,7 @@ import App from "./App";
 import { UI_VARIANT } from "./config";
 import { NewUILayout } from "./layouts/NewUILayout";
 import { SynthesisModuleApp } from "./synthesis/SynthesisModuleApp";
+import { initGanttShortcut } from "./utils/ganttShortcut";
 import "./styles/reset.css";
 
 const pathname = typeof window === "undefined" ? "/" : window.location.pathname;
@@ -21,6 +22,8 @@ const RootComponent = isSynthesisRoute
   : UI_VARIANT === "newUI"
     ? NewUILayout
     : LegacyLayout;
+
+initGanttShortcut();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

@@ -19,12 +19,14 @@
   --rb:rgba(255,255,255,.06);--gl:rgba(255,255,255,.05);--gm:rgba(255,255,255,.12);
   --tc-design:#3BCFF0;--tc-workshop:#FFC845;--tc-build:#4BCD3E;
   --tc-spec:#9B6BFF;--tc-test:#FD8D62;--tc-docs:#94b4c8;
-  --staff:#3BCFF0;
+  --staff:#5A6E7F;--fhh:136px;
 }
 html,body{width:100%;min-height:100vh;overflow-x:hidden}
 body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px;padding:0 0 40px}
 
 /* HEADER */
+.fhead{position:fixed;top:0;left:0;right:0;z-index:120;background:linear-gradient(160deg,#015B7E,#012834);box-shadow:0 8px 20px rgba(0,0,0,.25)}
+.fhsp{height:var(--fhh)}
 .hdr{background:linear-gradient(160deg,#015B7E,#012834);border-bottom:2px solid transparent;
   border-image:linear-gradient(90deg,#4BCD3E,#3BCFF014) 1;
   padding:16px 20px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
@@ -48,6 +50,8 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
 .li{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--warm);font-family:var(--B);white-space:nowrap}
 .ld{width:12px;height:5px;border-radius:1px;flex-shrink:0}
 .ld.dot{border-radius:50%;width:8px;height:8px}
+.ld.mil{width:10px;height:10px;background:#fff;transform:rotate(45deg);border-radius:0;box-shadow:0 0 6px rgba(255,255,255,.55)}
+.ld.meet{width:14px;height:14px;background:#F0F0F0;border-radius:50%;box-shadow:0 0 8px rgba(240,240,240,.65)}
 .ld.dep{background:transparent;border:1px dashed var(--red);width:14px;height:8px;border-radius:1px}
 .ts{width:8px;height:8px;border-radius:1px;flex-shrink:0}
 .sep{width:1px;height:20px;background:rgba(255,255,255,.1);flex-shrink:0}
@@ -64,7 +68,8 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
 .gw{background:var(--navy);border-top:1px solid var(--rb);min-width:900px}
 
 /* week header */
-.wh{display:flex;border-bottom:1px solid rgba(255,255,255,.1);position:sticky;top:0;z-index:20;background:#013244}
+.fwh-wrap{overflow:hidden;border-top:1px solid var(--rb)}
+.wh{display:flex;border-bottom:1px solid rgba(255,255,255,.1);background:#013244;will-change:transform}
 .whl{flex-shrink:0;padding:8px 10px;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;
   color:var(--warm);font-family:var(--B);border-right:1px solid rgba(255,255,255,.1);
   display:flex;align-items:center;gap:4px;cursor:col-resize;user-select:none}
@@ -74,10 +79,11 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
   color:rgba(232,219,203,.3);font-family:var(--B);border-right:1px solid rgba(255,255,255,.1);
   display:flex;align-items:center;justify-content:center}
 .whws{display:flex;flex:1;overflow:hidden}
-.whwk{flex-shrink:0;padding:6px 2px;font-size:9px;font-weight:600;font-family:var(--B);
+.whwk{flex-shrink:0;padding:6px 2px;font-size:10px;font-weight:600;font-family:var(--B);
   color:rgba(232,219,203,.4);text-align:center;border-right:1px solid var(--gl);line-height:1.3}
 .whwk.ms{color:var(--warm);border-right:1px solid var(--gm)}
 .whwk.tc{color:var(--green)}
+.whwk strong{font-size:inherit;font-weight:inherit}
 
 /* section header */
 .sh{display:flex;background:linear-gradient(90deg,#013244,#012030);
@@ -90,7 +96,7 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
 .arr{font-size:7px;transition:transform .2s;opacity:.7;display:inline-block}
 .arr.c{transform:rotate(-90deg)}
 
-/* summary bar (shown when collapsed) */
+/* summary bar */
 .sg{position:relative;flex:1;overflow:hidden;min-height:32px}
 .sbar{position:absolute;top:50%;transform:translateY(-50%);height:10px;border-radius:2px;z-index:2;
   display:flex;align-items:center;justify-content:space-between;padding:0 7px}
@@ -109,6 +115,9 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
   border:1px solid rgba(59,207,240,.25);flex-shrink:0;margin-left:6px}
 .ttype{flex-shrink:0;display:flex;align-items:center;justify-content:center;border-right:1px solid rgba(255,255,255,.08)}
 .tsw{width:9px;height:9px;border-radius:1px;cursor:default}
+.tsw.mil{width:10px;height:10px;background:#fff;transform:rotate(45deg);border-radius:0;box-shadow:0 0 6px rgba(255,255,255,.55)}
+.tsw.meet{width:14px;height:14px;background:#F0F0F0;border-radius:50%;box-shadow:0 0 8px rgba(240,240,240,.65)}
+.tsw.ev{width:12px;height:1px;border-radius:0;background:#fff;box-shadow:none}
 
 /* grid */
 .tg{position:relative;flex:1;overflow:hidden;min-height:36px}
@@ -131,7 +140,7 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
 .msd:hover{transform:translateY(-50%) rotate(45deg) scale(1.5);z-index:6}
 .msl{position:absolute;top:50%;transform:translateY(-50%);font-size:9px;font-family:var(--B);font-weight:600;white-space:nowrap;z-index:4;pointer-events:none}
 /* meeting */
-.mtg{position:absolute;top:50%;transform:translateY(-50%);width:12px;height:12px;border-radius:50%;z-index:3;cursor:pointer;transition:transform .15s}
+.mtg{position:absolute;top:50%;transform:translateY(-50%);width:14px;height:14px;border-radius:50%;z-index:3;cursor:pointer;transition:transform .15s}
 .mtg:hover{transform:translateY(-50%) scale(1.4);z-index:6}
 /* today */
 .tday{position:absolute;top:0;bottom:0;width:1px;background:var(--green);z-index:8;pointer-events:none;box-shadow:0 0 5px rgba(75,205,62,.5)}
@@ -140,10 +149,6 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
 /* conference */
 .conf{position:absolute;top:0;bottom:0;background:rgba(255,200,69,.05);
   border-left:1px dashed rgba(255,200,69,.35);border-right:1px dashed rgba(255,200,69,.35);z-index:1;pointer-events:none}
-/* apr27 deadline */
-.dl27{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,31,62,.45);z-index:7;pointer-events:none}
-.dl27::before{content:'APR 27';position:absolute;top:-18px;left:3px;
-  font-size:8px;font-family:var(--B);font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--red);white-space:nowrap}
 
 /* MODALS */
 .ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;backdrop-filter:blur(4px);align-items:center;justify-content:center}
@@ -179,6 +184,7 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
 .tr2{display:flex;justify-content:space-between;gap:14px;margin-bottom:3px;font-family:var(--B)}
 .tk{color:var(--green);font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;flex-shrink:0}
 .tv{color:var(--off);font-size:11px;text-align:right}
+#tto{white-space:pre-line;display:block;text-align:right}
 .tdep{margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,31,62,.25);
   font-size:10px;font-weight:600;letter-spacing:.3px;color:var(--red);font-family:var(--B)}
 
@@ -197,22 +203,22 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
     <div class="mi">
       <div class="mit">1 · Interactive Roadmap Explorer</div>
       <div class="mid">A strategic sales enablement and product communication tool that allows FIS sales teams, bank executives, and prospects to explore the Commercial Lending roadmap dynamically and in context.</div>
-      <div class="mm"><span class="mp du">Invoice: Apr 24</span></div>
+      <div class="mm"><span class="mp du">WS1</span></div>
     </div>
     <div class="mi">
       <div class="mit">2 · Interactive Lending Prototype</div>
       <div class="mid">Interactive prototype experience to show key flows for the Credit Memo and Covenants Management journeys. Includes a spotlight Journey Presentation from a client to highlight the benefits for other customers.</div>
-      <div class="mm"><span class="mp du">Invoice: May 8</span></div>
+      <div class="mm"><span class="mp du">WS2</span></div>
     </div>
     <div class="mi">
-      <div class="mit">3 · AI-Assisted Product Strategy</div>
+      <div class="mit">3 · AI-Assisted Product Strategy / Feedback Wall</div>
       <div class="mid">Leveraging the Interactive Lending Prototype, allowing customers to make recommendations on additional features through an interactive experience. These recommendations are then synthesized in near real-time into a revised interactive prototype demonstrating the speed at which FIS is moving with AI-enabled SDLC.</div>
-      <div class="mm"><span class="mp p0">Hard Deadline: Apr 27</span><span class="mp du">Invoice: May 22</span></div>
+      <div class="mm"><span class="mp du">WS3</span></div>
     </div>
     <div class="mi">
-      <div class="mit">4 · AI Enablement Workshops</div>
-      <div class="mid">A structured 8-week AI enablement engagement covering Use Case Identification, Architecture & Data Readiness, and Proof of Value planning. Method facilitates cross-functional workshops to help FIS identify, prioritize, and architect AI use cases — delivering a prioritized use case roadmap, architecture readiness assessment, data readiness assessment, and a Proof of Value PRD with narrative prototype for the top-priority use case.</div>
-      <div class="mm"><span class="mp ow">Owner: Chris Patten + Jason Rome</span><span class="mp du">Mar 23 – May 15</span></div>
+      <div class="mit">4 · AI Enablement</div>
+      <div class="mid">A structured AI enablement engagement covering Use Case Identification, Architecture & Data Readiness, and Proof of Value planning. Method facilitates cross-functional workshops to help FIS identify, prioritize, and architect AI use cases — delivering a prioritized use case roadmap, architecture readiness assessment, data readiness assessment, and a Proof of Value PRD with narrative prototype.</div>
+      <div class="mm"><span class="mp ow">Owner: Chris Patten + Jason Rome</span><span class="mp du">WS4</span></div>
     </div>
   </div>
 </div></div>
@@ -224,10 +230,11 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
   <div class="mbody" id="oq-body"></div>
 </div></div>
 
+<div class="fhead" id="fhead">
 <!-- HEADER -->
 <div class="hdr">
   <div>
-    <div class="eyebrow">FIS × Method &nbsp;·&nbsp; Project Timeline v9</div>
+    <div class="eyebrow">FIS × Method &nbsp;·&nbsp; Project Timeline · Draft</div>
     <div class="h1">Emerald <em>2026</em></div>
     <div class="sub">SOW: Mar 23 – May 30 &nbsp;·&nbsp; 4 Workstreams</div>
   </div>
@@ -236,7 +243,7 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
     <div class="stat"><span class="v">5</span><span class="l">Team Roles</span></div>
     <div class="stat btn" onclick="openMod('del-ov')" title="Click to view deliverables"><span class="v">4</span><span class="l">Deliverables ▾</span></div>
     <div class="stat btn" onclick="openMod('oq-ov')" title="Click to view open questions"><span class="v" id="oqv">12</span><span class="l">Open Questions ▾</span></div>
-    <div class="stat warn" title="WS3 hard deadline. WS1 &amp; WS2 continue to May 15."><span class="v">APR 27</span><span class="l">WS3 Deadline</span></div>
+    <div class="stat warn" title="Target completion before Emerald"><span class="v">MAY 1</span><span class="l">Deliverable Target</span></div>
   </div>
 </div>
 <div class="bl"></div>
@@ -253,8 +260,8 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
   </button>
   <div class="sep"></div>
   <div class="leg">
-    <div class="li"><div class="ld dot" style="background:var(--green)"></div>Milestone</div>
-    <div class="li"><div class="ld dot" style="background:var(--cyan)"></div>FIS Meeting</div>
+    <div class="li"><div class="ld mil"></div>Milestone</div>
+    <div class="li"><div class="ld meet"></div>FIS Meeting</div>
     <div class="li"><div class="ld dep"></div>Has Dependency</div>
     <div class="sep"></div>
     <div class="li"><div class="ts" style="background:var(--tc-design)"></div>Design</div>
@@ -269,12 +276,15 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
     <span class="chk" id="tt-chk">✓</span>Show Today
   </div>
 </div>
+<div class="fwh-wrap"><div class="wh" id="fwh"></div></div>
+</div>
+<div class="fhsp" id="fhsp"></div>
 
 <!-- GANTT -->
 <div class="go"><div class="gw" id="gantt"></div></div>
 
 <div class="foot">
-  <span>FIS Emerald 2026 · FIS × Method · Confidential · v9</span>
+  <span>FIS Emerald 2026 · FIS × Method · Confidential · Draft</span>
   <span id="gd"></span>
 </div>
 
@@ -283,18 +293,55 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
   <div class="tit" id="tit"></div>
   <div class="tr2"><span class="tk">Start</span><span class="tv" id="tts"></span></div>
   <div class="tr2" id="tte-r"><span class="tk">End</span><span class="tv" id="tte"></span></div>
-  <div class="tr2" id="tto-r"><span class="tk">Owner</span><span class="tv" id="tto"></span></div>
+  <div class="tr2" id="ttm-r"><span class="tk">Duration</span><span class="tv" id="ttm"></span></div>
+  <div class="tr2" id="tto-r"><span class="tk" id="tto-k">Owner</span><span class="tv" id="tto"></span></div>
   <div class="tr2" id="ttn-r"><span class="tk">Note</span><span class="tv" id="ttn"></span></div>
-  <div class="tdep" id="ttd" style="display:none"></div>
+  <div class="tdep" id="tdep" style="display:none"></div>
 </div>
 
 <script>
 // DATES
 const MS=86400000;
 function d(s){const[y,m,dy]=s.split('-').map(Number);return new Date(y,m-1,dy)}
+function ds(dt){return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`}
 function fmt(dt){return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'})}
 function df(a,b){return Math.round((b-a)/MS)}
-const PS=d('2026-03-23'),PE=d('2026-05-30'),TODAY=new Date(),TOTAL=df(PS,PE);
+function durationMonthsWeeks(a,b){
+  if(b<=a)return '0 month, 0 week';
+  let months=0,cur=new Date(a);
+  while(true){
+    const nx=new Date(cur);nx.setMonth(nx.getMonth()+1);
+    if(nx<=b){months++;cur=nx}else break;
+  }
+  const weeks=Math.floor((b-cur)/MS/7);
+  const mLabel=months<=1?'month':'months';
+  const wLabel=weeks<=1?'week':'weeks';
+  return months+' '+mLabel+', '+weeks+' '+wLabel;
+}
+function taskOwners(task){
+  const fmtAlloc=a=>{
+    if(a===undefined||a===null||a==='')return '';
+    const n=typeof a==='number'?a:parseFloat(a);
+    return Number.isFinite(n)?` (${Math.max(0,Math.min(100,Math.round(n)))}%)`:'';
+  };
+  if(Array.isArray(task.owners)&&task.owners.length){
+    return task.owners
+      .filter(o=>o&&o.name)
+      .map(o=>`${o.name}${fmtAlloc(o.alloc)}`);
+  }
+  if(task.owner)return [`${task.owner}${fmtAlloc(task.alloc)}`];
+  return [];
+}
+function isWD(dt){const g=dt.getDay();return g!==0&&g!==6}
+function addDays(dt,n){return new Date(dt.getTime()+n*MS)}
+function bdx(a,b){
+  if(b<=a)return 0;
+  let cur=new Date(a),n=0;
+  while(cur<b){if(isWD(cur))n++;cur=addDays(cur,1)}
+  return n;
+}
+function bdc(a,b){return b<a?0:bdx(a,addDays(b,1))}
+const PS=d('2026-03-23'),PE=d('2026-05-30'),TODAY=new Date(),TOTAL=bdc(PS,PE);
 const WKS=[];
 {let c=new Date(PS);const dw=c.getDay();c=new Date(c.getTime()-(dw===0?6:dw-1)*MS);
  while(c<=PE){WKS.push(new Date(c));c=new Date(c.getTime()+7*MS)}}
@@ -306,21 +353,21 @@ const COLL=new Set();
 
 // TYPE COLORS
 const TC={'Design':'#3BCFF0','Workshop':'#FFC845','Build':'#4BCD3E','Spec':'#9B6BFF','Test':'#FD8D62','Docs':'#94b4c8','Documentation':'#94b4c8'};
-const SC='#3BCFF0'; // staff color
+const SC='#3BCFF0';
 
 // OPEN QUESTIONS
 const OQS=[
   {q:'What are the confirmed application names and screens for WS3 Feedback Wall?',ow:'Chris Patten → Dale',due:'Mar 23',p:'P0'},
-  {q:'What does "revised prototype" mean to FIS on Day 2 — Claude-generated PRD + overnight functional build, or a visually updated interactive demo?',ow:'Chris Patten → Dale',due:'Mar 27',p:'P0'},
+  //{q:'What does "revised prototype" mean to FIS on Day 2 — Claude-generated PRD + overnight functional build, or a visually updated interactive demo?',ow:'Chris Patten → Dale',due:'Mar 27',p:'P0'},
   {q:'Which WS3 / Feedback Wall features are in scope for Emerald?',ow:'Chris Patten → Dale',due:'Mar 27',p:'P0'},
-  {q:'Can FIS provide seed data (screens, features, concept cards) by April 4?',ow:'Chris Patten → Dale',due:'Mar 23',p:'P0'},
-  {q:'Is the zero-cost change order for WS3 scope acceptable to FIS and Jason Rome?',ow:'Jason Rome',due:'Mar 25',p:'P0'},
+  {q:'Can FIS provide seed data (screens, features, concept cards) by April 3?',ow:'Chris Patten → Dale',due:'Mar 23',p:'P0'},
+  //{q:'Is the zero-cost change order for WS3 scope acceptable to FIS and Jason Rome?',ow:'Jason Rome',due:'Mar 25',p:'P0'},
   {q:'Are wireframe-level screen representations acceptable, or does FIS expect real product UI?',ow:'Chris Patten → Dale',due:'Mar 27',p:'P1'},
-  {q:'Who is the FIS facilitator / kiosk operator at Emerald on Day 1?',ow:'Chris Patten → Dale',due:'Mar 27',p:'P1'},
-  {q:'What is the executive presentation format and cadence (SVP / EVP)?',ow:'Jason Rome → Dale',due:'Mar 27',p:'P1'},
-  {q:'Will Method have on-site presence at Emerald (May 4–7)?',ow:'Chris Patten (internal)',due:'Apr 4',p:'P1'},
-  {q:'How should the Day 2 overnight prototype be framed publicly at Emerald?',ow:'Chris Patten + Jason Rome → Dale',due:'Apr 14',p:'P1'},
+  {q:'Who from Method will have on-site presence at Emerald (May 4–7)?',ow:'Chris Patten (internal)',due:'Apr 4',p:'P1'},
+  {q:'Who is the FIS facilitator / kiosk operator at Emerald on Day 1? Day 2?',ow:'Chris Patten → Dale',due:'Mar 27',p:'P1'},
   {q:'What is FIS\'s data handling expectation for attendee feedback captured via the Feedback Wall?',ow:'Chris Patten → Dale / FIS Legal',due:'Mar 30',p:'P1'},
+  //{q:'What is the executive presentation format and cadence (SVP / EVP)?',ow:'Jason Rome → Dale',due:'Mar 27',p:'P1'},
+  {q:'How should the Day 2 overnight prototype be framed publicly at Emerald?',ow:'Chris Patten + Jason Rome → Dale',due:'Apr 14',p:'P1'},
   {q:'What does FIS consider "acceptance" for each milestone deliverable?',ow:'Chris Patten → Dale',due:'Mar 27',p:'P1'},
 ];
 (function(){
@@ -335,72 +382,102 @@ const OQS=[
 
 // SECTIONS
 const SECS=[
-  {id:'staffing',label:'STAFFING PLAN',sc:SC,tasks:[
-    {name:'Jenna Stout',sub:'Associate Director, Experience Design · 100%',alloc:'100%',start:'2026-03-23',end:'2026-05-15',color:SC,owner:'Jenna Stout',note:'Sets design direction across WS1, WS2, WS3 simultaneously. Engagement ends May 15.'},
-    {name:'Xavier Salazar',sub:'Sr. Software Engineer · 100%',alloc:'100%',start:'2026-03-30',end:'2026-05-15',color:SC,owner:'Xavier Salazar',note:'Joins Mar 30. Productionizes all three prototypes. Builds WS3 AI synthesis pipeline.'},
-    {name:'Chris Patten',sub:'Principal Product Manager · 50%',alloc:'50%',start:'2026-03-23',end:'2026-05-30',color:SC,owner:'Chris Patten',note:'Day-to-day lead. Prototype builds via Claude + Codex through Mar 29. PM oversight through closeout.'},
-    {name:'Jason Rome',sub:'Principal Business Strategist · 25%',alloc:'25%',start:'2026-03-23',end:'2026-05-30',color:SC,owner:'Jason Rome',note:'Senior oversight. Strategic decisions, executive presentations, change order management.'},
-    {name:'TBD',sub:'Sr. Program Manager · 25%',alloc:'25%',start:'2026-03-30',end:'2026-05-08',color:SC,owner:'TBD',note:'Coordination support through midpoint. Name TBD — confirm by Mar 27.'},
+  {id:'reviews',label:'RECURRING MEETINGS',sc:'#4BCD3E',tasks:[
+    {name:'Project Kickoff',sub:'Mar 23 · Dale + Method team',start:'2026-03-23',end:'2026-03-23',color:'#4BCD3E',isMtg:true,note:'Scope alignment, Beeline VMS confirmation, seed data request issued, review cadence set.'},
+    {name:'Weekly Check-Ins',sub:'Weekly meetings with FIS every Friday',start:'2026-03-27',end:'2026-05-29',isMtg:true,every:'friday',except:['2026-05-08'],note:'Recurring weekly FIS check-ins every Friday through project close.'},
+    //{name:'FIS Seed Data Deadline',sub:'Apr 3 — unblocks WS3',start:'2026-04-03',end:'2026-04-03',color:'#FF1F3E',isMil:true,note:'Hard deadline. FIS delivers product screens, features, concept cards. Directly unblocks Feedback Wall Config + Build in WS3.'},
+    {name:'FIS Emerald Conference',sub:'May 4–7 · Las Vegas',start:'2026-05-04',end:'2026-05-07',color:'#FFC845',type:'Workshop',isConf:true,note:'Live demos. WS3 Feedback Wall captures real-time attendee input. Day 2 overnight P0 prototype build.'},
   ]},
-  {id:'ws1',label:'WS1 — INTERACTIVE ROADMAP EXPLORER',sc:'#285BC5',tasks:[
-    {name:'UX Design Direction',type:'Design',start:'2026-03-23',end:'2026-05-15',color:'#285BC5',note:'Navigation model, product module structure, time horizon design for roadmap explorer.'},
-    {name:'Content Definition w/ FIS',sub:'FIS must confirm scope by Mar 30',type:'Workshop',start:'2026-03-23',end:'2026-03-30',color:'#8B6500',dep:true,depNote:'FIS must confirm roadmap content scope before design can be finalized. Unblocked at Mar 30 workshop.',note:'Workshop with FIS stakeholders to define content structure and navigation model.'},
-    {name:'Initial Prototype Build',sub:'Claude + Codex · PPM-led',type:'Build',start:'2026-03-23',end:'2026-04-05',color:'#1A4A1A',note:'Rapid prototype foundation before Engineer joins Mar 30.'},
-    {name:'Engineer Productionizing',sub:'Joins Mar 30',type:'Build',start:'2026-03-30',end:'2026-05-15',color:'#285BC5',note:'Polish, performance, production-ready UI components and interactions.'},
-    {name:'Functional Specification',type:'Spec',start:'2026-03-30',end:'2026-04-11',color:'#5A35A0',note:'Functional specification for Roadmap Explorer — content structure, navigation model, interaction states.'},
+  {id:'ws2',label:'WS1 — INTERACTIVE ROADMAP EXPLORER',sc:'#285BC5',tasks:[
+    {name:'Walkthrough of Interactive Roadmap Explorer (IRE) prototype',sub:'Goal: Get feedback on initial concept',type:'Design',start:'2026-03-23',end:'2026-03-24',color:'#009775',owners:[{name:'Chris Patten',alloc:50}],note:'Credit Memo and Covenants Management journey design, interaction states, and spotlight Journey Presentation format.'},
+    {name:'Get content for IRE prototype',sub:'FIS provided descriptions and roadmaps to inform prototype',type:'Design',start:'2026-03-24',end:'2026-03-27',color:'#009775',note:'Credit Memo and Covenants Management journey design, interaction states, and spotlight Journey Presentation format.'},
+    {name:'Refine IRE prototype',sub:'2-week sprint w/Claude + VS Code + Codex | PPM-led',type:'Design',start:'2026-03-24',end:'2026-04-01',color:'#009775',note:'Credit Memo and Covenants Management journey design, interaction states, and spotlight Journey Presentation format.'},
+    {name:'Walkthrough of refined IRE prototype',sub:'Goal: Bring FIS up to speed on refined prototype',type:'Workshop',start:'2026-04-02',end:'2026-04-02',color:'#8B5000',owners:[{name:'Chris Patten',alloc:50},{name:'Jason Rome',alloc:25}],note:'Workshop sessions with FIS stakeholders to map workflows.'},
+    {name:'Signoff of refined IRE prototype',sub:'Goal: Get signoff on prototype',type:'Workshop',start:'2026-04-03',end:'2026-04-03',color:'#8B5000',isMil:true,note:'Workshop sessions with FIS stakeholders to map workflows.'},
+    {name:'Productionize IRE Prototype',sub:'Harden prototype to production-level needed',type:'Build',start:'2026-04-06',end:'2026-04-17',color:'#004D3A',note:'Skeleton flows for journeys.'},
+    {name:'Functional specification for IRE prototype',sub:'Document how the application works',type:'Build',start:'2026-04-13',end:'2026-04-17',color:'#009775',note:'Production polish including spotlight Journey Presentation format and all interaction states.'},
+    {name:'Walkthrough of FIS IRE prototype',sub:'Goal: Get verbal signoff from FIS',type:'Workshop',start:'2026-04-20',end:'2026-04-20',color:'#8B5000',isMtg:true,note:'Production polish including all interaction states.'},
+    {name:'Package and handoff of FIS IRE prototype',sub:'Goal: Transition application to FIS',type:'Workshop',start:'2026-04-21',end:'2026-04-23',color:'#8B5000',note:'Production polish including all interaction states.'},
+    {name:'Delivery of FIS IRE prototype',sub:'Goal: Formal delivery and acceptance of IRE',type:'Workshop',isMil:true,start:'2026-04-24',end:'2026-04-24',color:'#8B5000',note:'Production polish including all interaction states.'},
   ]},
-  {id:'ws2',label:'WS2 — INTERACTIVE LENDING PROTOTYPE',sc:'#009775',tasks:[
-    {name:'UX Design Direction',type:'Design',start:'2026-03-23',end:'2026-05-15',color:'#009775',note:'Credit Memo and Covenants Management journey design, interaction states, and spotlight Journey Presentation format.'},
-    {name:'Workflow Mapping w/ FIS',sub:'Must complete by Apr 4',type:'Workshop',start:'2026-03-30',end:'2026-04-04',color:'#8B5000',dep:true,depNote:'Workflow mapping with FIS must complete by Apr 4. Blocks engineer productionizing until sessions are done.',note:'Workshop sessions with FIS stakeholders to map Credit Memo and Covenants Management workflows.'},
-    {name:'Initial Prototype Build',sub:'Claude + Codex · PPM-led',type:'Build',start:'2026-03-23',end:'2026-04-05',color:'#004D3A',note:'Skeleton flows for Credit Memo and Covenants Management journeys.'},
-    {name:'Engineer Productionizing',sub:'Joins Mar 30',type:'Build',start:'2026-03-30',end:'2026-05-15',color:'#009775',note:'Production polish including spotlight Journey Presentation format and all interaction states.'},
+  {id:'ws1',label:'WS2 — INTERACTIVE LENDING PROTOTYPE',sc:'#009775',tasks:[
+    {name:'Overview of Credit Memo and Covenants Management',sub:'FIS product walkthrough',type:'Design',start:'2026-03-30',end:'2026-04-01',color:'#285BC5',note:'Product walkthrough by FIS, along with product documentation, as available'},
+    {name:'Decide on spotlight Credit Memo and Covenants Mgmt journeys',type:'Design',start:'2026-04-02',end:'2026-04-03',color:'#285BC5',dep:true,depNote:'Need product walkthrough first',note:'Navigation model, product module structure, time horizon design for roadmap explorer.'},
+    //{name:'Decide on spotlight Covenants Mgmt Journey Presentation',type:'Design',start:'2026-04-02',end:'2026-04-03',color:'#285BC5',dep:true,depNote:'Need product walkthrough first',note:'Navigation model, product module structure, time horizon design for roadmap explorer.'},
+    {name:'Ideate on journey enhancements',type:'Design',start:'2026-04-02',end:'2026-04-09',color:'#285BC5',note:'Navigation model, product module structure, time horizon design for roadmap explorer.'},
+    {name:'First review of journey enhancements',sub:'FIS review',type:'Workshop',start:'2026-04-10',end:'2026-04-10',isMtg:true,color:'#8B6500',note:'Navigation model, product module structure, time horizon design for roadmap explorer.'},
+    {name:'First iteration of journey enhancements',type:'Design',start:'2026-04-13',end:'2026-04-17',color:'#285BC5',dep:true,depNote:'Completion of first review of journey enhancements',note:'Navigation model, product module structure, time horizon design for roadmap explorer.'},
+    {name:'Second review of journey enhancements',sub:'FIS review',type:'Workshop',start:'2026-04-20',end:'2026-04-20',isMtg:true,color:'#8B6500',dep:true,depNote:'Completion of first iteration of journey enhancements',note:'Workshop with FIS stakeholders to define content structure and navigation model.'},
+    {name:'Second iteration of journey enhancements',type:'Design',start:'2026-04-20',end:'2026-04-23',color:'#285BC5',dep:true,depNote:'Completion of second review of journey enhancements',note:'Navigation model, product module structure, time horizon design for roadmap explorer.'},
+    {name:'Walkthrough of journey enhancements',sub:'Alignment on implementation of journey enhancements',type:'Workshop',start:'2026-04-24',end:'2026-04-24',color:'#8B6500',dep:true,depNote:'Completion of second iteration of journey enhancements',note:'Workshop with FIS stakeholders to define content structure and navigation model.'},
+    {name:'Signoff of journey enhancements',sub:'Formal signoff to begin build',type:'Workshop',start:'2026-04-24',end:'2026-04-24',color:'#8B6500',isMil:true,dep:true,depNote:'Completion of second iteration of journey enhancements',note:'Workshop with FIS stakeholders to define content structure and navigation model.'},
+    {name:'Write functional specification',sub:'Document outlining the functionality of the prototype',type:'Spec',start:'2026-04-13',end:'2026-04-24',color:'#5A35A0',note:'Functional specification for Roadmap Explorer — content structure, navigation model, interaction states.'},
+    {name:'Sprint 1 - Interactive Lending prototype',sub:'1-week prototyping sprint w/Claude + VS Code + Codex',type:'Build',start:'2026-04-13',end:'2026-04-17',color:'#1A4A1A',dep:true,depNote:'Approval of designs',note:'Rapid prototype foundation.'},
+    {name:'Sprint 2 - Interactive Lending prototype',sub:'1-week prototyping sprint w/Claude + VS Code + Codex',type:'Build',start:'2026-04-20',end:'2026-04-24',color:'#1A4A1A',dep:true,depNote:'Approval of designs',note:'Rapid prototype foundation.'},
+    {name:'Sprint 3 - Interactive Lending prototype',sub:'1-week prototyping sprint w/Claude + VS Code + Codex',type:'Build',start:'2026-04-27',end:'2026-05-01',color:'#1A4A1A',dep:true,depNote:'Approval of designs',note:'Rapid prototype foundation.'},
+    {name:'Productionize Interactive Lending prototype',sub:'Harden prototype to necessary production-level',type:'Build',start:'2026-05-11',end:'2026-05-15',color:'#285BC5',note:'Polish, performance, production-ready UI components and interactions.'},
+    {name:'Document Interactive Lending product',sub:'User, functional, and technical documentation',type:'Spec',start:'2026-05-11',end:'2026-05-20',color:'#285BC5',note:'Polish, performance, production-ready UI components and interactions.'},
+    {name:'Handoff of Interactive Lending product and documentation',sub:'Goal: Approval on prototype',type:'Spec',start:'2026-05-21',end:'2026-05-21',color:'#285BC5',isMtg:true,note:'Polish, performance, production-ready UI components and interactions.'},
+    {name:'Delivery of Interactive Lending product',sub:'Goal: Formal delivery and acceptance of Interactive Lending product',type:'Spec',start:'2026-05-22',end:'2026-05-22',color:'#285BC5',isMil:true,note:'Polish, performance, production-ready UI components and interactions.'},
   ]},
   {id:'ws3',label:'WS3 — AI-ASSISTED PRODUCT STRATEGY / FEEDBACK WALL',sc:'#FFC845',tasks:[
-    {name:'UX Design Direction',type:'Design',start:'2026-03-23',end:'2026-04-27',color:'#8B6500',note:'Attendee input capture experience and Day 2 reveal presentation design.'},
-    {name:'WS3 Scope Alignment w/ Dale',sub:'Week 1 — critical before Phase 2',type:'Workshop',start:'2026-03-23',end:'2026-03-27',color:'#991020',dep:true,depNote:'Must get written alignment on WS3 scope and Day 2 deliverable before Phase 2. Blocks Feedback Wall config and AI layer build.',note:'Demo Feedback Wall to Dale. Written scope alignment. Critical gate before Phase 2.'},
-    {name:'FIS Seed Data Delivery',sub:'Hard dependency — due Apr 4',type:'Workshop',start:'2026-03-23',end:'2026-04-04',color:'#7A0C1A',dep:true,depNote:'FIS must deliver product screens, feature names, and concept cards by Apr 4. Directly unblocks Feedback Wall Config + Build. Request issued at kickoff.',note:'FIS delivers product screens, feature names, AI concept cards. Required before Feedback Wall can be configured.'},
-    {name:'Feedback Wall Config + Build',sub:'Unblocked by Seed Data + WS2',type:'Build',start:'2026-04-06',end:'2026-04-27',color:'#7A5000',dep:true,depNote:'Cannot begin until (1) FIS Seed Data Delivery is complete and (2) WS2 is substantially stable. Both required by Apr 6.',note:'Configures Feedback Wall with FIS product content. Builds on WS2 as the base experience.'},
-    {name:'AI Synthesis Layer Build',sub:'Two-phase Claude API',type:'Build',start:'2026-04-06',end:'2026-04-27',color:'#CC8800',note:'Two-phase analysis + generation pipeline. Preprocessing, conflict detection, facilitator macros, streaming output.'},
-    {name:'Fallback Demo Mode',sub:'Required — conference resilience',type:'Build',start:'2026-04-06',end:'2026-04-27',color:'#991020',note:'Simulated synthesis fallback required as a parallel deliverable. Ensures conference resilience if live AI is unstable.'},
-    {name:'WS3 Weekly Rehearsal Standup',sub:'Weekly from Apr 6',type:'Test',start:'2026-04-06',end:'2026-04-22',color:'#8B4500',note:'Weekly WS3 sync: AI layer status, fallback validation, synthesis pipeline testing progress.'},
-    {name:'End-to-End Rehearsal',sub:'Full cycle before Apr 27',type:'Test',start:'2026-04-20',end:'2026-04-27',color:'#CC5500',note:'Full Day 1 input → synthesis → Day 2 overnight build cycle rehearsal before Apr 27 deadline.'},
-    {name:'WS2 + WS3 Functional Specification',type:'Spec',start:'2026-03-30',end:'2026-04-11',color:'#5A35A0',note:'Functional specifications for WS2 lending workflows and WS3 Feedback Wall input capture and synthesis pipeline.'},
-    {name:'User Workflow Documentation',type:'Documentation',start:'2026-04-14',end:'2026-04-25',color:'#5A6A7A',note:'Documentation of user workflows and system interactions across all three workstreams.'},
-    {name:'Design Artifact Packaging',sub:'Engineering handoff',type:'Documentation',start:'2026-04-21',end:'2026-04-27',color:'#485860',note:'Design artifacts packaged for FIS engineering handoff. Complete by Apr 27 deadline.'},
-    {name:'Final Documentation & Handoff',sub:'Post-conference · last 2 weeks',type:'Documentation',start:'2026-05-16',end:'2026-05-30',color:'#5A6A7A',note:'Final documentation package for FIS covering all three workstreams. Closes out the engagement.'},
+    {name:'Walkthrough of prototype to identify gaps and opportunities',sub:'Goal: Align on scope based on initial prototype',type:'Workshop',start:'2026-03-23',end:'2026-03-24',color:'#991020',note:'Demo Feedback Wall to FIS, capturing feedback with AI and manual notes'},
+    {name:'Document next steps for prototype as Functional Specification',type:'Design',start:'2026-03-25',end:'2026-03-27',color:'#991020',dep:true,depNote:'Must conduct walkthrough first',note:'Synthesize AI and manual notes, creating Func Spec to align on final scope.'},
+    {name:'Submit Functional Specification for approval',sub:'Goal: Get signoff on functional spec',type:'Workshop',start:'2026-03-27',end:'2026-03-27',isMtg:true,color:'#991020',dep:true,depNote:'Must document next steps for prototype first',note:'Submit Func Spec via email for written approval. Blocks any additional work.'},
+    {name:'Approval of Feedback Wall Functional Specification',sub:'Written signoff on func spec',type:'Workshop',start:'2026-03-30',end:'2026-03-3',isMil:true,color:'#991020',dep:true,depNote:'Must document next steps for prototype first',note:'Submit Func Spec via email for written approval. Blocks any additional work.'},
+    {name:'Sprint 1 - Functional build of Feedback Wall',sub:'Unblocked by scope alignment',type:'Build',start:'2026-03-30',end:'2026-04-10',color:'#7A5000',dep:true,depNote:'Must get approval on Func Spec first',note:'Iterative development of Feedback Wall to incorporate approved Functional Specification.'},
+    {name:'Delivery of FIS seed data',sub:'Hard dependency — due Apr 3',type:'Workshop',start:'2026-04-03',end:'2026-04-03',isMil:true,color:'#7A0C1A',dep:true,depNote:'FIS must deliver product screens, feature names, etc. by Apr 3. Directly unblocks config of Feedback Wall.',note:'FIS delivers product screens, feature names, AI concept cards. Required before Feedback Wall can be configured.'},
+    {name:'Configure Feedback Wall with seed data',sub:'Unblocked by Seed Data',type:'Build',start:'2026-04-06',end:'2026-04-17',color:'#7A5000',dep:true,depNote:'Cannot begin until FIS seed data is delivered, required by Apr 3.',note:'Configures Feedback Wall with FIS product content.'},
+    {name:'Sprint 2 - Functional build of Feedback Wall',sub:'Unblocked by scope alignment',type:'Build',start:'2026-04-13',end:'2026-04-23',color:'#7A5000',dep:true,depNote:'Sprint 1 review happens',note:'Iterative development of Feedback Wall to incorporate approved Functional Specification. Sprint includes fallback demo mode.'},
+    //{name:'Build out AI synthesis layer',sub:'Two-phase Claude API',type:'Build',start:'2026-04-06',end:'2026-04-24',color:'#CC8800',dep:true,depNote:'Must get approval on Func Spec first',note:'Two-phase analysis + generation pipeline. Preprocessing, conflict detection, facilitator macros, streaming output.'},
+    //{name:'Build out fallback demo mode',sub:'Required for conference resilience',type:'Build',start:'2026-04-20',end:'2026-04-23',color:'#991020',note:'Simulated synthesis fallback required. Ensures conference resilience if live AI is unstable.'},
+    {name:'Document user flows (attendee, facilitator, admin)',type:'Documentation',start:'2026-04-20',end:'2026-04-23',color:'#5A6A7A',note:'Documentation of user workflows and system interactions.'},
+    {name:'Demo refined Feedback Wall',type:'Test',start:'2026-04-24',end:'2026-04-24',color:'#8B4500',note:'Demo of refined Feedback Wall including AI layer status, fallback validation, synthesis pipeline testing progress.'},
+    {name:'Signoff on Feedback Wall and documentation',sub:'Goal: Get signoff on Feedback Wall, even with listed caveats',type:'Workshop',start:'2026-04-24',end:'2026-04-24',color:'#991020',isMil:true,note:'Walkthrough of Feedback Wall with FIS to get final signoff to begin productionization.'},
+    {name:'Final refinement / hardening of Feedback Wall',type:'Build',start:'2026-04-24',end:'2026-04-28',color:'#7A5000',note:'Productionization of Feedback Wall to get it fully ready for Emerald Conference'},
+    {name:'End-to-End rehearsal',sub:'Daily rehearsals and refinement of Feedback Wall',type:'Test',start:'2026-04-28',end:'2026-05-01',color:'#CC5500',note:'Conduct daily walkthroughs of full flow (Day 1 input → synthesis → Day 2 overnight build cycle).'},
+    {name:'Document functional specification for Feedback Wall',type:'Spec',start:'2026-04-27',end:'2026-05-01',color:'#5A35A0',note:'Functional specifications for Feedback Wall input capture and synthesis pipeline.'},
+    {name:'Package Feedback Wall for Emerald Conference deployment',sub:'Engineering handoff',type:'Documentation',start:'2026-04-27',end:'2026-05-01',color:'#485860',note:'Design artifacts packaged for FIS handoff.'},
+    {name:'Gather feedback during Emerald',sub:'Document gaps from Emerald to enhance Feedback Wall',type:'Documentation',start:'2026-05-04',end:'2026-05-07',color:'#5A6A7A',dep:true,depNote:'Feedback Wall must be fully packaged and ready for deployment.',note:'Track usage and feedback on Feedback Wall during Emerald conference. Review feedback with FIS daily, prioritizing on last day. Create Functional Specification addendum based on prioritized feedback captured.'},
+    {name:'Debrief after Emerald',sub:'Conduct pseudo-retrospective on Emerald conference and align on next steps',type:'Documentation',start:'2026-05-11',end:'2026-05-11',color:'#5A6A7A',dep:true,depNote:'Feedback Wall must be fully packaged and ready for deployment.',note:'Track usage and feedback on Feedback Wall during Emerald conference. Review feedback with FIS daily, prioritizing on last day. Create Functional Specification addendum based on prioritized feedback captured.'},
+    {name:'Sprint 3 - Refine Feedback Wall based on Emerald feedback',sub:'Post-conference',type:'Build',start:'2026-05-11',end:'2026-05-22',color:'#CC8800',dep:true,depNote:'Must capture feedback in as real-time as possible during conference',note:'Use Functional Specification addendum to further refine Feedback Wall.'},
+    {name:'Create final documentation & handoff',sub:'Post-conference',type:'Documentation',start:'2026-05-25',end:'2026-05-29',color:'#5A6A7A',note:'Final documentation package for FIS covering all workstreams. Closes out the engagement.'},
   ]},
-  {id:'ws4',label:'WS4 — AI ENABLEMENT WORKSHOPS',sc:'#FD8D62',tasks:[
-    // M1: Use Case Identification (Mar 23 – Apr 4)
-    {name:'Use Case Workshop — Guardrails & Governance',type:'Workshop',start:'2026-03-23',end:'2026-03-27',color:'#C05A20',owner:'Chris Patten + Jason Rome',note:'M1 Phase — Identify FIS stakeholders. Align on current AI state and strategy. Provide portfolio-level AI education to establish guardrails. Introduce rubric categories: Monetization & ROI Intent, Adoption & Change Impact, Design Pattern, Agency & Control, Product Impact.'},
-    {name:'Use Case Workshop — Business & Use Cases',type:'Workshop',start:'2026-03-30',end:'2026-04-10',color:'#D06830',owner:'Chris Patten + Jason Rome',note:'M1 Phase — Perform value stream and outcome mapping. Identify highly repetitive, structured, and painful tasks as agent candidates. Prioritize Jobs to Be Done by need, feasibility, and viability. Apply monetization and revenue protection frameworks to candidate use cases.'},
-    {name:'Use Case Architecture Workshop',type:'Workshop',start:'2026-03-30',end:'2026-04-10',color:'#B84A18',owner:'Chris Patten + Jason Rome',note:'M1 Phase — Review AI landscape of solutions for identified use cases. Assess architecture readiness, data readiness, and dependencies. Determine where Agents fit vs. automation, AI assistance, or analytical AI. Map API and architecture implications including modularity, security, and human-in-the-loop design.'},
-    // M2: Detailed Architecture & Design (Apr 13 – May 1)
-    {name:'Rapid Validation — Solution Landscape Review',type:'Workshop',start:'2026-04-13',end:'2026-04-17',color:'#E07030',owner:'Chris Patten + Jason Rome',dep:true,depNote:'Depends on completion of Use Case workshops (M1). Cannot assess solutions without prioritized use case list.',note:'M2 Phase — Review landscape of AI solutions for top-priority use cases. Conduct customer and stakeholder research. Assess risk, regulatory constraints, and dependencies for each candidate use case.'},
-    {name:'Detailed Architecture — Data Readiness Assessment',type:'Spec',start:'2026-04-20',end:'2026-04-24',color:'#A03010',owner:'Chris Patten + Jason Rome',note:'M2 Phase — Assess FIS data readiness for AI initiatives: proprietary data moats, volume and scale, relevance, structured and enriched data, and interconnection across datasets. Identify data gaps that must be resolved before production launch.'},
-    {name:'Detailed Architecture — Architecture Readiness Assessment',type:'Spec',start:'2026-04-20',end:'2026-04-27',color:'#8B2800',owner:'Chris Patten + Jason Rome',note:'M2 Phase — Assess API and architecture readiness: modularity, tenant configuration, security, access controls, idempotency, observability, and context and memory design. Map integration requirements and modernization dependencies.'},
-    {name:'Process Re-Engineering & Task Decomposition',type:'Workshop',start:'2026-04-27',end:'2026-05-01',color:'#C04820',owner:'Chris Patten + Jason Rome',note:'M2 Phase — Decompose prioritized use case jobs into tasks and subtasks to draw agent boundaries. Determine whether individual or team-of-agents architecture applies. Map process homogeneity across customer segments for scalable agent deployment.'},
-    // M3: Proof of Value & MVP Plan (May 4 – May 15)
-    {name:'Proof of Value — PRD & Iterative Roadmap',type:'Spec',start:'2026-05-04',end:'2026-05-08',color:'#D05010',owner:'Chris Patten + Jason Rome',note:'M3 Phase — Develop Product Requirements Document for top P0 use case. Define iterative roadmap with phased milestones. Estimate level of effort across product, design, engineering, and QA. Incorporate monetization strategy and business case.'},
-    {name:'Proof of Value — Narrative Prototype & Workflows',type:'Build',start:'2026-05-11',end:'2026-05-15',color:'#E06020',owner:'Chris Patten + Jason Rome',note:'M3 Phase — Develop narrative prototype demonstrating the AI-enabled use case for stakeholder alignment. Document workflows for target agentic capabilities. Define Agent Operations plan: GTM, pricing and bundling, agent development, monitoring and observability, and governance configuration.'},
+  {id:'ws4',label:'WS4 — AI ENABLEMENT',sc:'#FD8D62',tasks:[
+    {name:'Prep for Use Case workshop',sub:'Identify stakeholders, align on current state and strategy, provide education to establish guardrails for use case identification',type:'Spec',start:'2026-03-30',end:'2026-04-03',color:'#C05A20',note:'Identify FIS stakeholders. Align on current AI state and strategy. Provide portfolio-level AI education to establish guardrails. Introduce rubric categories: Monetization & ROI Intent, Adoption & Change Impact, Design Pattern, Agency & Control, Product Impact.'},
+    {name:'Use Case workshop: business & use cases, architecture',sub:'Actual workshop is likely 1–2 days but this allows for travel and documentation.',type:'Workshop',start:'2026-04-06',end:'2026-04-10',color:'#D06830',note:'Review AI landscape of solutions for identified use cases. Assess architecture readiness, data readiness, and dependencies. Determine where Agents fit vs. automation, AI assistance, or analytical AI. Map API and architecture implications including modularity, security, and human-in-the-loop design.'},
+    {name:'Rapid validation: solution landscape review',type:'Workshop',start:'2026-04-13',end:'2026-04-17',color:'#E07030',dep:true,depNote:'Depends on completion of Use Case workshops. Cannot assess solutions without prioritized use case list.',note:'Review landscape of AI solutions for top-priority use cases. Conduct customer and stakeholder research. Assess risk, regulatory constraints, and dependencies for each candidate use case.'},
+    {name:'Data readiness assessment',type:'Spec',start:'2026-04-20',end:'2026-04-24',color:'#A03010',note:'Assess FIS data readiness for AI initiatives: proprietary data moats, volume and scale, relevance, structured and enriched data, and interconnection across datasets. Identify data gaps that must be resolved before production launch.'},
+    {name:'Architecture readiness assessment',type:'Spec',start:'2026-04-20',end:'2026-04-24',color:'#8B2800',note:'Assess API and architecture readiness: modularity, tenant configuration, security, access controls, idempotency, observability, and context and memory design. Map integration requirements and modernization dependencies.'},
+    {name:'Process re-engineering & task decomposition',type:'Workshop',start:'2026-04-20',end:'2026-05-01',color:'#C04820',note:'Decompose prioritized use case jobs into tasks and subtasks to draw agent boundaries. Determine whether individual or team-of-agents architecture applies. Map process homogeneity across customer segments for scalable agent deployment.'},
+    {name:'Proof of Value: PRD & iterative roadmap',type:'Spec',start:'2026-05-11',end:'2026-05-15',color:'#D05010',note:'Develop PRD for top P0 use case. Define iterative roadmap with phased milestones. Estimate level of effort across product, design, engineering, and QA. Incorporate monetization strategy and business case.'},
+    {name:'Proof of Value: Narrative prototype & workflows',type:'Build',start:'2026-05-18',end:'2026-05-22',color:'#E06020',note:'Develop narrative prototype demonstrating the AI-enabled use case for stakeholder alignment. Document workflows for target agentic capabilities. Define Agent Operations plan: GTM, pricing and bundling, agent development, monitoring and observability, and governance configuration.'},
+    {name:'Review deliverables with FIS',sub:'Goal: Align on approach',type:'Workshop',start:'2026-05-26',end:'2026-05-26',isMtg:true,color:'#E06020'},
+    {name:'Finalize documentation and recommendations',sub:'Goal: Align on next steps',type:'Spec',start:'2026-05-26',end:'2026-05-28',color:'#E06020'},
+    {name:'Deliver and handoff materials',sub:'Goal: Signoff on final materials',type:'Spec',start:'2026-05-29',end:'2026-05-29',color:'#E06020'},
   ]},
-  {id:'reviews',label:'FIS REVIEWS & KEY MEETINGS',sc:'#4BCD3E',tasks:[
-    {name:'Project Kickoff',sub:'Mar 23 · Dale + FIS team',start:'2026-03-23',end:'2026-03-23',isMtg:true,color:'#4BCD3E',owner:'Chris Patten + Jason Rome + Dale',note:'Scope alignment, Beeline VMS confirmation, seed data request issued, review cadence set.'},
-    {name:'Feedback Wall Demo to Dale',sub:'Mar 25 · WS3 scope alignment',start:'2026-03-25',end:'2026-03-25',isMtg:true,color:'#3BCFF0',owner:'Chris Patten + Dale',note:'Demo existing Feedback Wall. Written WS3 scope and Day 2 deliverable alignment. Critical gate before Phase 2.'},
-    {name:'Zero-Cost Change Order',sub:'Target Mar 28',start:'2026-03-28',end:'2026-03-28',isMil:true,color:'#FFC845',owner:'Jason Rome + Chris Patten',note:'Change order clarifying WS3 scope. Must be agreed before Phase 2.'},
-    {name:'FIS Seed Data Deadline',sub:'Apr 4 — unblocks WS3',start:'2026-04-04',end:'2026-04-04',isMil:true,color:'#FF1F3E',owner:'FIS (Dale)',note:'Hard deadline. FIS delivers product screens, features, concept cards. Directly unblocks Feedback Wall Config + Build in WS3.'},
-    {name:'FIS Review #1',sub:'~Apr 6–8 · All 3 prototypes',start:'2026-04-06',end:'2026-04-08',isRev:true,color:'#2E9A24',owner:'Chris Patten + Jenna Stout + Dale',note:'First incremental review. All three workstreams in reviewable state. FIS feedback within 2 business days.'},
-    {name:'FIS Review #2',sub:'~Apr 14 · Near-final state',start:'2026-04-14',end:'2026-04-15',isRev:true,color:'#2E9A24',owner:'Chris Patten + Jenna Stout + Dale',note:'Near-final review before final polish. FIS feedback within 2 business days.'},
-    {name:'Executive Presentation',sub:'TBD · SVP + EVP',start:'2026-04-17',end:'2026-04-17',isMtg:true,color:'#3BCFF0',owner:'Chris Patten + Jason Rome + Dale SVP/EVP',note:'Strategic alignment. Narrative-driven demo format. Led by Jason Rome.'},
-    {name:'WS3 Code Freeze',sub:'Apr 27 · WS3 deadline only',start:'2026-04-27',end:'2026-04-27',isMil:true,color:'#FF1F3E',owner:'Full Team',note:'WS3 hard deadline. WS1 and WS2 continue to May 15.'},
-    {name:'FIS Emerald Conference',sub:'May 4–7 · Las Vegas',start:'2026-05-04',end:'2026-05-07',isConf:true,color:'#FFC845',owner:'Chris Patten + Jason Rome',note:'Live demos. WS3 Feedback Wall captures real-time attendee input. Day 2 overnight P0 prototype build.'},
+  {id:'staffing',label:'STAFFING PLAN',sc:SC,tasks:[
+    {name:'Chris Patten',sub:'Principal Product Manager · 50%',start:'2026-03-23',end:'2026-05-30',color:'#5A6E7F',owner:'Chris Patten',alloc:'50%',note:'Day-to-day lead. Prototype builds via Claude + Codex. PM oversight through closeout.'},
+    {name:'Jason Rome',sub:'Principal Business Strategist · 25%',start:'2026-03-23',end:'2026-05-30',color:'#5A6E7F',owner:'Jason Rome',alloc:'25%',note:'Senior oversight. Strategic decisions, executive presentations, change order management.'},
+    {name:'Jenna Stout',sub:'Associate Director, Experience Design · 100%',start:'2026-03-30',end:'2026-05-22',color:'#5A6E7F',owner:'Jenna Stout',alloc:'100%',note:'Sets design direction across WS1, WS2, WS3 simultaneously. Engagement ends May 15.'},
+    {name:'Xavier Salazar',sub:'Sr. Software Engineer · 100%',start:'2026-03-30',end:'2026-05-15',color:'#5A6E7F',owner:'Xavier Salazar',alloc:'100%',note:'Joins Mar 30. Productionizes all three prototypes. Builds WS3 AI synthesis pipeline.'},
+    {name:'TBD',sub:'Sr. Program Manager · 25%',start:'2026-03-30',end:'2026-05-08',color:'#5A6E7F',owner:'TBD',alloc:'25%',note:'Coordination support through midpoint. Name TBD — confirm by Mar 27.'},
   ]},
 ];
+
+// Normalize milestone flags.
+SECS.forEach(sec=>sec.tasks.forEach(task=>{
+  if(typeof task.isMil!=='boolean')task.isMil=false;
+}));
 
 // helpers
 function secSpan(sec){let mn=null,mx=null;sec.tasks.forEach(t=>{const s=d(t.start),e=d(t.end||t.start);if(!mn||s<mn)mn=s;if(!mx||e>mx)mx=e});return{s:mn,e:mx}}
 function WW(){const el=document.getElementById('gantt');const av=(el?el.offsetWidth:window.innerWidth)-LW-TW;return Math.max(28,Math.floor(av/NW))}
 function GW(){return WW()*NW}
-function tpx(ds,gw){const s=d(ds),cs=s<PS?PS:s>PE?PE:s;return(df(PS,cs)/TOTAL)*(gw||GW())}
+function tpx(v,gw){
+  const s=v instanceof Date?v:d(v),cs=s<PS?PS:s>PE?PE:s;
+  return (bdx(PS,cs)/TOTAL)*(gw||GW());
+}
 
 // MODALS
 function openMod(id){document.getElementById(id).classList.add('open')}
@@ -416,12 +493,15 @@ function dl(){
   const html=document.documentElement.outerHTML;
   const b=new Blob([html],{type:'text/html;charset=utf-8'});
   const u=URL.createObjectURL(b);const a=document.createElement('a');
-  a.href=u;a.download='FIS-Emerald-2026-Gantt-v9.html';
+  a.href=u;a.download='FIS-Emerald-2026-Gantt-DRAFT.html';
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
 }
 
 // RENDER
 const GE=document.getElementById('gantt');
+const FWH=document.getElementById('fwh');
+const GO=document.querySelector('.go');
+function syncFWH(){if(FWH&&GO)FWH.style.transform=`translateX(${-GO.scrollLeft}px)`}
 
 function mkGridLines(gw,ww){
   const gl=document.createElement('div');gl.className='gls';
@@ -436,31 +516,31 @@ function mkGridLines(gw,ww){
 }
 
 function mkOverlays(gc,gw){
-  const cL=tpx('2026-05-04',gw),cW=Math.max(0,((df(d('2026-05-04'),d('2026-05-07'))+1)/TOTAL)*gw);
+  const cL=tpx('2026-05-04',gw),cW=Math.max(0,(bdc(d('2026-05-04'),d('2026-05-07'))/TOTAL)*gw);
   const cb=document.createElement('div');cb.className='conf';cb.style.left=cL+'px';cb.style.width=cW+'px';gc.appendChild(cb);
-  if(showT){const tm=document.createElement('div');tm.className='tday';tm.style.left=(df(PS,TODAY)/TOTAL*gw)+'px';gc.appendChild(tm)}
-  const dl=document.createElement('div');dl.className='dl27';dl.style.left=tpx('2026-04-27',gw)+'px';gc.appendChild(dl);
+  if(showT){const tm=document.createElement('div');tm.className='tday';tm.style.left=(bdx(PS,TODAY)/TOTAL*gw)+'px';gc.appendChild(tm)}
 }
 
 function render(){
   GE.innerHTML='';
   const ww=WW(),gw=GW();
-  // Week header
-  const wh=document.createElement('div');wh.className='wh';
+  // Floating week header (inside fixed header)
+  FWH.innerHTML='';
+  FWH.style.width=(LW+TW+gw)+'px';
   const whl=document.createElement('div');whl.className='whl';whl.style.width=LW+'px';
-  whl.innerHTML='Task / Resource <span class="rh">⟺</span>';mkDrag(whl);wh.appendChild(whl);
-  const wht=document.createElement('div');wht.className='wht';wht.style.width=TW+'px';wht.textContent='Type';wh.appendChild(wht);
+  whl.innerHTML='Task / Resource <span class="rh">⟺</span>';mkDrag(whl);FWH.appendChild(whl);
+  const wht=document.createElement('div');wht.className='wht';wht.style.width=TW+'px';wht.textContent='Type';FWH.appendChild(wht);
   const whws=document.createElement('div');whws.className='whws';whws.style.width=gw+'px';
   WKS.forEach(wk=>{
     const c=document.createElement('div');c.className='whwk';c.style.width=ww+'px';
     const isM=wk.getDate()<=7;if(isM)c.classList.add('ms');
-    const wkE=new Date(wk.getTime()+6*MS);
+    const wkE=new Date(wk.getTime()+4*MS);
     if(showT&&TODAY>=wk&&TODAY<=wkE)c.classList.add('tc');
-    const mo=wk.toLocaleDateString('en-US',{month:'short'});
-    c.innerHTML=isM?`<strong>${mo}</strong><br>${wk.getDate()}`:`${mo}<br>${wk.getDate()}`;
+    c.textContent=`${fmt(wk)} – ${fmt(wkE)}`;
     whws.appendChild(c);
   });
-  wh.appendChild(whws);GE.appendChild(wh);
+  FWH.appendChild(whws);
+  syncFWH();
 
   SECS.forEach(sec=>{
     const isC=COLL.has(sec.id);
@@ -474,8 +554,8 @@ function render(){
       sg.appendChild(mkGridLines(gw,ww));mkOverlays(sg,gw);
       const {s,e}=secSpan(sec);
       if(s&&e){
-        const sL=tpx(s.toISOString().slice(0,10),gw);
-        const sW=Math.max(24,((df(s,e)+1)/TOTAL)*gw);
+        const sL=tpx(s,gw);
+        const sW=Math.max(24,(bdc(s,e)/TOTAL)*gw);
         const sb=document.createElement('div');sb.className='sbar';
         sb.style.left=sL+'px';sb.style.width=sW+'px';
         sb.style.background=`linear-gradient(90deg,${sec.sc}CC,${sec.sc}66)`;
@@ -500,6 +580,8 @@ function render(){
 
     sec.tasks.forEach(task=>{
       const row=document.createElement('div');row.className='tr';
+      const secColor=sec.sc;
+      const isOneDay=((task.end||task.start)===task.start);
       // label
       const tl=document.createElement('div');tl.className='tl';tl.style.width=LW+'px';
       const tw=document.createElement('div');tw.className='ttw';
@@ -510,7 +592,11 @@ function render(){
       row.appendChild(tl);
       // type swatch col
       const ttc=document.createElement('div');ttc.className='ttype';ttc.style.width=TW+'px';
-      if(task.type&&TC[task.type]){
+      if(task.isMil){
+        const sw=document.createElement('div');sw.className='tsw ev';sw.title='Milestone';ttc.appendChild(sw);
+      } else if(task.isMtg){
+        const sw=document.createElement('div');sw.className='tsw ev';sw.title='FIS Meeting';ttc.appendChild(sw);
+      } else if(task.type&&TC[task.type]){
         const sw=document.createElement('div');sw.className='tsw';sw.style.background=TC[task.type];sw.title=task.type;ttc.appendChild(sw);
       }
       row.appendChild(ttc);
@@ -518,32 +604,50 @@ function render(){
       const gc=document.createElement('div');gc.className='tg';gc.style.width=gw+'px';
       gc.appendChild(mkGridLines(gw,ww));mkOverlays(gc,gw);
       if(task.isMil){
-        const left=tpx(task.start,gw);
-        const ms=document.createElement('div');ms.className='msd';ms.style.left=(left-5)+'px';ms.style.background=task.color;ms.style.boxShadow=`0 0 8px ${task.color}80`;
-        const ml=document.createElement('div');ml.className='msl';ml.style.left=(left+9)+'px';ml.style.color=task.color;ml.textContent=fmt(d(task.start));
-        gc.appendChild(ms);gc.appendChild(ml);attachTip(ms,task);
-      } else if(task.isMtg){
-        const left=tpx(task.start,gw);
-        const mt=document.createElement('div');mt.className='mtg';mt.style.left=(left-6)+'px';mt.style.background=task.color;mt.style.boxShadow=`0 0 8px ${task.color}80`;
-        const ml=document.createElement('div');ml.className='msl';ml.style.left=(left+9)+'px';ml.style.color=task.color;ml.style.fontSize='9px';ml.textContent=fmt(d(task.start));
-        gc.appendChild(mt);gc.appendChild(ml);attachTip(mt,task);
+        const dayW=gw/TOTAL;
+        const cx=tpx(task.start,gw)+(dayW/2);
+        const ms=document.createElement('div');ms.className='msd';ms.style.left=(cx-5)+'px';ms.style.background='#fff';ms.style.boxShadow='0 0 8px rgba(255,255,255,.75)';
+        const ml=document.createElement('div');ml.className='msl';ml.style.left=(cx+9)+'px';ml.style.color='#fff';ml.textContent=fmt(d(task.start));
+        gc.appendChild(ms);gc.appendChild(ml);attachTip(ms,task,sec.id);
+      } else if(task.isMtg&&task.every==='friday'){
+        const dayW=gw/TOTAL;
+        const cs=d(task.start)<PS?PS:d(task.start),ce=d(task.end)>PE?PE:d(task.end);
+        const ex=new Set(task.except||[]);
+        let cur=new Date(cs);
+        while(cur<=ce){
+          const cDate=ds(cur);
+          if(cur.getDay()===5&&!ex.has(cDate)){
+            const cx=tpx(cur,gw)+(dayW/2);
+            const mt=document.createElement('div');mt.className='mtg';mt.style.left=(cx-7)+'px';mt.style.background='#F0F0F0';mt.style.boxShadow='0 0 8px rgba(240,240,240,.65)';
+            const tipTask={...task,start:cDate,end:cDate};
+            gc.appendChild(mt);attachTip(mt,tipTask,sec.id);
+          }
+          cur=addDays(cur,1);
+        }
+      } else if(task.isMtg&&isOneDay){
+        const dayW=gw/TOTAL;
+        const cx=tpx(task.start,gw)+(dayW/2);
+        const mt=document.createElement('div');mt.className='mtg';mt.style.left=(cx-7)+'px';mt.style.background='#F0F0F0';mt.style.boxShadow='0 0 8px rgba(240,240,240,.65)';
+        const ml=document.createElement('div');ml.className='msl';ml.style.left=(cx+10)+'px';ml.style.color='#F0F0F0';ml.style.fontSize='9px';ml.textContent=fmt(d(task.start));
+        gc.appendChild(mt);gc.appendChild(ml);attachTip(mt,task,sec.id);
       } else {
         const cs=d(task.start)<PS?PS:d(task.start),ce=d(task.end)>PE?PE:d(task.end);
-        const left=(df(PS,cs)/TOTAL)*gw,width=Math.max(8,((df(cs,ce)+1)/TOTAL)*gw);
+        const left=(bdx(PS,cs)/TOTAL)*gw,width=Math.max(8,(bdc(cs,ce)/TOTAL)*gw);
         const bar=document.createElement('div');bar.className='bar';
         if(task.dep)bar.classList.add('dep');
         bar.style.left=left+'px';bar.style.width=width+'px';
         bar.style.background=task.isConf
-          ?`repeating-linear-gradient(45deg,${task.color}50,${task.color}50 4px,${task.color}20 4px,${task.color}20 8px)`
-          :(task.isRev?`linear-gradient(90deg,${task.color}BB,${task.color}77)`:`linear-gradient(90deg,${task.color}EE,${task.color}99)`);
-        bar.style.border=`1px solid ${task.color}60`;
+          ?`repeating-linear-gradient(45deg,${secColor}50,${secColor}50 4px,${secColor}20 4px,${secColor}20 8px)`
+          :(task.isRev?`linear-gradient(90deg,${secColor}BB,${secColor}77)`:`linear-gradient(90deg,${secColor}EE,${secColor}99)`);
+        bar.style.border=`1px solid ${secColor}60`;
         if(width>60)bar.textContent=fmt(d(task.start))+' – '+fmt(d(task.end));
-        gc.appendChild(bar);attachTip(bar,task);
+        gc.appendChild(bar);attachTip(bar,task,sec.id);
       }
       row.appendChild(gc);GE.appendChild(row);
     });
   });
-  document.getElementById('gd').textContent='Generated: '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})+' · v9';
+  document.getElementById('gd').textContent='Generated: '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})+' · Draft';
+  if(typeof updFH==='function')updFH();
 }
 
 // DRAG RESIZE
@@ -560,17 +664,27 @@ function mkDrag(el){
 
 // TOOLTIP
 const tipEl=document.getElementById('tip');
-function attachTip(el,task){
+function attachTip(el,task,secId){
   el.addEventListener('mouseenter',e=>{
     document.getElementById('tit').textContent=task.name;
     document.getElementById('tts').textContent=fmt(d(task.start));
     const er=document.getElementById('tte-r');
     if(!task.isMil&&!task.isMtg&&task.end&&task.end!==task.start){er.style.display='flex';document.getElementById('tte').textContent=fmt(d(task.end))}else er.style.display='none';
+    const mr=document.getElementById('ttm-r');
+    if(secId==='staffing'&&task.end&&task.end!==task.start){
+      mr.style.display='flex';
+      document.getElementById('ttm').textContent=durationMonthsWeeks(d(task.start),d(task.end));
+    } else mr.style.display='none';
     const or=document.getElementById('tto-r');
-    if(task.owner){or.style.display='flex';document.getElementById('tto').textContent=task.owner}else or.style.display='none';
+    const owners=taskOwners(task);
+    if(owners.length){
+      or.style.display='flex';
+      document.getElementById('tto-k').textContent=owners.length>1?'Owners':'Owner';
+      document.getElementById('tto').textContent=owners.join('\n');
+    } else or.style.display='none';
     const nr=document.getElementById('ttn-r');
     if(task.note){nr.style.display='flex';document.getElementById('ttn').textContent=task.note}else nr.style.display='none';
-    const dr=document.getElementById('ttd');
+    const dr=document.getElementById('tdep');
     if(task.dep&&task.depNote){dr.style.display='block';dr.textContent='⚠ DEPENDENCY: '+task.depNote}else dr.style.display='none';
     tipEl.classList.add('on');mvTip(e);
   });
@@ -583,9 +697,20 @@ function mvTip(e){
   tipEl.style.top=(y+th>window.innerHeight?y-th:y)+'px';
 }
 
+const fh=document.getElementById('fhead');
+const fhs=document.getElementById('fhsp');
+function updFH(){
+  const h=(fh?fh.offsetHeight:136);
+  document.documentElement.style.setProperty('--fhh',h+'px');
+  if(fhs)fhs.style.height=h+'px';
+}
 // INIT
 render();
+updFH();
 let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(render,80)});
+window.addEventListener('resize',updFH);
+if('ResizeObserver' in window&&fh){new ResizeObserver(updFH).observe(fh)}
+if(GO)GO.addEventListener('scroll',syncFWH);
 </script>
 </body>
 </html>
