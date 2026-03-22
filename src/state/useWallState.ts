@@ -38,6 +38,7 @@ import { dataApi } from "../services/dataApi";
 import { synthesisModuleApi } from "../services/synthesisModuleApi";
 import { useDbDataSource } from "../config/runtimeConfig";
 import { migrateStripLocationFields } from "../data/migrations/strip-location-from-fr-kudos";
+import { writeAdminBootstrapCache } from "../synthesis/adminBootstrapCache";
 
 const SYNTHESIS_PIN_LENGTH_RANGE = { min: 4, max: 6 } as const;
 const DEFAULT_SYNTHESIS_COUNTDOWN_SECONDS = 1800;
@@ -233,7 +234,11 @@ export const useWallState = (): WallState => {
   const reloadFromStore = useCallback(async (): Promise<void> => {
     try {
       await refreshHealth();
-      const bootstrap = await dataApi.getBootstrap();
+      const [bootstrap, adminBootstrap] = await Promise.all([
+        dataApi.getBootstrap(),
+        dataApi.getAdminBootstrap(),
+      ]);
+      writeAdminBootstrapCache(adminBootstrap);
       const snapshot = mapBootstrapToSnapshot(bootstrap);
       migrateStripLocationFields(snapshot);
       applySnapshot(snapshot);
@@ -241,7 +246,7 @@ export const useWallState = (): WallState => {
       // eslint-disable-next-line no-console
       console.error("[wall-state] reloadFromStore failed", error);
       setAdminTables([]);
-      setDataLoadError("Unable to load application data. Please retry.");
+      setDataLoadError("Unable to load application and admin session data. Please retry.");
       setIsDataLoaded(false);
     }
   }, [applySnapshot, refreshHealth]);
@@ -250,7 +255,11 @@ export const useWallState = (): WallState => {
     setIsDataLoaded(false);
     setDataLoadError(null);
     const health = await refreshHealth();
-    const bootstrap = await dataApi.getBootstrap();
+    const [bootstrap, adminBootstrap] = await Promise.all([
+      dataApi.getBootstrap(),
+      dataApi.getAdminBootstrap(),
+    ]);
+    writeAdminBootstrapCache(adminBootstrap);
     const backendUsesDb = (health?.dataSourceMode ?? (useDbDataSource ? "db" : "flat")) === "db";
     if (backendUsesDb) {
       const hasCanonicalSeed =
@@ -279,7 +288,7 @@ export const useWallState = (): WallState => {
         console.error("[wall-state] init failed", error);
         if (!cancelled) {
           setAdminTables([]);
-          setDataLoadError("Unable to load application data. Please retry.");
+          setDataLoadError("Unable to load application and admin session data. Please retry.");
           setIsDataLoaded(false);
         }
       }
@@ -297,7 +306,7 @@ export const useWallState = (): WallState => {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error("[wall-state] retryDataLoad failed", error);
-      setDataLoadError("Unable to load application data. Please retry.");
+      setDataLoadError("Unable to load application and admin session data. Please retry.");
       setIsDataLoaded(false);
     }
   }, [initializeData]);

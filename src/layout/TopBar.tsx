@@ -157,7 +157,7 @@ export const TopBar = memo(({
                 MOBILE QR
               </button>
               <button type="button" className="universe-launch" onClick={onOpenSystemAdmin}>
-                {systemAdminActive ? "BACK TO WALL" : "System Admin"}
+                {systemAdminActive ? "BACK TO WALL" : "Facilitator"}
               </button>
             </>
           )}

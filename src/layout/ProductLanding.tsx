@@ -18,7 +18,7 @@ export const ProductLanding = memo(({ products, featureCountByProductId, onSelec
     <section className="product-landing" aria-label="Product selection">
       <div className="product-landing-actions">
         <button type="button" className="universe-launch" onClick={onOpenSystemAdmin}>
-          System Admin
+          Facilitator
         </button>
       </div>
       <p className="product-landing-eyebrow">Screen Feedback</p>

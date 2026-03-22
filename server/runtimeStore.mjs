@@ -8,6 +8,15 @@ const emptyStore = () => ({
   kudos: [],
   cardSortResults: [],
   moderationInputStates: {},
+  sessionConfig: {},
+  synthesisParameters: null,
+  synthesisParametersUpdatedAt: null,
+  latestPhase1Analysis: null,
+  latestTShirtSizing: null,
+  latestSynthesisOutput: null,
+  latestSynthesisMetadata: null,
+  synthesisHistory: [],
+  savedNarrative: null,
 });
 
 export const initRuntimeStore = (storePath) => {
@@ -40,6 +49,10 @@ export const readRuntimeStore = (storePath) => {
         parsed && typeof parsed.moderationInputStates === "object" && parsed.moderationInputStates
           ? parsed.moderationInputStates
           : {},
+      synthesisHistory:
+        parsed && Array.isArray(parsed.synthesisHistory)
+          ? parsed.synthesisHistory
+          : [],
     };
   } catch {
     return emptyStore();

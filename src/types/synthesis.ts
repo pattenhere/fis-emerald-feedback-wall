@@ -34,6 +34,14 @@ export type SynthesisStreamEvent =
       type: "phase1_completed";
       macroApplicationLog?: string[];
       phase1AnalysisSummary?: { p0: number; p1: number; p2: number };
+      phase1Analysis?: {
+        p0Items?: Array<{
+          title?: string;
+          rationale?: string;
+          feasibilityNote?: string | null;
+          evidenceSources?: string[];
+        }>;
+      };
     }
   | { type: "phase2_started"; outputMode: SynthesisMode }
   | { type: "phase2_token"; token: string }

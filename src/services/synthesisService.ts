@@ -1,7 +1,8 @@
 import type { SynthesisRequest, SynthesisResponse, SynthesisStreamChunk, SynthesisStreamEvent } from "../types/synthesis";
 import { buildSynthesisAuthHeaders } from "./synthesisAuth";
+import { resolveApiBase } from "./apiBase";
 
-const SYNTHESIS_API_BASE = import.meta.env.VITE_SYNTHESIS_API_BASE_URL;
+const SYNTHESIS_API_BASE = resolveApiBase(import.meta.env.VITE_SYNTHESIS_API_BASE_URL);
 const SYNTHESIS_STREAM_PATH = "/api/synthesis/stream";
 const AI_DEBUG_LOGS = String(import.meta.env.VITE_AI_DEBUG_LOGS ?? "false").toLowerCase() === "true";
 

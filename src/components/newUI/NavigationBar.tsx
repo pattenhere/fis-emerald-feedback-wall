@@ -61,7 +61,7 @@ export const NavigationBar = memo(({
               onClick={() => onScreenSelect(screen.name)}
             >
               <span className="pill-label">{screen.name}</span>
-              {count > 0 && <span className="pill-count">· {count}</span>}
+              {count > 0 && <span className={`pill-count ${isActive ? "is-active" : ""}`}>{count}</span>}
             </button>
           );
         })}

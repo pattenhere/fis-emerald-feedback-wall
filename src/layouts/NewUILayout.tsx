@@ -6,6 +6,8 @@ import { NavigationBar } from "../components/newUI/NavigationBar";
 import { RightPanel } from "../components/newUI/RightPanel";
 import { Scrim } from "../components/newUI/Scrim";
 import { SeeAllView } from "../components/newUI/SeeAllView";
+import { IdleOverlay } from "../components/newUI/IdleOverlay";
+import { useIdleTimer } from "../components/newUI/useIdleTimer";
 import { SubmittedFeedbackBar } from "../components/newUI/SubmittedFeedbackBar";
 import type { AppSection, ScreenRecord } from "../components/newUI/types";
 import { ProductLanding } from "../layout/ProductLanding";
@@ -13,6 +15,8 @@ import { SplashPage } from "../layout/SplashPage";
 import { TopBar } from "../layout/TopBar";
 import { ViewAllResponsesPage } from "../layout/ViewAllResponsesPage";
 import { SystemAdministratorPage } from "../modules/admin/SystemAdministratorPage";
+import type { ThemeSnapshot } from "../themeSnapshots/types";
+import { readPublishedThemeSnapshot } from "../themeSnapshots/store";
 import { useWallState } from "../state/useWallState";
 import "../styles/app.css";
 import "../styles/new-ui.css";
@@ -48,6 +52,7 @@ export const NewUILayout = (): JSX.Element => {
   const [inputCloseTimeLocal, setInputCloseTimeLocal] = useState("16:30");
   const [navStickyTop, setNavStickyTop] = useState(68);
   const [overlayTop, setOverlayTop] = useState(160);
+  const [idleThemeSnapshot, setIdleThemeSnapshot] = useState<ThemeSnapshot | null>(null);
   const {
     addFeatureRequest,
     addKudosQuote,
@@ -66,7 +71,6 @@ export const NewUILayout = (): JSX.Element => {
     adminTables,
     reseeding,
     reseedData,
-    refreshAdminTables,
     adminDataSource,
     adminDbEngine,
     isDataLoaded,
@@ -164,6 +168,8 @@ export const NewUILayout = (): JSX.Element => {
     [selectedScreenName, selectedSection],
   );
   const showSubmittedFeedback = (selectedCategory != null && selectedScreen != null) || seeAllTab != null;
+  const kioskHeroVisible = !showSplash && !showAllResponsesPage && !showSystemAdminPage && !inProductLanding;
+  const { isIdle } = useIdleTimer(kioskHeroVisible, 45_000);
 
   useEffect(() => {
     if (!selectedSection) return;
@@ -185,6 +191,18 @@ export const NewUILayout = (): JSX.Element => {
     const timer = window.setTimeout(() => setHeroToast(""), 2000);
     return () => window.clearTimeout(timer);
   }, [heroToast]);
+
+  useEffect(() => {
+    if (!kioskHeroVisible) {
+      setIdleThemeSnapshot(null);
+      return;
+    }
+    if (!isIdle) {
+      setIdleThemeSnapshot(null);
+      return;
+    }
+    setIdleThemeSnapshot(readPublishedThemeSnapshot());
+  }, [isIdle, kioskHeroVisible]);
 
   useEffect(() => {
     const readTopBarHeight = (): void => {
@@ -390,17 +408,9 @@ export const NewUILayout = (): JSX.Element => {
         onOpenLiveResponses={() => setShowLiveResponses(true)}
         onOpenSplash={() => setShowSplash(true)}
         onOpenSystemAdmin={() => {
-          setShowLiveResponses(false);
-          setShowAllResponsesPage(false);
-          setShowSystemAdminPage((current) => {
-            const next = !current;
-            if (next) {
-              void refreshAdminTables();
-            }
-            return next;
-          });
+          window.location.assign("/facilitator/overview");
         }}
-        systemAdminActive={showSystemAdminPage}
+        systemAdminActive={false}
         mobileQrEnabled={mobileQrActive}
       />
 
@@ -444,9 +454,7 @@ export const NewUILayout = (): JSX.Element => {
             featureCountByProductId={featureCountByProductId}
             onSelectProduct={handleSelectProduct}
             onOpenSystemAdmin={() => {
-              setShowAllResponsesPage(false);
-              void refreshAdminTables();
-              setShowSystemAdminPage(true);
+              window.location.assign("/facilitator/overview");
             }}
           />
         </main>
@@ -494,6 +502,12 @@ export const NewUILayout = (): JSX.Element => {
               onClick={closeLeftPanel}
               coverSubmittedFeedback={false}
             />
+            {idleThemeSnapshot && (
+              <IdleOverlay
+                snapshot={idleThemeSnapshot}
+                onDismiss={() => setIdleThemeSnapshot(null)}
+              />
+            )}
           </div>
           {showSubmittedFeedback && <SubmittedFeedbackBar feedbackHistory={selectedScreenFeedback} />}
 

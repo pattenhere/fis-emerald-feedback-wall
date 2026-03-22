@@ -70,10 +70,12 @@ export const RightPanel = memo(({
   }, [successMessage]);
 
   useEffect(() => {
-    if (!isOpen) {
-      setError(null);
-      setFollowUpState(null);
-    }
+    if (!isOpen) return;
+    setType(null);
+    setText("");
+    setError(null);
+    setSuccessMessage("");
+    setFollowUpState(null);
   }, [isOpen]);
 
   const placeholder = useMemo(() => (type ? typePlaceholder[type] : "Select a feedback type to begin."), [type]);
@@ -149,6 +151,7 @@ export const RightPanel = memo(({
               <button
                 key={id}
                 type="button"
+                data-type={id}
                 className={`chip ${type === id ? "is-active" : ""}`}
                 onClick={() => {
                   setType(id);
@@ -169,7 +172,7 @@ export const RightPanel = memo(({
           {error && <p className="error-text">{error}</p>}
           {successMessage && <p className="newui-inline-success">{successMessage}</p>}
           <button type="submit" className="primary-btn">
-            Submit Feedback
+            Submit
           </button>
         </form>
       ) : (

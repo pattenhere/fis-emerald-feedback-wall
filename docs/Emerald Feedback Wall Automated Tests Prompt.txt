@@ -1,0 +1,365 @@
+═══════════════════════════════════════════════════════════
+UI AUDIT — PLAYWRIGHT SCREENSHOT + CLAUDE VISION PIPELINE
+═══════════════════════════════════════════════════════════
+
+Build an automated UI audit pipeline that:
+  1. Uses Playwright to capture screenshots of every route
+     and key UI state in the application
+  2. Sends each screenshot to the Anthropic API for
+     visual analysis
+  3. Compiles findings into a structured HTML report
+
+This is a standalone audit tool — not part of the main
+application build. It runs as a separate script against
+the running dev server.
+
+Read the entire prompt before writing any code.
+
+═══════════════════════════════════════════════════════════
+STEP 1 — INSTALL PLAYWRIGHT
+═══════════════════════════════════════════════════════════
+
+Add Playwright as a dev dependency and install browsers:
+
+Run these commands:
+  npm install --save-dev @playwright/test playwright
+  npx playwright install chromium
+
+Add to package.json scripts:
+  "audit:screenshots": "node scripts/audit/capture.mjs",
+  "audit:analyze": "node scripts/audit/analyze.mjs",
+  "audit:report": "node scripts/audit/report.mjs",
+  "audit:run": "npm run audit:screenshots && npm run audit:analyze && npm run audit:report"
+
+═══════════════════════════════════════════════════════════
+STEP 2 — CREATE SCREENSHOT CAPTURE SCRIPT
+═══════════════════════════════════════════════════════════
+
+Create: scripts/audit/capture.mjs
+
+This script launches a headless Chromium browser, navigates
+to every route and key state, and saves screenshots to
+scripts/audit/screenshots/. It authenticates with the
+synthesis PIN before capturing protected routes.
+
+Configuration at top of file:
+  const BASE_URL = 'http://localhost:4000'
+  const SYNTHESIS_PIN = process.env.SYNTHESIS_PIN ?? '2468'
+  const SCREENSHOTS_DIR = './scripts/audit/screenshots'
+  const VIEWPORT = { width: 1440, height: 900 }
+
+Authentication helper:
+  Before capturing protected routes, POST to
+  /api/synthesis/auth with the PIN to get a bearer token.
+  Store the token and inject it into localStorage as
+  'synthesisAuthToken' so the app's auth check passes.
+  Use page.evaluate() to set localStorage after navigation.
+
+Routes to capture — define as an array of objects:
+  Each object: { id, url, label, requiresAuth, actions }
+  where actions is an optional array of Playwright
+  interactions to perform before screenshotting.
+
+  UNAUTHENTICATED routes:
+  { id: 'wall-home', url: '/', label: 'Kiosk wall - home' }
+  { id: 'wall-idle', url: '/', label: 'Kiosk wall - idle overlay',
+    actions: [{ type: 'wait', ms: 46000 }] }
+
+  AUTHENTICATED routes (requiresAuth: true):
+  { id: 'overview', url: '/facilitator', label: 'Overview' }
+  { id: 'moderation', url: '/facilitator/moderation',
+    label: 'Moderation' }
+  { id: 'parameters', url: '/facilitator/synthesis/parameters',
+    label: 'Synthesis parameters' }
+  { id: 'competing-views',
+    url: '/facilitator/synthesis/competing-views',
+    label: 'Competing views' }
+  { id: 'run-synthesis',
+    url: '/facilitator/synthesis/run',
+    label: 'Run synthesis' }
+  { id: 'tshirt-sizing',
+    url: '/facilitator/t-shirt-sizing',
+    label: 'T-shirt sizing' }
+  { id: 'ceremony', url: '/facilitator/ceremony',
+    label: 'Ceremony' }
+  { id: 'session-config', url: '/admin/session-config',
+    label: 'Session config' }
+  { id: 'tables', url: '/admin/tables', label: 'Tables' }
+
+  KEY STATE variants (add after main routes):
+  { id: 'parameters-macro-active',
+    url: '/facilitator/synthesis/parameters',
+    label: 'Parameters - with active macro',
+    requiresAuth: true,
+    actions: [
+      { type: 'click', selector: '[data-testid="exclude-toggle"]
+        or first toggle in Input filters section' }
+    ]
+  }
+  { id: 'session-config-scrolled',
+    url: '/admin/session-config',
+    label: 'Session config - Event Identity section',
+    requiresAuth: true,
+    actions: [{ type: 'scroll', y: 600 }]
+  }
+
+Capture implementation:
+  For each route:
+    1. Navigate to BASE_URL + route.url
+    2. If requiresAuth: inject auth token to localStorage,
+       reload page, wait for navigation
+    3. Execute any actions (click, scroll, wait, type)
+    4. Wait for network idle (waitUntil: 'networkidle')
+    5. Wait additional 500ms for animations to settle
+    6. Take full-page screenshot
+    7. Save to SCREENSHOTS_DIR/{route.id}.png
+    8. Also save a metadata JSON file alongside each
+       screenshot: { id, url, label, capturedAt }
+
+  Use try/catch per route — a failed screenshot should
+  not abort the entire capture run. Log failures clearly.
+
+  After all captures, write a manifest file:
+  SCREENSHOTS_DIR/manifest.json
+  containing array of { id, label, url, path, capturedAt,
+  success, error? }
+
+Step 2 complete when:
+  [ ] Running 'npm run audit:screenshots' captures all routes
+  [ ] Screenshots saved to scripts/audit/screenshots/
+  [ ] manifest.json written with all route metadata
+  [ ] Failed routes logged but script continues
+
+═══════════════════════════════════════════════════════════
+STEP 3 — CREATE ANALYSIS SCRIPT
+═══════════════════════════════════════════════════════════
+
+Create: scripts/audit/analyze.mjs
+
+Reads the screenshot manifest, sends each screenshot to
+the Anthropic API for visual analysis, saves structured
+findings as JSON.
+
+Configuration:
+  const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
+  const MODEL = 'claude-sonnet-4-6'
+  const SCREENSHOTS_DIR = './scripts/audit/screenshots'
+  const FINDINGS_DIR = './scripts/audit/findings'
+  const CONCURRENT_REQUESTS = 3
+    (process screenshots in batches of 3 to avoid rate limits)
+
+Analysis prompt (send with each screenshot):
+  SYSTEM:
+  You are a senior UI/UX designer conducting a detailed
+  interface audit. Analyze screenshots objectively and
+  precisely. Output ONLY valid JSON matching the schema.
+  Never add prose outside the JSON.
+
+  USER (per screenshot):
+  Analyze this screenshot of '{label}' from a B2B
+  conference feedback kiosk application.
+
+  Identify issues in these exact categories:
+
+  1. ALIGNMENT — elements that are not properly aligned
+     horizontally or vertically with adjacent elements.
+     Note the specific elements and their positions.
+
+  2. CONSISTENCY — UI elements that use different styles,
+     sizes, colors, or spacing than similar elements
+     elsewhere. Note what differs and what it should
+     match.
+
+  3. SPACING — inconsistent padding, margins, or gaps
+     between elements. Note where spacing appears
+     irregular.
+
+  4. TYPOGRAPHY — inconsistent font sizes, weights,
+     or colors. Headings that don't follow a clear
+     hierarchy. Text that is too small or has poor
+     contrast.
+
+  5. REDUNDANCY — duplicate information, buttons, or
+     labels that convey the same thing. Navigation
+     elements that appear multiple times unnecessarily.
+
+  6. HIERARCHY — visual weight that doesn't match
+     information importance. Primary actions that don't
+     stand out. Secondary information that competes
+     with primary content.
+
+  7. BEST_PRACTICE — any other UI best practice
+     violations: poor contrast, touch targets too small,
+     unclear affordances, missing feedback states.
+
+  Output this JSON schema:
+  {
+    "screenshot": "string (the label)",
+    "overallScore": number (1-10, 10=perfect),
+    "summary": "string (2-3 sentence overall assessment)",
+    "issues": [
+      {
+        "category": "ALIGNMENT|CONSISTENCY|SPACING|
+          TYPOGRAPHY|REDUNDANCY|HIERARCHY|BEST_PRACTICE",
+        "severity": "HIGH|MEDIUM|LOW",
+        "description": "string (specific, actionable)",
+        "location": "string (where on screen)",
+        "recommendation": "string (how to fix)"
+      }
+    ]
+  }
+
+Implementation:
+  For each screenshot in the manifest:
+    1. Read the PNG file as base64
+    2. POST to https://api.anthropic.com/v1/messages:
+       Headers: x-api-key, anthropic-version: 2023-06-01
+       Body: {
+         model: MODEL,
+         max_tokens: 2000,
+         messages: [{
+           role: 'user',
+           content: [
+             { type: 'image', source: {
+                 type: 'base64',
+                 media_type: 'image/png',
+                 data: base64Data
+               }
+             },
+             { type: 'text', text: analysisPrompt }
+           ]
+         }]
+       }
+    3. Parse response JSON
+    4. Save findings to FINDINGS_DIR/{id}.json
+    5. Log progress: 'Analyzed {n}/{total}: {label}
+       (score: {score})'
+
+  Process in batches of CONCURRENT_REQUESTS using
+  Promise.allSettled() to handle failures gracefully.
+
+  After all analyses, write a combined findings file:
+  FINDINGS_DIR/all-findings.json
+  containing array of all individual finding objects.
+
+Step 3 complete when:
+  [ ] 'npm run audit:analyze' processes all screenshots
+  [ ] Individual .json files in findings/ directory
+  [ ] all-findings.json compiled
+  [ ] Progress logged per screenshot with score
+
+═══════════════════════════════════════════════════════════
+STEP 4 — CREATE REPORT GENERATOR
+═══════════════════════════════════════════════════════════
+
+Create: scripts/audit/report.mjs
+
+Reads all-findings.json and the screenshots, generates
+a self-contained HTML report.
+
+Report structure:
+  Output: scripts/audit/ui-audit-report.html
+  Self-contained: inline CSS, inline base64 screenshots,
+  no external dependencies.
+
+  HEADER SECTION:
+    Title: 'Emerald Feedback Wall — UI Audit Report'
+    Generated date and time
+    Total screenshots analyzed
+    Overall health score (average of all scores)
+    Issue count by severity (HIGH / MEDIUM / LOW)
+    Issue count by category
+
+  ISSUE SUMMARY TABLE:
+    Sorted by severity (HIGH first), then by category.
+    Columns: Screen | Category | Severity | Description
+    | Recommendation
+    Color coding: HIGH=red row tint, MEDIUM=amber,
+    LOW=grey
+
+  PER-SCREEN SECTIONS:
+    For each screenshot, a collapsible section showing:
+      - Screenshot thumbnail (inline base64, max 800px wide)
+      - Overall score badge (color-coded)
+      - Summary text
+      - Issues table for this screen only
+
+  FILTER CONTROLS:
+    JavaScript filter buttons at top:
+      All | HIGH only | MEDIUM+ | By category buttons
+    Clicking filters the issue summary table and
+    highlights relevant per-screen sections.
+
+  PRINT STYLES:
+    @media print — expand all collapsibles, remove
+    filter controls, show page breaks between screens.
+
+Step 4 complete when:
+  [ ] ui-audit-report.html generated
+  [ ] Opens in browser without external requests
+  [ ] Filter controls work
+  [ ] All screenshots visible inline
+  [ ] Sortable by severity
+
+═══════════════════════════════════════════════════════════
+STEP 5 — ADD .GITIGNORE ENTRIES
+═══════════════════════════════════════════════════════════
+
+File: .gitignore
+
+Add these entries to prevent audit artifacts from
+being committed:
+
+  # UI Audit artifacts
+  scripts/audit/screenshots/
+  scripts/audit/findings/
+  scripts/audit/ui-audit-report.html
+
+═══════════════════════════════════════════════════════════
+USAGE INSTRUCTIONS (add as README)
+═══════════════════════════════════════════════════════════
+
+Create: scripts/audit/README.md
+
+  # UI Audit Pipeline
+
+  ## Prerequisites
+  - Dev server running: npm run dev
+  - ANTHROPIC_API_KEY set in .env.config.local
+  - SYNTHESIS_PIN set in .env.config.local
+
+  ## Run full audit
+  npm run audit:run
+
+  ## Run individual steps
+  npm run audit:screenshots   # capture only
+  npm run audit:analyze       # analyze only (needs screenshots)
+  npm run audit:report        # generate report (needs findings)
+
+  ## Output
+  Open scripts/audit/ui-audit-report.html in any browser.
+
+  ## Notes
+  - Dev server must be running on localhost:4000
+  - Idle overlay capture takes ~46 seconds (by design)
+  - Analysis costs approx $0.10-0.20 per full run
+  - Re-run analyze only to refresh findings without
+    re-capturing screenshots
+
+═══════════════════════════════════════════════════════════
+VERIFICATION CHECKLIST
+═══════════════════════════════════════════════════════════
+
+  [ ] npm install completes without errors
+  [ ] npx playwright install chromium succeeds
+  [ ] npm run audit:screenshots captures all routes
+      (check scripts/audit/screenshots/ for PNG files)
+  [ ] npm run audit:analyze processes all screenshots
+      and logs scores
+  [ ] npm run audit:report generates the HTML file
+  [ ] HTML report opens in browser, shows all sections
+  [ ] npm run audit:run executes all three steps
+  [ ] .gitignore updated
+  [ ] README.md created
+
+END OF PROMPT

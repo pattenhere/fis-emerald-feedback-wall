@@ -3,6 +3,9 @@ import type { SeedTableDefinition } from "../state/adminSeedData";
 import type { DbSeedPayload } from "../state/dbSeedPayload";
 import type { AppArea } from "../types/domain";
 import { buildSynthesisAuthHeaders } from "./synthesisAuth";
+import type { TShirtSizingResultsPayload } from "../synthesis/tshirt/sizingResultsStore";
+import type { Day2Narrative } from "./synthesisModuleApi";
+import { toApiUrl } from "./apiBase";
 
 export interface BootstrapResponse {
   appAreas: Array<{ id: AppArea; label: string; dark?: boolean }>;
@@ -51,8 +54,27 @@ interface HealthResponse {
   dbEngine?: "sqlite" | "postgres";
 }
 
+export interface AdminBootstrapResponse {
+  sessionConfig: Record<string, unknown>;
+  synthesisParameters: {
+    parameters: Record<string, unknown>;
+    updatedAt: string | null;
+    usingDefaults: boolean;
+  };
+  inputsCount: Record<string, unknown>;
+  dedupCounts: Record<string, unknown>;
+  latestPhase1Analysis?: unknown;
+  latestTShirtSizing?: TShirtSizingResultsPayload | null;
+  savedNarrative?: Day2Narrative | null;
+  moderation: {
+    pendingCount: number;
+  };
+  loadedAt: string;
+}
+
 const jsonHeaders = { "content-type": "application/json" };
 const SESSION_STORAGE_KEY = "emerald.feedback.session_id";
+const API_BASE = import.meta.env.VITE_SYNTHESIS_API_BASE_URL;
 
 let inMemorySessionId: string | null = null;
 const getSessionId = (): string => {
@@ -78,21 +100,52 @@ const getSessionId = (): string => {
 };
 
 const readJson = async <T>(response: Response): Promise<T> => {
+  const text = await response.text();
+  let parsedBody: unknown = null;
+  if (text) {
+    try {
+      parsedBody = JSON.parse(text) as unknown;
+    } catch {
+      parsedBody = text;
+    }
+  }
+
   if (!response.ok) {
+    if (typeof parsedBody === "object" && parsedBody != null && "error" in parsedBody) {
+      const candidate = (parsedBody as { error?: unknown }).error;
+      if (typeof candidate === "string" && candidate.trim().length > 0) {
+        throw new Error(candidate);
+      }
+    }
+    if (typeof parsedBody === "string" && parsedBody.trim().length > 0) {
+      throw new Error(parsedBody.trim().slice(0, 240));
+    }
     throw new Error(`API error (${response.status})`);
   }
-  return (await response.json()) as T;
+
+  if (!text) {
+    return {} as T;
+  }
+  if (typeof parsedBody === "string") {
+    throw new Error("Server returned non-JSON success response.");
+  }
+  return parsedBody as T;
 };
 
 export const dataApi = {
   getHealth: async (): Promise<HealthResponse> => {
-    const response = await fetch("/health");
+    const response = await fetch(toApiUrl("/api/health", API_BASE));
     return readJson<HealthResponse>(response);
   },
 
   getBootstrap: async (): Promise<BootstrapResponse> => {
     const response = await fetch("/api/bootstrap");
     return readJson<BootstrapResponse>(response);
+  },
+
+  getAdminBootstrap: async (): Promise<AdminBootstrapResponse> => {
+    const response = await fetch("/api/bootstrap-admin");
+    return readJson<AdminBootstrapResponse>(response);
   },
 
   getAdminTables: async (): Promise<SeedTableDefinition[]> => {

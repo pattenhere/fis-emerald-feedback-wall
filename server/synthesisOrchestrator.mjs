@@ -1,3 +1,6 @@
+import { aiCall } from "./api/aiCall.mjs";
+import { AI_PROVIDER_CONFIG } from "./config/aiProvider.mjs";
+
 const DEFAULTS = {
   CONTEXT_WINDOW_TOKENS: 200_000,
   TOKEN_LIMIT_HEADROOM_PCT: 20,
@@ -12,7 +15,7 @@ const DEFAULTS = {
   PHASE1_MAX_TOKENS: 1300,
   PHASE2_MAX_TOKENS_ROADMAP: 1600,
   PHASE2_MAX_TOKENS_PRD: 1900,
-  PHASE1_TIMEOUT_MS: 60000,
+  PHASE1_TIMEOUT_MS: 120000,
   PHASE2_STALL_WARNING_MS: 10000,
   PHASE2_STALL_TERMINATE_MS: 60000,
   MAX_PUBLIC_QUOTES_DEFAULT: 3,
@@ -37,47 +40,17 @@ const firstNonEmpty = (...values) => {
   }
   return "";
 };
-const isOpenAIOrgId = (value) => /^org_[A-Za-z0-9]+$/u.test(String(value ?? "").trim());
-const isOpenAIProjectId = (value) => /^proj_[A-Za-z0-9]+$/u.test(String(value ?? "").trim());
-
 export const buildSynthesisConfig = (env) => {
-  const preferred = String(env.SYNTHESIS_AI_PROVIDER ?? "openai").toLowerCase();
-  const openaiKey = firstNonEmpty(env.OPENAI_API_KEY);
-  const anthropicKey = firstNonEmpty(env.ANTHROPIC_API_KEY);
-  let provider = null;
-  if (preferred === "openai") {
-    provider = openaiKey ? "openai" : null;
-  } else if (preferred === "anthropic") {
-    provider = anthropicKey ? "anthropic" : null;
-  }
-  if (!provider) {
-    if (openaiKey) provider = "openai";
-    else if (anthropicKey) provider = "anthropic";
-  }
-
-  const openaiBase = firstNonEmpty(env.OPENAI_BASE_URL, env.VITE_OPENAI_BASE_URL, "https://api.openai.com/v1").replace(/\/$/, "");
-  const anthropicBase = firstNonEmpty(env.ANTHROPIC_BASE_URL, env.VITE_ANTHROPIC_BASE_URL, "https://api.anthropic.com/v1").replace(/\/$/, "");
-
-  const model =
-    firstNonEmpty(
-      env.SYNTHESIS_MODEL,
-      env.VITE_SYNTHESIS_MODEL,
-      provider === "anthropic"
-        ? firstNonEmpty(env.ANTHROPIC_MODEL, env.VITE_ANTHROPIC_MODEL, "claude-sonnet-4-6")
-        : firstNonEmpty(env.OPENAI_MODEL, env.VITE_OPENAI_MODEL, "gpt-4o-mini"),
-    );
+  const provider = AI_PROVIDER_CONFIG.apiKey ? AI_PROVIDER_CONFIG.provider : null;
+  const model = firstNonEmpty(env.SYNTHESIS_MODEL, env.VITE_SYNTHESIS_MODEL, AI_PROVIDER_CONFIG.defaultModel);
 
   return {
     provider,
     model,
+    fastModel: AI_PROVIDER_CONFIG.fastModel,
+    baseURL: AI_PROVIDER_CONFIG.baseURL,
+    healthEndpoint: AI_PROVIDER_CONFIG.healthEndpoint,
     debugPrompt: toBool(env.SYNTHESIS_DEBUG_PROMPT),
-    openaiKey,
-    anthropicKey,
-    openaiBase,
-    anthropicBase,
-    openaiProject: firstNonEmpty(env.OPENAI_PROJECT, env.VITE_OPENAI_PROJECT),
-    openaiOrganization: firstNonEmpty(env.OPENAI_ORGANIZATION, env.VITE_OPENAI_ORGANIZATION),
-    anthropicVersion: firstNonEmpty(env.ANTHROPIC_VERSION, env.VITE_ANTHROPIC_VERSION, "2023-06-01"),
     CONTEXT_WINDOW_TOKENS: toNumber(env.SYNTHESIS_CONTEXT_WINDOW_TOKENS, DEFAULTS.CONTEXT_WINDOW_TOKENS),
     TOKEN_LIMIT_HEADROOM_PCT: toNumber(env.TOKEN_LIMIT_HEADROOM_PCT, DEFAULTS.TOKEN_LIMIT_HEADROOM_PCT),
     FEATURE_REQUEST_TOP_N: toNumber(env.FEATURE_REQUEST_TOP_N, DEFAULTS.FEATURE_REQUEST_TOP_N),
@@ -323,7 +296,7 @@ const applyUpweighting = (signals, macros, config) => {
   };
 };
 
-const detectCompetingPerspectives = (screenFeedback, config) => {
+export const detectCompetingPerspectives = (screenFeedback, config) => {
   const POSITIVE = new Set(["works_well"]);
   const NEGATIVE = new Set(["pain_point", "confusing", "missing_element"]);
   const byScreen = new Map();
@@ -1140,20 +1113,6 @@ const ensurePhase1Shape = (value) => {
   return normalized;
 };
 
-const buildOpenAIHeaders = (config) => {
-  const headers = {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${config.openaiKey}`,
-  };
-  if (config.openaiProject && isOpenAIProjectId(config.openaiProject)) {
-    headers["OpenAI-Project"] = config.openaiProject;
-  }
-  if (config.openaiOrganization && isOpenAIOrgId(config.openaiOrganization)) {
-    headers["OpenAI-Organization"] = config.openaiOrganization;
-  }
-  return headers;
-};
-
 const toOpenAIInput = (messages) => messages.map((m) => ({ role: m.role, content: [{ type: "input_text", text: m.content }] }));
 const toAnthropicMessages = (messages) => {
   const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
@@ -1165,101 +1124,62 @@ const toAnthropicMessages = (messages) => {
 const toDebugTextMessages = (messages) =>
   messages.map((m, idx) => `--- message ${idx + 1} (${m.role}) ---\n${m.content}`).join("\n\n");
 
-const extractOpenAIText = (payload) => {
-  if (!payload || typeof payload !== "object") return "";
-  if (typeof payload.output_text === "string" && payload.output_text.trim()) return payload.output_text;
-  const chunks = [];
-  for (const item of payload.output ?? []) {
-    for (const c of item.content ?? []) {
-      if ((c.type === "output_text" || c.type === "text") && typeof c.text === "string") chunks.push(c.text);
-    }
-  }
-  return chunks.join("");
+const toProviderEndpoint = (provider, baseURL, stream = false) => {
+  if (!provider) return "unconfigured";
+  const cleanedBase = String(baseURL ?? "").replace(/\/+$/u, "");
+  if (provider === "anthropic") return `${cleanedBase}/v1/messages`;
+  return `${cleanedBase}/v1/chat/completions${stream ? " (stream)" : ""}`;
 };
 
-const extractOpenAIJsonObject = (payload) => {
-  if (!payload || typeof payload !== "object") return null;
-  if (payload.output_parsed && typeof payload.output_parsed === "object") return payload.output_parsed;
-  for (const item of payload.output ?? []) {
-    for (const chunk of item.content ?? []) {
-      if (chunk?.type === "output_json" && chunk?.json && typeof chunk.json === "object") {
-        return chunk.json;
-      }
-      if (chunk?.type === "json" && chunk?.json && typeof chunk.json === "object") {
-        return chunk.json;
-      }
-    }
+const extractSystemPrompt = (messages, instructions = "") =>
+  [
+    String(instructions ?? "").trim(),
+    ...messages
+      .filter((m) => m.role === "system")
+      .map((m) => String(m.content ?? "").trim())
+      .filter(Boolean),
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+const extractUserPrompt = (messages, input) => {
+  if (Array.isArray(input) && input.length > 0) {
+    const fromInput = input
+      .map((entry) =>
+        Array.isArray(entry?.content)
+          ? entry.content
+              .filter((chunk) => chunk?.type === "input_text" && typeof chunk?.text === "string")
+              .map((chunk) => chunk.text)
+              .join("\n")
+          : "",
+      )
+      .filter(Boolean)
+      .join("\n\n");
+    if (fromInput) return fromInput;
   }
-  return null;
+  return messages
+    .filter((m) => m.role !== "system")
+    .map((m) => String(m.content ?? "").trim())
+    .filter(Boolean)
+    .join("\n\n");
 };
 
-const createText = async ({ provider, config, messages, temperature, maxOutputTokens, instructions, input, responseFormat, debugPhase = "phase1" }) => {
-  if (provider === "openai") {
-    const requestBody = {
-      model: config.model,
-      input: input ?? toOpenAIInput(messages),
-      temperature,
-      max_output_tokens: maxOutputTokens,
-      instructions,
-      text: responseFormat ? { format: responseFormat } : undefined,
-    };
-    if (!requestBody.instructions) delete requestBody.instructions;
-    if (!requestBody.text) delete requestBody.text;
-    if (config.debugPrompt) {
-      // eslint-disable-next-line no-console
-      console.log(`[synthesis][openai][${debugPhase}] outbound request payload:\n` + JSON.stringify({
-        endpoint: `${config.openaiBase}/responses`,
-        body: requestBody,
-      }, null, 2));
-    }
-    const response = await fetch(`${config.openaiBase}/responses`, {
-      method: "POST",
-      headers: buildOpenAIHeaders(config),
-      body: JSON.stringify(requestBody),
-    });
-    if (!response.ok) {
-      throw new Error(`OpenAI request failed (${response.status}): ${await response.text()}`);
-    }
-    const payload = await response.json();
-    if (responseFormat?.type === "json_schema") {
-      return extractOpenAIJsonObject(payload) ?? extractOpenAIText(payload);
-    }
-    return extractOpenAIText(payload);
-  }
-
-  const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
-  const userMessages = messages.filter((m) => m.role !== "system").map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }));
-
-  const response = await fetch(`${config.anthropicBase}/messages`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": config.anthropicKey,
-      "anthropic-version": config.anthropicVersion,
-    },
-    body: JSON.stringify({
-      model: config.model,
-      system: system || undefined,
-      messages: userMessages,
-      temperature,
-      max_tokens: maxOutputTokens,
-    }),
+const createText = async ({ config, messages = [], temperature, maxOutputTokens, instructions, input }) => {
+  const result = await aiCall({
+    systemPrompt: extractSystemPrompt(messages, instructions),
+    userPrompt: extractUserPrompt(messages, input),
+    model: config.model,
+    maxTokens: maxOutputTokens,
+    temperature,
+    stream: false,
   });
-  if (!response.ok) {
-    throw new Error(`Anthropic request failed (${response.status}): ${await response.text()}`);
-  }
-  const payload = await response.json();
-  const chunks = [];
-  for (const c of payload.content ?? []) {
-    if (c.type === "text" && typeof c.text === "string") chunks.push(c.text);
-  }
-  return chunks.join("");
+  return result.content;
 };
 
-const streamProviderText = async ({ provider, config, messages, temperature, maxOutputTokens, onToken, onWarning }) => {
-  const controller = new AbortController();
+const streamProviderText = async ({ config, messages, temperature, maxOutputTokens, onToken, onWarning }) => {
   let lastTokenAt = Date.now();
   let warned = false;
+  let stalledOut = false;
   const stallWatch = setInterval(() => {
     const gap = Date.now() - lastTokenAt;
     if (!warned && gap > config.PHASE2_STALL_WARNING_MS) {
@@ -1267,115 +1187,31 @@ const streamProviderText = async ({ provider, config, messages, temperature, max
       onWarning("Output is taking longer than expected...");
     }
     if (gap > config.PHASE2_STALL_TERMINATE_MS) {
-      controller.abort();
+      stalledOut = true;
     }
   }, 1000);
 
   let fullText = "";
   try {
-    if (provider === "openai") {
-      const requestBody = {
-        model: config.model,
-        input: toOpenAIInput(messages),
-        stream: true,
-        temperature,
-        max_output_tokens: maxOutputTokens,
-      };
-      if (config.debugPrompt) {
-        // eslint-disable-next-line no-console
-        console.log("[synthesis][openai][phase2] outbound request payload:\n" + JSON.stringify({
-          endpoint: `${config.openaiBase}/responses`,
-          body: requestBody,
-        }, null, 2));
-      }
-      const response = await fetch(`${config.openaiBase}/responses`, {
-        method: "POST",
-        signal: controller.signal,
-        headers: buildOpenAIHeaders(config),
-        body: JSON.stringify(requestBody),
-      });
-      if (!response.ok || !response.body) {
-        throw new Error(`OpenAI stream failed (${response.status}): ${await response.text()}`);
-      }
-      const decoder = new TextDecoder();
-      const reader = response.body.getReader();
-      let buffer = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const events = buffer.split("\n\n");
-        buffer = events.pop() ?? "";
-        for (const evt of events) {
-          for (const line of evt.split("\n")) {
-            if (!line.startsWith("data: ")) continue;
-            const raw = line.slice(6).trim();
-            if (!raw || raw === "[DONE]") continue;
-            let data = null;
-            try { data = JSON.parse(raw); } catch { continue; }
-            if (data?.type === "response.output_text.delta" && typeof data.delta === "string") {
-              lastTokenAt = Date.now();
-              fullText += data.delta;
-              onToken(data.delta);
-            }
-          }
-        }
-      }
-      return fullText;
-    }
-
-    const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
-    const userMessages = messages.filter((m) => m.role !== "system").map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }));
-    const response = await fetch(`${config.anthropicBase}/messages`, {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": config.anthropicKey,
-        "anthropic-version": config.anthropicVersion,
+    const result = await aiCall({
+      systemPrompt: extractSystemPrompt(messages),
+      userPrompt: extractUserPrompt(messages),
+      model: config.model,
+      maxTokens: maxOutputTokens,
+      temperature,
+      stream: true,
+      onToken: (token) => {
+        lastTokenAt = Date.now();
+        fullText += token;
+        onToken(token);
       },
-      body: JSON.stringify({
-        model: config.model,
-        system: system || undefined,
-        messages: userMessages,
-        stream: true,
-        temperature,
-        max_tokens: maxOutputTokens,
-      }),
     });
-    if (!response.ok || !response.body) {
-      throw new Error(`Anthropic stream failed (${response.status}): ${await response.text()}`);
+    if (!fullText && typeof result?.content === "string") {
+      fullText = result.content;
     }
-
-    const decoder = new TextDecoder();
-    const reader = response.body.getReader();
-    let buffer = "";
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const events = buffer.split("\n\n");
-      buffer = events.pop() ?? "";
-      for (const evt of events) {
-        for (const line of evt.split("\n")) {
-          if (!line.startsWith("data: ")) continue;
-          const raw = line.slice(6).trim();
-          if (!raw || raw === "[DONE]") continue;
-          let data = null;
-          try { data = JSON.parse(raw); } catch { continue; }
-          const token = data?.delta?.text;
-          if (typeof token === "string" && token.length > 0) {
-            lastTokenAt = Date.now();
-            fullText += token;
-            onToken(token);
-          }
-        }
-      }
-    }
-
     return fullText;
   } catch (error) {
-    if (controller.signal.aborted) {
+    if (stalledOut) {
       const stalled = new Error("Output generation stalled. The partial output above is shown. You can copy what was received, or try again.");
       stalled.code = "ERR-04";
       throw stalled;
@@ -1554,7 +1390,7 @@ export const runSynthesis = async ({ requestBody, signals, sendEvent, config, lo
     phase: "phase1",
     provider: config.provider ?? "none",
     model: config.model,
-    endpoint: config.provider === "anthropic" ? `${config.anthropicBase}/messages` : `${config.openaiBase}/responses`,
+    endpoint: toProviderEndpoint(config.provider, config.baseURL, false),
     maxTokens: config.PHASE1_MAX_TOKENS,
     temperature: config.PHASE1_TEMPERATURE,
   });
@@ -1562,53 +1398,32 @@ export const runSynthesis = async ({ requestBody, signals, sendEvent, config, lo
   const phase1Input = [{ role: "user", content: [{ type: "input_text", text: compactPayloadText }] }];
   const phase1Instructions = `${SYNTHESIS_INSTRUCTIONS}\n\nReturn only structured analysis JSON using the declared schema.`;
   if (config.debugPrompt) {
-    if (config.provider === "openai") {
-      sendEvent({
-        type: "debug_prompt",
-        phase: "phase1",
-        provider: "openai",
-        payload: {
-          endpoint: `${config.openaiBase}/responses`,
-          readableMessages: `--- instructions ---\n${phase1Instructions}\n\n--- input ---\n${compactPayloadText}`,
-          body: {
-            model: config.model,
-            instructions: phase1Instructions,
-            input: phase1Input,
-            text: { format: { type: "json_schema", strict: true, ...PHASE1_JSON_SCHEMA } },
-            temperature: config.PHASE1_TEMPERATURE,
-            max_output_tokens: config.PHASE1_MAX_TOKENS,
-          },
+    const messagesPhase1 = [
+      { role: "system", content: `${SYNTHESIS_INSTRUCTIONS}\n\nReturn valid JSON only using this structure.` },
+      { role: "user", content: compactPayloadText },
+    ];
+    sendEvent({
+      type: "debug_prompt",
+      phase: "phase1",
+      provider: config.provider ?? "openai",
+      payload: {
+        endpoint: toProviderEndpoint(config.provider, config.baseURL, false),
+        readableMessages: toDebugTextMessages(messagesPhase1),
+        body: {
+          model: config.model,
+          systemPrompt: extractSystemPrompt(messagesPhase1, phase1Instructions),
+          userPrompt: extractUserPrompt(messagesPhase1, phase1Input),
+          temperature: config.PHASE1_TEMPERATURE,
+          maxTokens: config.PHASE1_MAX_TOKENS,
         },
-      });
-    } else if (config.provider === "anthropic") {
-      const messagesPhase1 = [
-        { role: "system", content: `${SYNTHESIS_INSTRUCTIONS}\n\nReturn valid JSON only using this structure.` },
-        { role: "user", content: compactPayloadText },
-      ];
-      const { system, userMessages } = toAnthropicMessages(messagesPhase1);
-      sendEvent({
-        type: "debug_prompt",
-        phase: "phase1",
-        provider: "anthropic",
-        payload: {
-          endpoint: `${config.anthropicBase}/messages`,
-          readableMessages: toDebugTextMessages(messagesPhase1),
-          body: {
-            model: config.model,
-            system: system || undefined,
-            messages: userMessages,
-            temperature: config.PHASE1_TEMPERATURE,
-            max_tokens: config.PHASE1_MAX_TOKENS,
-          },
-        },
-      });
-    }
+      },
+    });
   }
 
   let phase1Analysis;
   if (!config.provider) {
     if (!config.enableLocalFallback) {
-      const err = new Error("No configured AI provider key is available. Set SYNTHESIS_AI_PROVIDER and matching OPENAI_API_KEY or ANTHROPIC_API_KEY.");
+      const err = new Error("No configured AI provider key is available. Set SYNTHESIS_API_PROVIDER and matching OPENAI_API_KEY or ANTHROPIC_API_KEY.");
       err.code = "ERR-02";
       throw err;
     }
@@ -1625,21 +1440,15 @@ export const runSynthesis = async ({ requestBody, signals, sendEvent, config, lo
     try {
       phase1Result = await withTimeout(
         createText({
-          provider: config.provider,
           config,
-          messages:
-            config.provider === "anthropic"
-              ? [
-                  { role: "system", content: `${SYNTHESIS_INSTRUCTIONS}\n\nReturn valid JSON only.` },
-                  { role: "user", content: compactPayloadText },
-                ]
-              : undefined,
-          instructions: config.provider === "openai" ? phase1Instructions : undefined,
-          input: config.provider === "openai" ? phase1Input : undefined,
-          responseFormat: config.provider === "openai" ? { type: "json_schema", strict: true, ...PHASE1_JSON_SCHEMA } : undefined,
+          messages: [
+            { role: "system", content: `${SYNTHESIS_INSTRUCTIONS}\n\nReturn valid JSON only.` },
+            { role: "user", content: compactPayloadText },
+          ],
+          instructions: phase1Instructions,
+          input: phase1Input,
           temperature: config.PHASE1_TEMPERATURE,
           maxOutputTokens: config.PHASE1_MAX_TOKENS,
-          debugPhase: "phase1",
         }),
         config.PHASE1_TIMEOUT_MS,
         "ERR-02",
@@ -1680,6 +1489,9 @@ export const runSynthesis = async ({ requestBody, signals, sendEvent, config, lo
       p1: phase1Analysis.p1Items.length,
       p2: phase1Analysis.p2Themes.length,
     },
+    phase1Analysis: {
+      p0Items: phase1Analysis.p0Items,
+    },
   });
 
   sendEvent({ type: "phase2_started", outputMode });
@@ -1688,7 +1500,7 @@ export const runSynthesis = async ({ requestBody, signals, sendEvent, config, lo
     phase: "phase2",
     provider: config.provider ?? "none",
     model: config.model,
-    endpoint: config.provider === "anthropic" ? `${config.anthropicBase}/messages` : `${config.openaiBase}/responses`,
+    endpoint: toProviderEndpoint(config.provider, config.baseURL, true),
     maxTokens: outputMode === "prd" ? config.PHASE2_MAX_TOKENS_PRD : config.PHASE2_MAX_TOKENS_ROADMAP,
     temperature: config.PHASE2_TEMPERATURE,
   });
@@ -1704,43 +1516,23 @@ export const runSynthesis = async ({ requestBody, signals, sendEvent, config, lo
     { role: "user", content: phase2Prompt },
   ];
   if (config.debugPrompt) {
-    if (config.provider === "openai") {
-      sendEvent({
-        type: "debug_prompt",
-        phase: "phase2",
-        provider: "openai",
-        payload: {
-          endpoint: `${config.openaiBase}/responses`,
-          readableMessages: toDebugTextMessages(messagesPhase2),
-          body: {
-            model: config.model,
-            input: toOpenAIInput(messagesPhase2),
-            stream: true,
-            temperature: config.PHASE2_TEMPERATURE,
-            max_output_tokens: outputMode === "prd" ? config.PHASE2_MAX_TOKENS_PRD : config.PHASE2_MAX_TOKENS_ROADMAP,
-          },
+    sendEvent({
+      type: "debug_prompt",
+      phase: "phase2",
+      provider: config.provider ?? "openai",
+      payload: {
+        endpoint: toProviderEndpoint(config.provider, config.baseURL, true),
+        readableMessages: toDebugTextMessages(messagesPhase2),
+        body: {
+          model: config.model,
+          stream: true,
+          systemPrompt: extractSystemPrompt(messagesPhase2),
+          userPrompt: extractUserPrompt(messagesPhase2),
+          temperature: config.PHASE2_TEMPERATURE,
+          maxTokens: outputMode === "prd" ? config.PHASE2_MAX_TOKENS_PRD : config.PHASE2_MAX_TOKENS_ROADMAP,
         },
-      });
-    } else if (config.provider === "anthropic") {
-      const { system, userMessages } = toAnthropicMessages(messagesPhase2);
-      sendEvent({
-        type: "debug_prompt",
-        phase: "phase2",
-        provider: "anthropic",
-        payload: {
-          endpoint: `${config.anthropicBase}/messages`,
-          readableMessages: toDebugTextMessages(messagesPhase2),
-          body: {
-            model: config.model,
-            system: system || undefined,
-            messages: userMessages,
-            stream: true,
-            temperature: config.PHASE2_TEMPERATURE,
-            max_tokens: outputMode === "prd" ? config.PHASE2_MAX_TOKENS_PRD : config.PHASE2_MAX_TOKENS_ROADMAP,
-          },
-        },
-      });
-    }
+      },
+    });
   }
 
   let streamedText = "";
@@ -1752,7 +1544,6 @@ export const runSynthesis = async ({ requestBody, signals, sendEvent, config, lo
     }
   } else {
     streamedText = await streamProviderText({
-      provider: config.provider,
       config,
       messages: messagesPhase2,
       temperature: config.PHASE2_TEMPERATURE,

@@ -1,4 +1,4 @@
-import type { AppArea, AppScreen, CardSortConcept, FeatureRequest, KudosQuote, ScreenFeedback } from "../../types/domain";
+import type { AppArea, AppScreen, CardSortConcept, FeatureRequest, KudosQuote, ScreenFeedback } from "../../types/domain.js";
 
 type SeedRecord = Record<string, unknown>;
 
@@ -19,6 +19,7 @@ const ensureArray = (value: unknown, name: string): SeedRecord[] => {
 
 const hasString = (row: SeedRecord, key: string): boolean => typeof row[key] === "string" && String(row[key]).trim().length > 0;
 const ASSET_PATH_PATTERN = /^[a-z0-9-_/]+\/\d{2}-[a-z0-9-]+\.(png|jpg)$/i;
+const LEGACY_ASSET_PATH_PATTERN = /^[a-z0-9-_/]+\/\d{2}[ _-][a-z0-9][a-z0-9 ._-]*\.(png|jpg)$/i;
 
 const validateRequiredStringKeys = (rows: SeedRecord[], name: string, keys: string[]): void => {
   rows.forEach((row, index) => {
@@ -104,7 +105,7 @@ export const validateScreenLibrarySeed = (raw: unknown): AppScreen[] => {
         // eslint-disable-next-line no-console
         console.warn(`[seed-validator] screenLibrary.seed.json[${index}] asset filename exceeds 64 chars: ${filename}`);
       }
-      if (!ASSET_PATH_PATTERN.test(trimmed)) {
+      if (!ASSET_PATH_PATTERN.test(trimmed) && !LEGACY_ASSET_PATH_PATTERN.test(trimmed)) {
         // eslint-disable-next-line no-console
         console.warn(`[seed-validator] screenLibrary.seed.json[${index}] asset path does not match naming convention: ${trimmed}`);
       }

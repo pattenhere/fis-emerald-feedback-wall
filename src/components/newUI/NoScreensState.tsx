@@ -24,8 +24,9 @@ export const NoScreensState = memo(({
       </div>
       <div className="newui-hero-controls">
         <button type="button" className="primary-btn newui-submit-btn" onClick={onSubmitFeedback}>
-          Submit Feedback
+          Leave Feedback
         </button>
+        {screenName ? <p className="newui-active-screen-context">Giving feedback on: {screenName}</p> : null}
       </div>
     </section>
   );
