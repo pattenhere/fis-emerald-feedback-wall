@@ -8,6 +8,21 @@
   </head>
   <body>
     <div id="universe-root"></div>
+    <script>
+      (function () {
+        if (window.__emeraldGanttShortcutBound) return;
+        window.__emeraldGanttShortcutBound = true;
+        window.addEventListener("keydown", function (event) {
+          const t = event.target;
+          if (t && t.tagName && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+          if (t && t.isContentEditable) return;
+          const key = String(event.key || "").toLowerCase();
+          if (!event.ctrlKey || event.metaKey || !event.shiftKey || key !== "m") return;
+          event.preventDefault();
+          window.open("/assets/fis-emerald-gantt.html", "_blank", "noopener,noreferrer");
+        });
+      })();
+    </script>
     <script type="module" src="/src/universe-main.tsx"></script>
   </body>
 </html>
