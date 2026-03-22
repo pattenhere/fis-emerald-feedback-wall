@@ -2,11 +2,51 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "source": "/facilitator/tables",
+      "destination": "/index.html"
     },
     {
-      "source": "/:path*",
+      "source": "/facilitator/tables/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/synthesis/tables",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/synthesis/tables/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/facilitator/admin/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/facilitator",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/facilitator/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/synthesis",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/synthesis/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/reveal/:path*",
       "destination": "/index.html"
     }
   ]
