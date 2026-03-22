@@ -116,11 +116,19 @@ export const SYNTHESIS_ROUTE_DEFINITIONS: SynthesisRouteDefinition[] = [
   },
   {
     id: "tables",
-    path: "/synthesis/tables",
+    path: "/facilitator/tables",
     label: "Tables",
     description: "Inspect available seed tables and schema data used by the session.",
     section: "admin",
     visibleInNav: true,
+  },
+  {
+    id: "tables",
+    path: "/synthesis/tables",
+    label: "Tables",
+    description: "Inspect available seed tables and schema data used by the session.",
+    section: "admin",
+    visibleInNav: false,
   },
   {
     id: "overview",
@@ -187,7 +195,7 @@ export const SYNTHESIS_NAV_SECTIONS: SynthesisNavSection[] = [
     label: "ADMIN",
     items: [
       { id: "session-config", label: "Session config", path: "/admin/session-config" },
-      { id: "tables", label: "Tables", path: "/synthesis/tables" },
+      { id: "tables", label: "Tables", path: "/facilitator/tables" },
     ],
   },
 ];
