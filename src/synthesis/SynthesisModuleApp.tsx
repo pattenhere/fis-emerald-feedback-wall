@@ -588,6 +588,7 @@ export const SynthesisModuleApp = (): JSX.Element => {
                 value={pinInput}
                 onChange={(event) => setPinInput(event.target.value)}
                 autoComplete="one-time-code"
+                autoFocus
               />
               {pinError && <p className="synthesis-pin-error">{pinError}</p>}
               <button type="submit" className="synthesis-pin-submit" disabled={authLoading}>
@@ -847,6 +848,7 @@ export const SynthesisModuleApp = (): JSX.Element => {
               value={pinInput}
               onChange={(event) => setPinInput(event.target.value)}
               autoComplete="one-time-code"
+              autoFocus
             />
             {pinError && <p className="synthesis-pin-error">{pinError}</p>}
             <button type="submit" className="synthesis-pin-submit" disabled={authLoading}>
