@@ -22,6 +22,22 @@
       "destination": "/index.html"
     },
     {
+      "source": "/admin/tables",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin/tables/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/tables",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/tables/:path*",
+      "destination": "/index.html"
+    },
+    {
       "source": "/facilitator",
       "destination": "/index.html"
     },
