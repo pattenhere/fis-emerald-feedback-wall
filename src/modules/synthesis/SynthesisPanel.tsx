@@ -183,9 +183,14 @@ const normalizeSynthesisOutput = (text: string, macros: MacroState, generatedAt:
 };
 
 const mapSynthesisError = (error: unknown): SynthesisErrorState => {
-  const rawMessage = error instanceof Error ? error.message : "Synthesis failed. Please try again.";
+  const errorObject = error as { code?: unknown; message?: unknown } | null;
+  const rawMessage = error instanceof Error
+    ? error.message
+    : typeof errorObject?.message === "string" && errorObject.message.trim()
+      ? errorObject.message
+      : "Synthesis failed. Please try again.";
   const codeMatch = rawMessage.match(/\bERR-\d{2}\b/);
-  const code = (error as { code?: unknown } | null)?.code;
+  const code = errorObject?.code;
   const normalizedCode = typeof code === "string" ? code : codeMatch?.[0];
   switch (normalizedCode) {
     case "ERR-01":
@@ -831,7 +836,7 @@ export const SynthesisPanel = memo(({
         <div className="synthesis-run-v2-left-actions">
           <button
             type="button"
-            className="overview-theme-primary-btn"
+            className="overview-theme-secondary-btn"
             onClick={() => void handleGenerate("roadmap")}
             disabled={isGenerating}
           >

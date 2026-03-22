@@ -2952,26 +2952,43 @@ const getDedupCounts = async () => {
   };
 };
 
+const getPendingModerationCount = () => {
+  const stateMap = getModerationStateMap();
+  let pending = 0;
+  for (const state of Object.values(stateMap)) {
+    if (state && state.flagged === true && !state.deletedAt) {
+      pending += 1;
+    }
+  }
+  return pending;
+};
+
 const buildAdminBootstrapPayload = async () => {
-  const [sessionConfig, synthesisParameters, inputsCount, dedupCounts, flaggedItems] = await Promise.all([
+  const [sessionConfig, synthesisParameters, signals] = await Promise.all([
     Promise.resolve(buildSessionConfigPayload()),
     Promise.resolve(buildSynthesisParametersPayload()),
-    getInputCounts(),
-    getDedupCounts(),
-    getFlaggedInputs(),
+    loadSignalRowsForOverview(),
   ]);
+  const counts = buildCountsFromSignals(signals);
   const runtime = readRuntimeStore(runtimeStorePath);
 
   return {
     sessionConfig,
     synthesisParameters,
-    inputsCount,
-    dedupCounts,
+    inputsCount: counts,
+    dedupCounts: {
+      uniqueInputs: counts.uniqueInputs,
+      uniqueFeatureRequests: counts.uniqueFeatureRequests,
+      distinctScreensCovered: counts.distinctScreensCovered,
+      consentApprovedKudos: counts.consentApprovedKudos,
+      totalVotesCast: counts.totalVotesCast,
+      updatedAt: counts.updatedAt,
+    },
     latestPhase1Analysis: runtime.latestPhase1Analysis ?? null,
     latestTShirtSizing: runtime.latestTShirtSizing ?? null,
     savedNarrative: runtime.savedNarrative ?? null,
     moderation: {
-      pendingCount: flaggedItems.length,
+      pendingCount: getPendingModerationCount(),
     },
     loadedAt: nowIso(),
   };

@@ -20,7 +20,7 @@ interface SeedSectionProps {
   children: JSX.Element;
 }
 
-const LOAD_ERROR_MESSAGE = "Failed to load data. Check that the API server is running.";
+const LOAD_ERROR_MESSAGE = "Failed to load data.";
 const PAGE_SIZE = 10;
 
 const coerceNumber = (value: unknown): number => {
@@ -185,8 +185,11 @@ export const SynthesisTablesPage = (): JSX.Element => {
       setBootstrapData(bootstrapPayload);
       setTables(adminTables);
       setLastLoadedAt(new Date());
-    } catch {
-      setError(LOAD_ERROR_MESSAGE);
+    } catch (error) {
+      const message = error instanceof Error && error.message.trim().length > 0
+        ? error.message
+        : LOAD_ERROR_MESSAGE;
+      setError(message);
     } finally {
       setLoading(false);
       setRefreshing(false);

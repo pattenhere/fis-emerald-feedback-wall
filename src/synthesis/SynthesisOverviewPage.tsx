@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { generateThemeSnapshot } from "../api/themeSnapshot";
-import { synthesisModuleApi } from "../services/synthesisModuleApi";
+import { dataApi } from "../services/dataApi";
 import { makeId } from "../utils/id";
 import { THEME_SNAPSHOT_MAX, appendThemeSnapshot, readThemeSnapshots, writePublishedThemeSnapshot } from "../themeSnapshots/store";
 import type { ThemeSnapshot } from "../themeSnapshots/types";
@@ -59,7 +59,11 @@ const toInteger = (value: unknown): number => {
 
 const formatInt = (value: number): string => toInteger(value).toLocaleString();
 
-export const SynthesisOverviewPage = (): JSX.Element => {
+interface SynthesisOverviewPageProps {
+  isAuthenticated: boolean;
+}
+
+export const SynthesisOverviewPage = ({ isAuthenticated }: SynthesisOverviewPageProps): JSX.Element => {
   const [stats, setStats] = useState<OverviewStatsState>(initialStatsState);
   const [cardLoading, setCardLoading] = useState<CardLoadingState>(initialCardLoadingState);
   const [lastUpdatedLabel, setLastUpdatedLabel] = useState("--");
@@ -76,53 +80,32 @@ export const SynthesisOverviewPage = (): JSX.Element => {
   const refreshOverviewData = useCallback(async (): Promise<void> => {
     const nextUpdatedAt = new Date();
     try {
-      const [
-        totalsResult,
-        featureCountResult,
-        screenCountResult,
-        kudosCountResult,
-        dedupCountsResult,
-        sessionConfigResult,
-        synthesisParametersResult,
-      ] = await Promise.allSettled([
-        synthesisModuleApi.getInputsCount(),
-        synthesisModuleApi.getInputsCountByType("feature_request"),
-        synthesisModuleApi.getInputsCountByType("screen_feedback"),
-        synthesisModuleApi.getInputsCountByType("kudos"),
-        synthesisModuleApi.getDedupCounts(),
-        synthesisModuleApi.getSessionConfig(),
-        synthesisModuleApi.getSynthesisParameters(),
-      ]);
-
-      const totals = totalsResult.status === "fulfilled" ? totalsResult.value : null;
-      const featureCount = featureCountResult.status === "fulfilled" ? featureCountResult.value : null;
-      const screenCount = screenCountResult.status === "fulfilled" ? screenCountResult.value : null;
-      const kudosCount = kudosCountResult.status === "fulfilled" ? kudosCountResult.value : null;
-      const dedupCounts = dedupCountsResult.status === "fulfilled" ? dedupCountsResult.value : null;
-      const sessionConfig = sessionConfigResult.status === "fulfilled" ? sessionConfigResult.value : null;
-      const synthesisParameters = synthesisParametersResult.status === "fulfilled" ? synthesisParametersResult.value : null;
+      const payload = await dataApi.getAdminBootstrap();
+      const totals = payload.inputsCount ?? {};
+      const dedupCounts = payload.dedupCounts ?? {};
+      const sessionConfig = payload.sessionConfig ?? {};
+      const synthesisParameters = payload.synthesisParameters ?? null;
 
       setStats((current) => ({
         ...current,
-        featureRequestsTotal: toInteger(featureCount?.count ?? totals?.featureRequests ?? current.featureRequestsTotal),
-        featureRequestsUnique: toInteger(dedupCounts?.uniqueFeatureRequests ?? current.featureRequestsUnique),
-        screenFeedbackTotal: toInteger(screenCount?.count ?? totals?.screenFeedback ?? current.screenFeedbackTotal),
-        distinctScreensCovered: toInteger(dedupCounts?.distinctScreensCovered ?? current.distinctScreensCovered),
-        kudosTotal: toInteger(kudosCount?.count ?? totals?.kudos ?? current.kudosTotal),
-        consentApprovedKudos: toInteger(dedupCounts?.consentApprovedKudos ?? current.consentApprovedKudos),
-        totalVotesCast: toInteger(dedupCounts?.totalVotesCast ?? totals?.totalVotesCast ?? current.totalVotesCast),
-        uniqueInputs: toInteger(dedupCounts?.uniqueInputs ?? totals?.totalInputs ?? current.uniqueInputs),
-        synthesisMinSignals: Math.max(1, toInteger(sessionConfig?.synthesisMinSignals ?? current.synthesisMinSignals)),
+        featureRequestsTotal: toInteger((totals as Record<string, unknown>).featureRequests ?? current.featureRequestsTotal),
+        featureRequestsUnique: toInteger((dedupCounts as Record<string, unknown>).uniqueFeatureRequests ?? current.featureRequestsUnique),
+        screenFeedbackTotal: toInteger((totals as Record<string, unknown>).screenFeedback ?? current.screenFeedbackTotal),
+        distinctScreensCovered: toInteger((dedupCounts as Record<string, unknown>).distinctScreensCovered ?? current.distinctScreensCovered),
+        kudosTotal: toInteger((totals as Record<string, unknown>).kudos ?? current.kudosTotal),
+        consentApprovedKudos: toInteger((dedupCounts as Record<string, unknown>).consentApprovedKudos ?? current.consentApprovedKudos),
+        totalVotesCast: toInteger((dedupCounts as Record<string, unknown>).totalVotesCast ?? (totals as Record<string, unknown>).totalVotesCast ?? current.totalVotesCast),
+        uniqueInputs: toInteger((dedupCounts as Record<string, unknown>).uniqueInputs ?? (totals as Record<string, unknown>).totalInputs ?? current.uniqueInputs),
+        synthesisMinSignals: Math.max(1, toInteger((sessionConfig as Record<string, unknown>).synthesisMinSignals ?? current.synthesisMinSignals)),
       }));
-      if (sessionConfig) {
-        setWallWindowOpen(Boolean(sessionConfig.wallWindowOpen ?? true));
-        setEventName(String(sessionConfig.eventName ?? ""));
-      }
+      setWallWindowOpen(Boolean((sessionConfig as Record<string, unknown>).wallWindowOpen ?? true));
+      setEventName(String((sessionConfig as Record<string, unknown>).eventName ?? ""));
       if (synthesisParameters) {
+        const parameters = (synthesisParameters.parameters ?? {}) as Record<string, unknown>;
         setThemeSnapshotThresholds({
-          minEach: Math.max(1, toInteger(synthesisParameters.parameters.competingMinEach ?? 3)),
-          minSplitRatio: Number.isFinite(Number(synthesisParameters.parameters.competingMinSplitRatio))
-            ? Number(synthesisParameters.parameters.competingMinSplitRatio)
+          minEach: Math.max(1, toInteger(parameters.competingMinEach ?? 3)),
+          minSplitRatio: Number.isFinite(Number(parameters.competingMinSplitRatio))
+            ? Number(parameters.competingMinSplitRatio)
             : 0.4,
         });
       }
@@ -155,12 +138,13 @@ export const SynthesisOverviewPage = (): JSX.Element => {
   }, []);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     void refreshOverviewData();
     const timer = window.setInterval(() => {
       void refreshOverviewData();
     }, 15_000);
     return () => window.clearInterval(timer);
-  }, [refreshOverviewData]);
+  }, [isAuthenticated, refreshOverviewData]);
 
   useEffect(() => {
     setThemeSnapshots(readThemeSnapshots());

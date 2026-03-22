@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { synthesisModuleApi } from "../services/synthesisModuleApi";
+import { dataApi, type AdminBootstrapResponse } from "../services/dataApi";
 import { clearSynthesisAuthSession, readSynthesisAuthFlag, writeSynthesisAuthFlag } from "../services/synthesisAuth";
 import { formatCountdown } from "../utils/time";
 import { SynthesisOverviewPage } from "./SynthesisOverviewPage";
@@ -13,7 +14,7 @@ import { SynthesisDay2RevealPage } from "./SynthesisDay2RevealPage";
 import { SynthesisTablesPage } from "./SynthesisTablesPage";
 import { readCompetingPerspectivesCache } from "./competingViewsCache";
 import { readThemeSnapshots } from "../themeSnapshots/store";
-import { readAdminBootstrapCache } from "./adminBootstrapCache";
+import { readAdminBootstrapCache, writeAdminBootstrapCache } from "./adminBootstrapCache";
 import { ensureDay2RevealState, readDay2RevealState, writeDay2RevealState } from "./day2RevealStore";
 import { SynthesisPanel } from "../modules/synthesis/SynthesisPanel";
 import { APP_AREAS } from "../state/seedData";
@@ -342,8 +343,30 @@ export const SynthesisModuleApp = (): JSX.Element => {
     ]);
   }, [refreshInputsCount, refreshModerationPending, refreshSessionConfig, refreshSynthesisParameters]);
 
-  const verifyProtectedDataAccess = useCallback(async (): Promise<void> => {
-    await synthesisModuleApi.getInputsCount();
+  const applyAdminBootstrap = useCallback((payload: AdminBootstrapResponse): void => {
+    const sessionConfig = payload?.sessionConfig ?? {};
+    const inputsCount = payload?.inputsCount ?? {};
+    const parametersPayload = payload?.synthesisParameters;
+    const parameterValues = parametersPayload?.parameters ?? {};
+    setSessionCutoffIso(toStringValue((sessionConfig as Record<string, unknown>).inputCutoffAt, nowIso()));
+    setInputWindowOpen(toBooleanValue((sessionConfig as Record<string, unknown>).inputWindowOpen, false));
+    setReadinessThreshold(Math.max(10, Math.min(500, toNumberValue((sessionConfig as Record<string, unknown>).synthesisMinSignals, 30))));
+    setEventName(toStringValue((sessionConfig as Record<string, unknown>).eventName, ""));
+    setEventSlug(toStringValue((sessionConfig as Record<string, unknown>).eventSlug, ""));
+    setCeremonyStartTimeLocal(toStringValue((sessionConfig as Record<string, unknown>).ceremonyStartTimeLocal, ""));
+    setDay2RevealTimeLocal(toStringValue((sessionConfig as Record<string, unknown>).day2RevealTimeLocal, ""));
+    setTotalInputs(Math.max(0, toNumberValue((inputsCount as Record<string, unknown>).totalInputs, 0)));
+    setFeatureRequestCount(Math.max(0, toNumberValue((inputsCount as Record<string, unknown>).featureRequests, 0)));
+    setScreenFeedbackCount(Math.max(0, toNumberValue((inputsCount as Record<string, unknown>).screenFeedback, 0)));
+    setKudosCount(Math.max(0, toNumberValue((inputsCount as Record<string, unknown>).kudos, 0)));
+    setTotalVotesCast(Math.max(0, toNumberValue((inputsCount as Record<string, unknown>).totalVotesCast, 0)));
+    setSynthesisParameters({
+      ...DEFAULT_SYNTHESIS_PARAMETERS,
+      ...(parameterValues as Partial<SynthesisParameters>),
+    });
+    setSynthesisParametersLastSavedAt(parametersPayload?.updatedAt ?? null);
+    setSynthesisParametersUsingDefaults(Boolean(parametersPayload?.usingDefaults ?? true));
+    setModerationPendingCount(Math.max(0, toNumberValue(payload?.moderation?.pendingCount, 0)));
   }, []);
 
   useEffect(() => {
@@ -384,48 +407,71 @@ export const SynthesisModuleApp = (): JSX.Element => {
 
   useEffect(() => {
     if (isRevealMode) return;
+    if (!isAuthenticated) return;
     void refreshInputsCount();
     const timer = window.setInterval(() => {
       void refreshInputsCount();
     }, 15_000);
     return () => window.clearInterval(timer);
-  }, [isRevealMode, refreshInputsCount]);
+  }, [isAuthenticated, isRevealMode, refreshInputsCount]);
 
   useEffect(() => {
     if (isRevealMode) return;
+    if (!isAuthenticated) return;
     void refreshSessionConfig();
     const timer = window.setInterval(() => {
       void refreshSessionConfig();
     }, 15_000);
     return () => window.clearInterval(timer);
-  }, [isRevealMode, refreshSessionConfig]);
+  }, [isAuthenticated, isRevealMode, refreshSessionConfig]);
 
   useEffect(() => {
     if (isRevealMode) return;
+    if (!isAuthenticated) return;
     void refreshConnectivity();
     const timer = window.setInterval(() => {
       void refreshConnectivity();
     }, 30_000);
     return () => window.clearInterval(timer);
-  }, [isRevealMode, refreshConnectivity]);
+  }, [isAuthenticated, isRevealMode, refreshConnectivity]);
 
   useEffect(() => {
     if (isRevealMode) return;
+    if (!isAuthenticated) return;
     void refreshModerationPending();
     const timer = window.setInterval(() => {
       void refreshModerationPending();
     }, 15_000);
     return () => window.clearInterval(timer);
-  }, [isRevealMode, refreshModerationPending]);
+  }, [isAuthenticated, isRevealMode, refreshModerationPending]);
 
   useEffect(() => {
     if (isRevealMode) return;
+    if (!isAuthenticated) return;
     void refreshSynthesisParameters();
     const timer = window.setInterval(() => {
       void refreshSynthesisParameters();
     }, 15_000);
     return () => window.clearInterval(timer);
-  }, [isRevealMode, refreshSynthesisParameters]);
+  }, [isAuthenticated, isRevealMode, refreshSynthesisParameters]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadBootstrapAdmin = async (): Promise<void> => {
+      try {
+        const payload = await dataApi.getAdminBootstrap();
+        writeAdminBootstrapCache(payload);
+        if (cancelled) return;
+        applyAdminBootstrap(payload);
+      } catch {
+        // Keep cached values if this preload fails.
+      }
+    };
+    void loadBootstrapAdmin();
+    return () => {
+      cancelled = true;
+    };
+  }, [applyAdminBootstrap]);
 
   useEffect(() => {
     if (!connectivityDialogOpen) return;
@@ -463,23 +509,11 @@ export const SynthesisModuleApp = (): JSX.Element => {
         setPinError(result.error ?? "Invalid PIN.");
         return;
       }
-      if (!isRevealMode) {
-        try {
-          await verifyProtectedDataAccess();
-        } catch (error) {
-          clearSynthesisAuthSession();
-          setIsAuthenticated(false);
-          const message = error instanceof Error ? error.message : "Unable to load facilitator data.";
-          setPinError(`PIN accepted, but facilitator data failed to load: ${message}`);
-          return;
-        }
-      }
       setIsAuthenticated(true);
       writeSynthesisAuthFlag(true);
       setPinInput("");
       if (!isRevealMode) {
-        void refreshConnectivity();
-        void refreshProtectedAdminData();
+        void Promise.all([refreshConnectivity(), refreshProtectedAdminData()]);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Authentication failed.";
@@ -487,28 +521,18 @@ export const SynthesisModuleApp = (): JSX.Element => {
     } finally {
       setAuthLoading(false);
     }
-  }, [isRevealMode, pinInput, refreshConnectivity, refreshProtectedAdminData, verifyProtectedDataAccess]);
+  }, [isRevealMode, pinInput, refreshConnectivity, refreshProtectedAdminData]);
 
   const handlePanelUnlock = useCallback(async (pin: string): Promise<boolean> => {
     const result = await synthesisModuleApi.verifyPin(pin);
     if (!result.authenticated) return false;
-    if (!isRevealMode) {
-      try {
-        await verifyProtectedDataAccess();
-      } catch {
-        clearSynthesisAuthSession();
-        setIsAuthenticated(false);
-        return false;
-      }
-    }
     setIsAuthenticated(true);
     writeSynthesisAuthFlag(true);
     if (!isRevealMode) {
-      void refreshConnectivity();
-      void refreshProtectedAdminData();
+      void Promise.all([refreshConnectivity(), refreshProtectedAdminData()]);
     }
     return true;
-  }, [isRevealMode, refreshConnectivity, refreshProtectedAdminData, verifyProtectedDataAccess]);
+  }, [isRevealMode, refreshConnectivity, refreshProtectedAdminData]);
 
   const buildPromptBody = useCallback((macros?: MacroState): string => {
     return JSON.stringify(
@@ -719,7 +743,7 @@ export const SynthesisModuleApp = (): JSX.Element => {
         </header>
 
         {activeRoute.id === "overview" ? (
-          <SynthesisOverviewPage />
+          <SynthesisOverviewPage isAuthenticated={isAuthenticated} />
         ) : activeRoute.id === "moderation" ? (
           <SynthesisModerationPage onPendingCountChange={setModerationPendingCount} />
         ) : activeRoute.id === "session-config" ? (

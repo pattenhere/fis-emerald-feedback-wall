@@ -100,10 +100,36 @@ const getSessionId = (): string => {
 };
 
 const readJson = async <T>(response: Response): Promise<T> => {
+  const text = await response.text();
+  let parsedBody: unknown = null;
+  if (text) {
+    try {
+      parsedBody = JSON.parse(text) as unknown;
+    } catch {
+      parsedBody = text;
+    }
+  }
+
   if (!response.ok) {
+    if (typeof parsedBody === "object" && parsedBody != null && "error" in parsedBody) {
+      const candidate = (parsedBody as { error?: unknown }).error;
+      if (typeof candidate === "string" && candidate.trim().length > 0) {
+        throw new Error(candidate);
+      }
+    }
+    if (typeof parsedBody === "string" && parsedBody.trim().length > 0) {
+      throw new Error(parsedBody.trim().slice(0, 240));
+    }
     throw new Error(`API error (${response.status})`);
   }
-  return (await response.json()) as T;
+
+  if (!text) {
+    return {} as T;
+  }
+  if (typeof parsedBody === "string") {
+    throw new Error("Server returned non-JSON success response.");
+  }
+  return parsedBody as T;
 };
 
 export const dataApi = {

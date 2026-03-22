@@ -156,7 +156,6 @@ export const SynthesisSessionConfigPage = ({ isAuthenticated }: SynthesisSession
   const stopTimeMinutes = parseLocalTime(config.stopAcceptingTimeLocal);
   const mobileCloseMinutes = parseLocalTime(config.mobileWindowCloseTimeLocal);
   const ceremonyMinutes = parseLocalTime(config.ceremonyStartTimeLocal);
-  const day2RevealMinutes = parseLocalTime(config.day2RevealTimeLocal);
 
   const wallClosingSoonWarning = useMemo(() => {
     if (!config.wallWindowOpen || stopTimeMinutes == null) return null;
@@ -176,12 +175,7 @@ export const SynthesisSessionConfigPage = ({ isAuthenticated }: SynthesisSession
 
   const ceremonyOrderingWarning =
     ceremonyMinutes != null && stopTimeMinutes != null && ceremonyMinutes <= stopTimeMinutes
-      ? "Ceremony should start after inputs close."
-      : null;
-
-  const revealOrderingWarning =
-    day2RevealMinutes != null && ceremonyMinutes != null && day2RevealMinutes <= ceremonyMinutes
-      ? "Reveal should be scheduled after the ceremony."
+      ? "Ceremony start must be after the stop accepting inputs time set in Day 1 session controls."
       : null;
 
   const eventNameMissingWarning = config.eventName.trim().length === 0
@@ -189,10 +183,66 @@ export const SynthesisSessionConfigPage = ({ isAuthenticated }: SynthesisSession
     : null;
 
   return (
-    <section className="synthesis-session-config">
-      <div className="overview-panel">
-        <h2>Session controls</h2>
+    <section className="synthesis-session-config synthesis-parameters-page">
+      <section className="overview-panel synthesis-parameters-section">
+        <h3>Event identity</h3>
         {eventNameMissingWarning && <p className="overview-inline-warning">{eventNameMissingWarning}</p>}
+
+        <div className="overview-toggle-row overview-field-row">
+          <div>
+            <p>Event name</p>
+          </div>
+          <input
+            type="text"
+            maxLength={80}
+            placeholder="e.g. Emerald 2026 — Chicago"
+            value={config.eventName}
+            onChange={(event) => setConfig((current) => ({ ...current, eventName: event.target.value }))}
+            onBlur={() => {
+              const nextName = config.eventName.trim();
+              const nextAutoSlug = slugifyEventName(nextName);
+              const shouldRegenerateSlug =
+                config.eventSlug.trim().length === 0 || config.eventSlug.trim() === lastAutoSlug;
+              if (shouldRegenerateSlug) {
+                setConfig((current) => ({ ...current, eventSlug: nextAutoSlug }));
+                setLastAutoSlug(nextAutoSlug);
+                void patchConfig({ eventName: nextName, eventSlug: nextAutoSlug });
+                return;
+              }
+              setLastAutoSlug(nextAutoSlug);
+              void patchConfig({ eventName: nextName });
+            }}
+          />
+        </div>
+
+        <div className="overview-toggle-row overview-field-row">
+          <div>
+            <p>Event slug</p>
+            <span>Used in export filenames. Auto-generated from event name — editable.</span>
+          </div>
+          <input
+            type="text"
+            maxLength={40}
+            value={config.eventSlug}
+            onChange={(event) => {
+              setSlugError(null);
+              setConfig((current) => ({ ...current, eventSlug: event.target.value.toLowerCase() }));
+            }}
+            onBlur={() => {
+              const trimmed = config.eventSlug.trim().toLowerCase();
+              if (trimmed && !/^[a-z0-9-]{1,40}$/u.test(trimmed)) {
+                setSlugError("Slug must be lowercase letters, numbers, and hyphens only (max 40 characters).");
+                return;
+              }
+              void patchConfig({ eventSlug: trimmed });
+            }}
+          />
+        </div>
+        {slugError && <p className="overview-inline-error">{slugError}</p>}
+      </section>
+
+      <section className="overview-panel synthesis-parameters-section">
+        <h3>Day 1 session controls</h3>
 
         <div className="overview-toggle-row">
           <div>
@@ -303,68 +353,10 @@ export const SynthesisSessionConfigPage = ({ isAuthenticated }: SynthesisSession
         </div>
         {mobileCloseAfterWallWarning && <p className="overview-inline-warning">{mobileCloseAfterWallWarning}</p>}
 
-        <div className="overview-toggle-row overview-section-header">
-          <div>
-            <p>Event identity</p>
-          </div>
-        </div>
-
-        <div className="overview-toggle-row overview-field-row">
-          <div>
-            <p>Event name</p>
-          </div>
-          <input
-            type="text"
-            maxLength={80}
-            placeholder="e.g. Emerald 2026 — Chicago"
-            value={config.eventName}
-            onChange={(event) => setConfig((current) => ({ ...current, eventName: event.target.value }))}
-            onBlur={() => {
-              const nextName = config.eventName.trim();
-              const nextAutoSlug = slugifyEventName(nextName);
-              const shouldRegenerateSlug =
-                config.eventSlug.trim().length === 0 || config.eventSlug.trim() === lastAutoSlug;
-              if (shouldRegenerateSlug) {
-                setConfig((current) => ({ ...current, eventSlug: nextAutoSlug }));
-                setLastAutoSlug(nextAutoSlug);
-                void patchConfig({ eventName: nextName, eventSlug: nextAutoSlug });
-                return;
-              }
-              setLastAutoSlug(nextAutoSlug);
-              void patchConfig({ eventName: nextName });
-            }}
-          />
-        </div>
-
-        <div className="overview-toggle-row overview-field-row">
-          <div>
-            <p>Event slug</p>
-            <span>Used in export filenames. Auto-generated from event name — editable.</span>
-          </div>
-          <input
-            type="text"
-            maxLength={40}
-            value={config.eventSlug}
-            onChange={(event) => {
-              setSlugError(null);
-              setConfig((current) => ({ ...current, eventSlug: event.target.value.toLowerCase() }));
-            }}
-            onBlur={() => {
-              const trimmed = config.eventSlug.trim().toLowerCase();
-              if (trimmed && !/^[a-z0-9-]{1,40}$/u.test(trimmed)) {
-                setSlugError("Slug must be lowercase letters, numbers, and hyphens only (max 40 characters).");
-                return;
-              }
-              void patchConfig({ eventSlug: trimmed });
-            }}
-          />
-        </div>
-        {slugError && <p className="overview-inline-error">{slugError}</p>}
-
         <div className="overview-toggle-row overview-field-row">
           <div>
             <p>Ceremony start time (local timezone)</p>
-            <span>When the end-of-day synthesis ceremony begins. Drives the ceremony countdown on the kiosk wall.</span>
+            <span>When the end-of-day synthesis ceremony begins. Must be after inputs close.</span>
           </div>
           <input
             type="time"
@@ -377,6 +369,10 @@ export const SynthesisSessionConfigPage = ({ isAuthenticated }: SynthesisSession
           />
         </div>
         {ceremonyOrderingWarning && <p className="overview-inline-warning">{ceremonyOrderingWarning}</p>}
+      </section>
+
+      <section className="overview-panel synthesis-parameters-section">
+        <h3>Day 2 reveal schedule</h3>
 
         <div className="overview-toggle-row overview-field-row">
           <div>
@@ -393,10 +389,8 @@ export const SynthesisSessionConfigPage = ({ isAuthenticated }: SynthesisSession
             }}
           />
         </div>
-        {revealOrderingWarning && <p className="overview-inline-warning">{revealOrderingWarning}</p>}
-
-        {toggleError && <p className="overview-toggle-error">{toggleError}</p>}
-      </div>
+      </section>
+      {toggleError && <p className="overview-toggle-error">{toggleError}</p>}
     </section>
   );
 };

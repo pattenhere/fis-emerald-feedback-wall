@@ -1478,6 +1478,10 @@
   display: grid;
 }
 
+.synthesis-session-config .overview-toggle-row p {
+  font-weight: 400;
+}
+
 .overview-field-row {
   align-items: flex-start;
 }

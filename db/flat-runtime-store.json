@@ -6,7 +6,7 @@
   "cardSortResults": [],
   "moderationInputStates": {},
   "sessionConfig": {
-    "inputCutoffAt": "2026-03-19T23:00:00.000Z",
+    "inputCutoffAt": "2026-03-22T22:00:00.000Z",
     "wallWindowOpen": true,
     "mobileWindowOpen": true,
     "themesViewActive": false,
@@ -14,7 +14,7 @@
     "mobileWindowCloseTime": "",
     "eventName": "Emerald 2026 - Orlando",
     "eventSlug": "emerald-2026-orlando",
-    "ceremonyStartTimeLocal": "18:00",
+    "ceremonyStartTimeLocal": "18:30",
     "day2RevealTimeLocal": "09:00"
   },
   "synthesisParameters": {
