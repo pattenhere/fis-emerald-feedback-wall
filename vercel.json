@@ -2,6 +2,26 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/facilitator/tables",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/facilitator/tables/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/synthesis/tables",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/synthesis/tables/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/facilitator/admin/:path*",
+      "destination": "/index.html"
+    },
+    {
       "source": "/facilitator",
       "destination": "/index.html"
     },
