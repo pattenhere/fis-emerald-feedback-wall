@@ -45,8 +45,13 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
 .bl{height:2px;background:linear-gradient(90deg,#4BCD3E,#3BCFF014)}
 
 /* TOOLBAR */
-.tb{display:flex;align-items:center;gap:10px;padding:9px 20px;border-bottom:1px solid var(--rb);flex-wrap:wrap}
-.leg{display:flex;gap:12px;flex-wrap:wrap;align-items:center;flex:1}
+.tb{display:flex;align-items:center;gap:12px;padding:9px 20px;border-bottom:1px solid var(--rb)}
+.tb-left{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.tb-mid{flex:1;min-width:0}
+.tb-right{display:flex;align-items:center;flex-shrink:0}
+.leg3{display:flex;flex-direction:column;gap:6px}
+.lrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.llab{min-width:120px;font-family:var(--B);font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(232,219,203,.5)}
 .li{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--warm);font-family:var(--B);white-space:nowrap}
 .ld{width:12px;height:5px;border-radius:1px;flex-shrink:0}
 .ld.dot{border-radius:50%;width:8px;height:8px}
@@ -75,12 +80,14 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
   display:flex;align-items:center;gap:4px;cursor:col-resize;user-select:none}
 .whl:hover{color:var(--green)}
 .whl .rh{font-size:9px;color:rgba(255,255,255,.2);font-weight:400}
-.wht{flex-shrink:0;padding:8px 0;font-size:8px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;
-  color:rgba(232,219,203,.3);font-family:var(--B);border-right:1px solid rgba(255,255,255,.1);
+.wht{flex-shrink:0;padding:8px 0;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--warm);font-family:var(--B);border-right:1px solid rgba(255,255,255,.1);
   display:flex;align-items:center;justify-content:center}
+.whs{flex-shrink:0;padding:8px 0;border-right:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center}
+.whsd{width:6px;height:6px;border-radius:50%;background:var(--warm)}
 .whws{display:flex;flex:1;overflow:hidden}
-.whwk{flex-shrink:0;padding:6px 2px;font-size:10px;font-weight:600;font-family:var(--B);
-  color:rgba(232,219,203,.4);text-align:center;border-right:1px solid var(--gl);line-height:1.3}
+.whwk{flex-shrink:0;padding:8px 2px;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;
+  font-family:var(--B);color:var(--warm);text-align:center;border-right:1px solid var(--gl);line-height:1.2}
 .whwk.ms{color:var(--warm);border-right:1px solid var(--gm)}
 .whwk.tc{color:var(--green)}
 .whwk strong{font-size:inherit;font-weight:inherit}
@@ -114,10 +121,12 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
   padding:2px 6px;border-radius:2px;background:rgba(59,207,240,.1);color:var(--cyan);
   border:1px solid rgba(59,207,240,.25);flex-shrink:0;margin-left:6px}
 .ttype{flex-shrink:0;display:flex;align-items:center;justify-content:center;border-right:1px solid rgba(255,255,255,.08)}
+.tstat{flex-shrink:0;display:flex;align-items:center;justify-content:center;border-right:1px solid rgba(255,255,255,.08)}
 .tsw{width:9px;height:9px;border-radius:1px;cursor:default}
 .tsw.mil{width:10px;height:10px;background:#fff;transform:rotate(45deg);border-radius:0;box-shadow:0 0 6px rgba(255,255,255,.55)}
 .tsw.meet{width:14px;height:14px;background:#F0F0F0;border-radius:50%;box-shadow:0 0 8px rgba(240,240,240,.65)}
 .tsw.ev{width:12px;height:1px;border-radius:0;background:#fff;box-shadow:none}
+.sdot{width:8px;height:8px;border-radius:50%;cursor:default}
 
 /* grid */
 .tg{position:relative;flex:1;overflow:hidden;min-height:36px}
@@ -134,6 +143,8 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
   color:rgba(255,255,255,.9);text-shadow:0 1px 3px rgba(0,0,0,.5);transition:filter .15s,height .15s}
 .bar:hover{filter:brightness(1.25);height:22px;z-index:5}
 .bar.dep{outline:1px dashed rgba(255,31,62,.65);outline-offset:-1px}
+.barf{position:absolute;left:0;top:0;bottom:0;border-radius:inherit;z-index:0;pointer-events:none}
+.barl{position:relative;z-index:1}
 
 /* milestone */
 .msd{position:absolute;top:50%;transform:translateY(-50%) rotate(45deg);width:10px;height:10px;z-index:3;cursor:pointer;transition:transform .15s}
@@ -250,30 +261,48 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
 
 <!-- TOOLBAR -->
 <div class="tb">
-  <button class="tbtn on" onclick="dl()" title="Download self-contained HTML — works offline in any browser">
-    <svg viewBox="0 0 16 16"><path d="M8 2v8M5 7l3 3 3-3M2 12h12"/></svg>Download
-  </button>
-  <div class="sep"></div>
-  <button class="tbtn" id="cab" onclick="toggleCA()">
-    <svg viewBox="0 0 16 16"><path d="M2 5h12M2 8h9M2 11h6"/></svg>
-    <span id="cal">Collapse All</span>
-  </button>
-  <div class="sep"></div>
-  <div class="leg">
-    <div class="li"><div class="ld mil"></div>Milestone</div>
-    <div class="li"><div class="ld meet"></div>FIS Meeting</div>
-    <div class="li"><div class="ld dep"></div>Has Dependency</div>
+  <div class="tb-left">
+    <button class="tbtn on" onclick="dl()" title="Download self-contained HTML — works offline in any browser">
+      <svg viewBox="0 0 16 16"><path d="M8 2v8M5 7l3 3 3-3M2 12h12"/></svg>Download
+    </button>
     <div class="sep"></div>
-    <div class="li"><div class="ts" style="background:var(--tc-design)"></div>Design</div>
-    <div class="li"><div class="ts" style="background:var(--tc-workshop)"></div>Workshop</div>
-    <div class="li"><div class="ts" style="background:var(--tc-build)"></div>Build</div>
-    <div class="li"><div class="ts" style="background:var(--tc-spec)"></div>Spec</div>
-    <div class="li"><div class="ts" style="background:var(--tc-test)"></div>Test</div>
-    <div class="li"><div class="ts" style="background:var(--tc-docs)"></div>Documentation</div>
+    <button class="tbtn" id="cab" onclick="toggleCA()">
+      <svg viewBox="0 0 16 16"><path d="M2 5h12M2 8h9M2 11h6"/></svg>
+      <span id="cal">Collapse All</span>
+    </button>
   </div>
-  <div class="sep"></div>
-  <div class="tbtn on" id="tt-btn" onclick="togToday()">
-    <span class="chk" id="tt-chk">✓</span>Show Today
+  <div class="tb-mid">
+    <div class="leg3">
+      <div class="lrow">
+        <div class="llab">Status</div>
+        <div class="li"><div class="sdot" style="background:#555555"></div>Not Started</div>
+        <div class="li"><div class="sdot" style="background:#3BCFF0"></div>In Progress</div>
+        <div class="li"><div class="sdot" style="background:#FF1F3E"></div>Blocked</div>
+        <div class="li"><div class="sdot" style="background:#FFC845"></div>Submitted for Approval</div>
+        <div class="li"><div class="sdot" style="background:#4BCD3E"></div>Approved</div>
+        <div class="li"><div class="sdot" style="background:rgba(255,255,255,.6)"></div>Complete</div>
+      </div>
+      <div class="lrow">
+        <div class="llab">Work Type</div>
+        <div class="li"><div class="ts" style="background:var(--tc-design)"></div>Design</div>
+        <div class="li"><div class="ts" style="background:var(--tc-workshop)"></div>Workshop</div>
+        <div class="li"><div class="ts" style="background:var(--tc-build)"></div>Build</div>
+        <div class="li"><div class="ts" style="background:var(--tc-spec)"></div>Spec</div>
+        <div class="li"><div class="ts" style="background:var(--tc-test)"></div>Test</div>
+        <div class="li"><div class="ts" style="background:var(--tc-docs)"></div>Documentation</div>
+      </div>
+      <div class="lrow">
+        <div class="llab">Chart Elements</div>
+        <div class="li"><div class="ld mil"></div>Milestone</div>
+        <div class="li"><div class="ld meet"></div>FIS Meeting</div>
+        <div class="li"><div class="ld dep"></div>Has Dependency</div>
+      </div>
+    </div>
+  </div>
+  <div class="tb-right">
+    <div class="tbtn on" id="tt-btn" onclick="togToday()">
+      <span class="chk" id="tt-chk">✓</span>Show Today
+    </div>
   </div>
 </div>
 <div class="fwh-wrap"><div class="wh" id="fwh"></div></div>
@@ -291,8 +320,9 @@ body{background:var(--navy);color:var(--off);font-family:var(--B);font-size:13px
 <!-- TOOLTIP -->
 <div class="tip" id="tip">
   <div class="tit" id="tit"></div>
-  <div class="tr2"><span class="tk">Start</span><span class="tv" id="tts"></span></div>
+  <div class="tr2" id="tts-r"><span class="tk">Start</span><span class="tv" id="tts"></span></div>
   <div class="tr2" id="tte-r"><span class="tk">End</span><span class="tv" id="tte"></span></div>
+  <div class="tr2" id="ttp-r"><span class="tk">Progress</span><span class="tv" id="ttp"></span></div>
   <div class="tr2" id="ttm-r"><span class="tk">Duration</span><span class="tv" id="ttm"></span></div>
   <div class="tr2" id="tto-r"><span class="tk" id="tto-k">Owner</span><span class="tv" id="tto"></span></div>
   <div class="tr2" id="ttn-r"><span class="tk">Note</span><span class="tv" id="ttn"></span></div>
@@ -348,12 +378,20 @@ const WKS=[];
 const NW=WKS.length;
 
 // STATE
-let LW=220,TW=30,showT=true,allC=false;
+let LW=220,TW=30,SW=24,showT=true,allC=false;
 const COLL=new Set();
 
 // TYPE COLORS
 const TC={'Design':'#3BCFF0','Workshop':'#FFC845','Build':'#4BCD3E','Spec':'#9B6BFF','Test':'#FD8D62','Docs':'#94b4c8','Documentation':'#94b4c8'};
 const SC='#3BCFF0';
+const STATUS_COLORS={
+  'Not Started':'#555555',
+  'In Progress':'#3BCFF0',
+  'Blocked':'#FF1F3E',
+  'Submitted for Approval':'#FFC845',
+  'Approved':'#4BCD3E',
+  'Complete':'rgba(255,255,255,.6)',
+};
 
 // OPEN QUESTIONS
 const OQS=[
@@ -389,9 +427,9 @@ const SECS=[
     {name:'FIS Emerald Conference',sub:'May 4–7 · Las Vegas',start:'2026-05-04',end:'2026-05-07',color:'#FFC845',type:'Workshop',isConf:true,note:'Live demos. WS3 Feedback Wall captures real-time attendee input. Day 2 overnight P0 prototype build.'},
   ]},
   {id:'ws2',label:'WS1 — INTERACTIVE ROADMAP EXPLORER',sc:'#285BC5',tasks:[
-    {name:'Walkthrough of Interactive Roadmap Explorer (IRE) prototype',sub:'Goal: Get feedback on initial concept',type:'Design',start:'2026-03-23',end:'2026-03-24',color:'#009775',owners:[{name:'Chris Patten',alloc:50}],note:'Credit Memo and Covenants Management journey design, interaction states, and spotlight Journey Presentation format.'},
-    {name:'Get content for IRE prototype',sub:'FIS provided descriptions and roadmaps to inform prototype',type:'Design',start:'2026-03-24',end:'2026-03-27',color:'#009775',note:'Credit Memo and Covenants Management journey design, interaction states, and spotlight Journey Presentation format.'},
-    {name:'Refine IRE prototype',sub:'2-week sprint w/Claude + VS Code + Codex | PPM-led',type:'Design',start:'2026-03-24',end:'2026-04-01',color:'#009775',note:'Credit Memo and Covenants Management journey design, interaction states, and spotlight Journey Presentation format.'},
+    {name:'Walkthrough of Interactive Roadmap Explorer (IRE) prototype',sub:'Goal: Get feedback on initial concept',type:'Design',start:'2026-03-23',end:'2026-03-24',color:'#009775',status:'Complete',owners:[{name:'Chris Patten',alloc:50}],note:'Credit Memo and Covenants Management journey design, interaction states, and spotlight Journey Presentation format.'},
+    {name:'Get content for IRE prototype',sub:'FIS provided descriptions and roadmaps to inform prototype',type:'Design',start:'2026-03-24',end:'2026-03-27',color:'#009775',status:'In Progress',pct:75,statusNote:'75% complete',note:'Credit Memo and Covenants Management journey design, interaction states, and spotlight Journey Presentation format.'},
+    {name:'Refine IRE prototype',sub:'2-week sprint w/Claude + VS Code + Codex | PPM-led',type:'Design',start:'2026-03-24',end:'2026-04-01',color:'#009775',status:'Blocked',statusNote:'Walkthrough of IRE not yet complete',note:'Credit Memo and Covenants Management journey design, interaction states, and spotlight Journey Presentation format.'},
     {name:'Walkthrough of refined IRE prototype',sub:'Goal: Bring FIS up to speed on refined prototype',type:'Workshop',start:'2026-04-02',end:'2026-04-02',color:'#8B5000',owners:[{name:'Chris Patten',alloc:50},{name:'Jason Rome',alloc:25}],note:'Workshop sessions with FIS stakeholders to map workflows.'},
     {name:'Signoff of refined IRE prototype',sub:'Goal: Get signoff on prototype',type:'Workshop',start:'2026-04-03',end:'2026-04-03',color:'#8B5000',isMil:true,note:'Workshop sessions with FIS stakeholders to map workflows.'},
     {name:'Productionize IRE Prototype',sub:'Harden prototype to production-level needed',type:'Build',start:'2026-04-06',end:'2026-04-17',color:'#004D3A',note:'Skeleton flows for journeys.'},
@@ -468,15 +506,21 @@ const SECS=[
 // Normalize milestone flags.
 SECS.forEach(sec=>sec.tasks.forEach(task=>{
   if(typeof task.isMil!=='boolean')task.isMil=false;
+  task.status='Not Started';
+  task.pct=0;
+  task.statusNote=undefined;
 }));
 
 // helpers
 function secSpan(sec){let mn=null,mx=null;sec.tasks.forEach(t=>{const s=d(t.start),e=d(t.end||t.start);if(!mn||s<mn)mn=s;if(!mx||e>mx)mx=e});return{s:mn,e:mx}}
-function WW(){const el=document.getElementById('gantt');const av=(el?el.offsetWidth:window.innerWidth)-LW-TW;return Math.max(28,Math.floor(av/NW))}
+function WW(){const el=document.getElementById('gantt');const av=(el?el.offsetWidth:window.innerWidth)-LW-TW-SW;return Math.max(28,Math.floor(av/NW))}
 function GW(){return WW()*NW}
 function tpx(v,gw){
   const s=v instanceof Date?v:d(v),cs=s<PS?PS:s>PE?PE:s;
   return (bdx(PS,cs)/TOTAL)*(gw||GW());
+}
+function withA(c,a){
+  return /^#[0-9a-f]{6}$/i.test(String(c||''))?`${c}${a}`:c;
 }
 
 // MODALS
@@ -526,10 +570,12 @@ function render(){
   const ww=WW(),gw=GW();
   // Floating week header (inside fixed header)
   FWH.innerHTML='';
-  FWH.style.width=(LW+TW+gw)+'px';
+  FWH.style.width=(LW+TW+SW+gw)+'px';
   const whl=document.createElement('div');whl.className='whl';whl.style.width=LW+'px';
   whl.innerHTML='Task / Resource <span class="rh">⟺</span>';mkDrag(whl);FWH.appendChild(whl);
   const wht=document.createElement('div');wht.className='wht';wht.style.width=TW+'px';wht.textContent='Type';FWH.appendChild(wht);
+  const whs=document.createElement('div');whs.className='whs';whs.style.width=SW+'px';
+  const whsd=document.createElement('div');whsd.className='whsd';whs.appendChild(whsd);FWH.appendChild(whs);
   const whws=document.createElement('div');whws.className='whws';whws.style.width=gw+'px';
   WKS.forEach(wk=>{
     const c=document.createElement('div');c.className='whwk';c.style.width=ww+'px';
@@ -545,7 +591,7 @@ function render(){
   SECS.forEach(sec=>{
     const isC=COLL.has(sec.id);
     const sh=document.createElement('div');sh.className='sh';
-    const slc=document.createElement('div');slc.className='slc';slc.style.width=(LW+TW)+'px';
+    const slc=document.createElement('div');slc.className='slc';slc.style.width=(LW+TW+SW)+'px';
     const arr=document.createElement('span');arr.className='arr';if(isC)arr.classList.add('c');arr.textContent='▼';
     slc.appendChild(arr);slc.appendChild(document.createTextNode(' '+sec.label));
     sh.appendChild(slc);
@@ -600,6 +646,16 @@ function render(){
         const sw=document.createElement('div');sw.className='tsw';sw.style.background=TC[task.type];sw.title=task.type;ttc.appendChild(sw);
       }
       row.appendChild(ttc);
+      // status col
+      const tsc=document.createElement('div');tsc.className='tstat';tsc.style.width=SW+'px';
+      const status=typeof task.status==='string'?task.status.trim():'';
+      const statusColor=STATUS_COLORS[status];
+      if(status&&statusColor){
+        const sd=document.createElement('div');sd.className='sdot';sd.style.background=statusColor;
+        attachStatusTip(sd,status,task.statusNote);
+        tsc.appendChild(sd);
+      }
+      row.appendChild(tsc);
       // grid
       const gc=document.createElement('div');gc.className='tg';gc.style.width=gw+'px';
       gc.appendChild(mkGridLines(gw,ww));mkOverlays(gc,gw);
@@ -636,11 +692,35 @@ function render(){
         const bar=document.createElement('div');bar.className='bar';
         if(task.dep)bar.classList.add('dep');
         bar.style.left=left+'px';bar.style.width=width+'px';
-        bar.style.background=task.isConf
-          ?`repeating-linear-gradient(45deg,${secColor}50,${secColor}50 4px,${secColor}20 4px,${secColor}20 8px)`
-          :(task.isRev?`linear-gradient(90deg,${secColor}BB,${secColor}77)`:`linear-gradient(90deg,${secColor}EE,${secColor}99)`);
+        const st=String(task.status||'').trim();
+        const isComplete=st==='Complete';
+        const isInProg=st==='In Progress';
+        const nPct=Number(task.pct);
+        const hasPct=Number.isFinite(nPct);
+        const pct=Math.max(0,Math.min(100,Math.round(nPct)));
+        if(task.isConf){
+          bar.style.background=`repeating-linear-gradient(45deg,${secColor}50,${secColor}50 4px,${secColor}20 4px,${secColor}20 8px)`;
+        }else if(isComplete){
+          bar.style.background=`linear-gradient(90deg,${secColor},${secColor})`;
+        }else if(isInProg&&hasPct){
+          bar.style.background=`linear-gradient(90deg,${withA(secColor,'59')},${withA(secColor,'59')})`;
+          if(pct>0){
+            const bf=document.createElement('div');
+            bf.className='barf';
+            bf.style.width=`${pct}%`;
+            bf.style.background=secColor;
+            bar.appendChild(bf);
+          }
+        }else{
+          bar.style.background=task.isRev?`linear-gradient(90deg,${secColor}BB,${secColor}77)`:`linear-gradient(90deg,${secColor}EE,${secColor}99)`;
+        }
         bar.style.border=`1px solid ${secColor}60`;
-        if(width>60)bar.textContent=fmt(d(task.start))+' – '+fmt(d(task.end));
+        if(width>60){
+          const lbl=document.createElement('span');
+          lbl.className='barl';
+          lbl.textContent=fmt(d(task.start))+' – '+fmt(d(task.end));
+          bar.appendChild(lbl);
+        }
         gc.appendChild(bar);attachTip(bar,task,sec.id);
       }
       row.appendChild(gc);GE.appendChild(row);
@@ -664,28 +744,64 @@ function mkDrag(el){
 
 // TOOLTIP
 const tipEl=document.getElementById('tip');
+function hideTipRows(){
+  ['tts-r','tte-r','ttp-r','ttm-r','tto-r','ttn-r'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none'});
+  const dr=document.getElementById('tdep');if(dr)dr.style.display='none';
+}
+function showTaskTip(task,secId){
+  const sr=document.getElementById('tts-r');
+  if(sr)sr.style.display='flex';
+  document.getElementById('tit').textContent=task.name;
+  document.getElementById('tts').textContent=fmt(d(task.start));
+  const er=document.getElementById('tte-r');
+  if(!task.isMil&&!task.isMtg&&task.end&&task.end!==task.start){er.style.display='flex';document.getElementById('tte').textContent=fmt(d(task.end))}else er.style.display='none';
+  const pr=document.getElementById('ttp-r');
+  const st=String(task.status||'').trim();
+  const nPct=Number(task.pct);
+  const hasPct=Number.isFinite(nPct);
+  const pct=Math.max(0,Math.min(100,Math.round(nPct)));
+  if(pr&&st==='In Progress'&&hasPct){
+    pr.style.display='flex';
+    document.getElementById('ttp').textContent=`${pct}% complete`;
+  }else if(pr)pr.style.display='none';
+  const mr=document.getElementById('ttm-r');
+  if(secId==='staffing'&&task.end&&task.end!==task.start){
+    mr.style.display='flex';
+    document.getElementById('ttm').textContent=durationMonthsWeeks(d(task.start),d(task.end));
+  } else mr.style.display='none';
+  const or=document.getElementById('tto-r');
+  const owners=taskOwners(task);
+  if(owners.length){
+    or.style.display='flex';
+    document.getElementById('tto-k').textContent=owners.length>1?'Owners':'Owner';
+    document.getElementById('tto').textContent=owners.join('\n');
+  } else or.style.display='none';
+  const nr=document.getElementById('ttn-r');
+  if(task.note){nr.style.display='flex';document.getElementById('ttn').textContent=task.note}else nr.style.display='none';
+  const dr=document.getElementById('tdep');
+  if(task.dep&&task.depNote){dr.style.display='block';dr.textContent='⚠ DEPENDENCY: '+task.depNote}else dr.style.display='none';
+}
+function showStatusTip(status,statusNote){
+  document.getElementById('tit').textContent=String(status||'').toUpperCase();
+  document.getElementById('tts').textContent='';
+  hideTipRows();
+  if(typeof statusNote==='string'&&statusNote.trim()){
+    const nr=document.getElementById('ttn-r');
+    nr.style.display='flex';
+    document.getElementById('ttn').textContent=statusNote.trim();
+  }
+}
 function attachTip(el,task,secId){
   el.addEventListener('mouseenter',e=>{
-    document.getElementById('tit').textContent=task.name;
-    document.getElementById('tts').textContent=fmt(d(task.start));
-    const er=document.getElementById('tte-r');
-    if(!task.isMil&&!task.isMtg&&task.end&&task.end!==task.start){er.style.display='flex';document.getElementById('tte').textContent=fmt(d(task.end))}else er.style.display='none';
-    const mr=document.getElementById('ttm-r');
-    if(secId==='staffing'&&task.end&&task.end!==task.start){
-      mr.style.display='flex';
-      document.getElementById('ttm').textContent=durationMonthsWeeks(d(task.start),d(task.end));
-    } else mr.style.display='none';
-    const or=document.getElementById('tto-r');
-    const owners=taskOwners(task);
-    if(owners.length){
-      or.style.display='flex';
-      document.getElementById('tto-k').textContent=owners.length>1?'Owners':'Owner';
-      document.getElementById('tto').textContent=owners.join('\n');
-    } else or.style.display='none';
-    const nr=document.getElementById('ttn-r');
-    if(task.note){nr.style.display='flex';document.getElementById('ttn').textContent=task.note}else nr.style.display='none';
-    const dr=document.getElementById('tdep');
-    if(task.dep&&task.depNote){dr.style.display='block';dr.textContent='⚠ DEPENDENCY: '+task.depNote}else dr.style.display='none';
+    showTaskTip(task,secId);
+    tipEl.classList.add('on');mvTip(e);
+  });
+  el.addEventListener('mousemove',mvTip);
+  el.addEventListener('mouseleave',()=>tipEl.classList.remove('on'));
+}
+function attachStatusTip(el,status,statusNote){
+  el.addEventListener('mouseenter',e=>{
+    showStatusTip(status,statusNote);
     tipEl.classList.add('on');mvTip(e);
   });
   el.addEventListener('mousemove',mvTip);
