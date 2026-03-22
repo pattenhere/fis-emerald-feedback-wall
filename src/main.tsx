@@ -4,7 +4,6 @@ import App from "./App";
 import { UI_VARIANT } from "./config";
 import { NewUILayout } from "./layouts/NewUILayout";
 import { SynthesisModuleApp } from "./synthesis/SynthesisModuleApp";
-import { initGanttShortcut } from "./utils/ganttShortcut";
 import "./styles/reset.css";
 
 const pathname = typeof window === "undefined" ? "/" : window.location.pathname;
@@ -23,7 +22,20 @@ const RootComponent = isSynthesisRoute
     ? NewUILayout
     : LegacyLayout;
 
-initGanttShortcut();
+if (typeof window !== "undefined" && !(window as any).__emeraldGanttShortcutBound) {
+  (window as any).__emeraldGanttShortcutBound = true;
+  window.addEventListener("keydown", (event: KeyboardEvent) => {
+    const target = event.target as HTMLElement | null;
+    if (target) {
+      const tag = target.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable) return;
+    }
+    const key = String(event.key || "").toLowerCase();
+    if (!event.ctrlKey || event.metaKey || !event.shiftKey || key !== "m") return;
+    event.preventDefault();
+    window.open("/assets/fis-emerald-gantt.html", "_blank", "noopener,noreferrer");
+  });
+}
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
