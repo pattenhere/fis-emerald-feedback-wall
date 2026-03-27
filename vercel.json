@@ -48,6 +48,14 @@
     {
       "source": "/reveal/:path*",
       "destination": "/index.html"
+    },
+    {
+      "source": "/greeter",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/greeter/:path*",
+      "destination": "/index.html"
     }
   ]
 }
