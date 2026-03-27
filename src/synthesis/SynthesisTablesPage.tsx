@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { dataApi, type BootstrapResponse } from "../services/dataApi";
+import { greeterApi, type GreeterSessionRecord } from "../services/greeterApi";
 import type { SeedTableDefinition } from "../state/adminSeedData";
 
 type TablesTabId = "seed" | "database";
@@ -168,6 +169,8 @@ export const SynthesisTablesPage = (): JSX.Element => {
   const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
   const [seedPages, setSeedPages] = useState<Record<string, number>>({});
   const [dbPages, setDbPages] = useState<Record<string, number>>({});
+  const [greeterSessions, setGreeterSessions] = useState<GreeterSessionRecord[]>([]);
+  const [greeterTotal, setGreeterTotal] = useState(0);
 
   const loadData = useCallback(async (isRefresh = false): Promise<void> => {
     if (isRefresh) {
@@ -178,12 +181,19 @@ export const SynthesisTablesPage = (): JSX.Element => {
 
     setError(null);
     try {
-      const [bootstrapPayload, adminTables] = await Promise.all([
+      const [bootstrapPayload, adminTables, greeterSessionsResult] = await Promise.all([
         dataApi.getBootstrap(),
         dataApi.getAdminTables(),
+        greeterApi.getSessions().catch(() => ({ sessions: [], total: 0 })),
       ]);
       setBootstrapData(bootstrapPayload);
       setTables(adminTables);
+      setGreeterSessions(
+        (Array.isArray(greeterSessionsResult.sessions) ? greeterSessionsResult.sessions : [])
+          .slice()
+          .sort((a, b) => new Date(String(b.completed_at ?? "")).getTime() - new Date(String(a.completed_at ?? "")).getTime()),
+      );
+      setGreeterTotal(Math.max(0, Number(greeterSessionsResult.total ?? 0)));
       setLastLoadedAt(new Date());
     } catch (error) {
       const message = error instanceof Error && error.message.trim().length > 0
@@ -255,6 +265,10 @@ export const SynthesisTablesPage = (): JSX.Element => {
     [screenFeedback, seedPages],
   );
   const pagedKudos = useMemo(() => paginateRows(kudosQuotes, seedPages.kudos ?? 1), [kudosQuotes, seedPages]);
+  const pagedGreeterSessions = useMemo(
+    () => paginateRows(greeterSessions, seedPages["greeter-sessions"] ?? 1),
+    [greeterSessions, seedPages],
+  );
 
   const tableSummary = useMemo(() => {
     const totalRows = tables.reduce((sum, table) => sum + table.rows.length, 0);
@@ -565,6 +579,47 @@ export const SynthesisTablesPage = (): JSX.Element => {
                         </tr>
                       );
                     })}
+                  </tbody>
+                </table>
+              </div>,
+            )}
+          </SeedSection>
+
+          <SeedSection
+            title="Greeter sessions"
+            count={greeterTotal}
+            page={clampPage(seedPages["greeter-sessions"] ?? 1, greeterSessions.length)}
+            totalPages={toTotalPages(greeterSessions.length)}
+            onPageChange={(nextPage) => setSeedPage("greeter-sessions", nextPage, greeterSessions.length)}
+          >
+            {renderSeedTableState(
+              greeterSessions,
+              "No greeter sessions recorded for this event yet.",
+              <div className="synthesis-tables-scroll-wrap">
+                <table className="synthesis-data-table">
+                  <thead>
+                    <tr>
+                      <th>Completed</th>
+                      <th>Q1</th>
+                      <th>Q2</th>
+                      <th>Q3</th>
+                      <th>Q4</th>
+                      <th>Primary route</th>
+                      <th>Secondary route</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedGreeterSessions.map((session) => (
+                      <tr key={String(session.session_id)}>
+                        <td>{formatLocalTimestamp(session.completed_at)}</td>
+                        <td>{session.answer_q1 ?? "—"}</td>
+                        <td>{session.answer_q2 ?? "—"}</td>
+                        <td>{session.answer_q3 ?? "—"}</td>
+                        <td>{session.answer_q4 ?? "—"}</td>
+                        <td>{[session.primary_category, session.primary_title].filter(Boolean).join(" · ") || "—"}</td>
+                        <td>{[session.secondary_category, session.secondary_title].filter(Boolean).join(" · ") || "—"}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>,

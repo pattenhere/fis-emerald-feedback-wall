@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { UI_VARIANT } from "./config";
 import { NewUILayout } from "./layouts/NewUILayout";
+import { GreeterApp } from "./greeter/GreeterApp";
 import { SynthesisModuleApp } from "./synthesis/SynthesisModuleApp";
 import "./styles/reset.css";
 
@@ -15,12 +16,15 @@ const isSynthesisRoute =
   pathname === "/admin" ||
   pathname.startsWith("/admin/") ||
   pathname.startsWith("/reveal/");
+const isGreeterRoute = pathname === "/greeter" || pathname.startsWith("/greeter/");
 const LegacyLayout = App;
-const RootComponent = isSynthesisRoute
-  ? SynthesisModuleApp
-  : UI_VARIANT === "newUI"
-    ? NewUILayout
-    : LegacyLayout;
+const RootComponent = isGreeterRoute
+  ? GreeterApp
+  : isSynthesisRoute
+    ? SynthesisModuleApp
+    : UI_VARIANT === "newUI"
+      ? NewUILayout
+      : LegacyLayout;
 
 if (typeof window !== "undefined" && !(window as any).__emeraldGanttShortcutBound) {
   (window as any).__emeraldGanttShortcutBound = true;

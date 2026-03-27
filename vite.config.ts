@@ -23,6 +23,7 @@ export default defineConfig(({ mode }) => {
           process.env.SYNTHESIS_AI_PROVIDER ??
           "anthropic",
       ),
+      "process.env.GREETER_IDLE_RESET_MINUTES": JSON.stringify(env.GREETER_IDLE_RESET_MINUTES ?? "3"),
     },
     server: {
       port: 4000,

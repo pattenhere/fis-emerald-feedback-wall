@@ -47,6 +47,10 @@ const TABLES = [
   "feature_request_votes",
   "feedback",
   "kudos",
+  "greeter_questions",
+  "greeter_answers",
+  "greeter_routes",
+  "greeter_sessions",
 ];
 
 try {

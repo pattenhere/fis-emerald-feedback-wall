@@ -526,10 +526,6 @@ const App = (): JSX.Element => {
         selectedProductName={selectedProductName}
         onOpenLiveResponses={() => setShowLiveResponses(true)}
         onOpenSplash={() => setShowSplash(true)}
-        onOpenSystemAdmin={() => {
-          window.location.assign("/facilitator/overview");
-        }}
-        systemAdminActive={false}
         mobileQrEnabled={mobileQrActive}
       />
       <main className={`content-shell ${showAllResponsesPage || showSystemAdminPage ? "is-admin-mode" : inProductLanding ? "is-product-landing" : drawerOpen ? "" : "is-drawer-collapsed"}`}>
@@ -567,9 +563,6 @@ const App = (): JSX.Element => {
             products={products}
             featureCountByProductId={featureCountByProductId}
             onSelectProduct={handleSelectProduct}
-            onOpenSystemAdmin={() => {
-              window.location.assign("/facilitator/overview");
-            }}
           />
         ) : (
           <>

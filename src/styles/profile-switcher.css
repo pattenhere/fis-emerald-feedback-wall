@@ -1,0 +1,132 @@
+.profile-switcher {
+  position: relative;
+  z-index: 120;
+}
+
+.profile-switcher-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  border: 1px solid #cfd8e2;
+  border-radius: 999px;
+  background: #fff;
+  color: #20344a;
+  padding: 0.3rem 0.6rem;
+  min-height: 34px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.profile-switcher-trigger.is-compact {
+  min-height: 32px;
+  padding: 0.24rem 0.5rem;
+}
+
+.profile-switcher-trigger.is-initial {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 999px;
+  justify-content: center;
+}
+
+.profile-switcher-initial {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.profile-switcher-icon {
+  width: 1rem;
+  height: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-switcher-icon svg {
+  width: 1rem;
+  height: 1rem;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.profile-switcher-label {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.7rem;
+}
+
+.profile-switcher-caret {
+  font-size: 0.7rem;
+  opacity: 0.72;
+}
+
+.profile-switcher-menu {
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  min-width: 180px;
+  border: 1px solid #d3dbe5;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(13, 31, 52, 0.16);
+  padding: 6px;
+  display: grid;
+  gap: 4px;
+}
+
+.profile-switcher-item {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #25374c;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 0.82rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.profile-switcher-item:hover {
+  background: #eef4f9;
+}
+
+.profile-switcher-item.is-active {
+  background: #e9f8ec;
+  color: #1e6530;
+}
+
+.profile-switcher.is-on-dark .profile-switcher-trigger {
+  background: rgba(6, 30, 39, 0.72);
+  border-color: rgba(138, 182, 198, 0.4);
+  color: #d5e9f1;
+}
+
+.profile-switcher.is-on-dark .profile-switcher-trigger.is-initial {
+  background: rgba(6, 30, 39, 0.9);
+}
+
+.profile-switcher.is-on-dark .profile-switcher-menu {
+  background: #0f2a35;
+  border-color: rgba(138, 182, 198, 0.35);
+}
+
+.profile-switcher.is-on-dark .profile-switcher-item {
+  color: #e6f6fb;
+}
+
+.profile-switcher.is-on-dark .profile-switcher-item:hover {
+  background: rgba(123, 173, 190, 0.18);
+}
+
+.profile-switcher.is-on-dark .profile-switcher-item.is-active {
+  background: rgba(75, 205, 62, 0.22);
+  color: #c7f7c3;
+}

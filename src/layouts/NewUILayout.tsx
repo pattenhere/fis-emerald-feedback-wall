@@ -407,10 +407,6 @@ export const NewUILayout = (): JSX.Element => {
         selectedProductName={selectedProductName}
         onOpenLiveResponses={() => setShowLiveResponses(true)}
         onOpenSplash={() => setShowSplash(true)}
-        onOpenSystemAdmin={() => {
-          window.location.assign("/facilitator/overview");
-        }}
-        systemAdminActive={false}
         mobileQrEnabled={mobileQrActive}
       />
 
@@ -453,9 +449,6 @@ export const NewUILayout = (): JSX.Element => {
             products={products}
             featureCountByProductId={featureCountByProductId}
             onSelectProduct={handleSelectProduct}
-            onOpenSystemAdmin={() => {
-              window.location.assign("/facilitator/overview");
-            }}
           />
         </main>
       ) : (

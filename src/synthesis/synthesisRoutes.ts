@@ -131,6 +131,14 @@ export const SYNTHESIS_ROUTE_DEFINITIONS: SynthesisRouteDefinition[] = [
     visibleInNav: false,
   },
   {
+    id: "tables",
+    path: "/facilitator/admin/tables",
+    label: "Tables",
+    description: "Inspect available seed tables and schema data used by the session.",
+    section: "admin",
+    visibleInNav: false,
+  },
+  {
     id: "overview",
     path: "/synthesis/overview",
     label: "Overview",

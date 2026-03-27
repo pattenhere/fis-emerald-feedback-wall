@@ -1,4 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { ProfileSwitcher } from "../components/ProfileSwitcher";
 import type { KudosQuote, SignalSummary } from "../types/domain";
 import { formatDurationHhMmSs } from "../utils/time";
 
@@ -25,9 +26,7 @@ interface TopBarProps {
   compactMode?: boolean;
   selectedProductName?: string | null;
   onOpenLiveResponses?: () => void;
-  onOpenSystemAdmin?: () => void;
   onOpenSplash?: () => void;
-  systemAdminActive?: boolean;
   mobileQrEnabled?: boolean;
 }
 
@@ -38,9 +37,7 @@ export const TopBar = memo(({
   compactMode = false,
   selectedProductName = null,
   onOpenLiveResponses,
-  onOpenSystemAdmin,
   onOpenSplash,
-  systemAdminActive = false,
   mobileQrEnabled = true,
 }: TopBarProps): JSX.Element => {
   const [timeRemaining, setTimeRemaining] = useState(() => getTimeRemaining(closeTimeLocal));
@@ -156,24 +153,23 @@ export const TopBar = memo(({
               >
                 MOBILE QR
               </button>
-              <button type="button" className="universe-launch" onClick={onOpenSystemAdmin}>
-                {systemAdminActive ? "BACK TO WALL" : "Facilitator"}
-              </button>
             </>
           )}
         </div>
         {!compactMode && (
-          <>
-            {activeQuote ? (
-              <div className="quote-ticker" aria-live="polite">
-                <p>{activeQuote.text}</p>
-                <span>{activeQuote.role.toUpperCase()}</span>
-              </div>
-            ) : (
-              <div className="quote-ticker quote-ticker-placeholder">
-                <p>Collect 3 consent-approved quotes to activate live ticker</p>
-              </div>
-            )}
+          activeQuote ? (
+            <div className="quote-ticker" aria-live="polite">
+              <p>{activeQuote.text}</p>
+              <span>{activeQuote.role.toUpperCase()}</span>
+            </div>
+          ) : (
+            <div className="quote-ticker quote-ticker-placeholder">
+              <p>Collect 3 consent-approved quotes to activate live ticker</p>
+            </div>
+          )
+        )}
+        <div className="top-bar-right">
+          {!compactMode ? (
             <div className="top-bar-metrics">
               <button type="button" className="metric-card metric-card-button" onClick={onOpenLiveResponses}>
                 <span className="metric-label">Live Responses</span>
@@ -184,8 +180,9 @@ export const TopBar = memo(({
                 <strong>{timeRemaining}</strong>
               </div>
             </div>
-          </>
-        )}
+          ) : null}
+          <ProfileSwitcher currentRole="attendee" compact={compactMode} display="initial" />
+        </div>
       </header>
       {showQr && mobileQrEnabled && (
         <div className="overlay-modal" role="dialog" aria-modal="true" aria-label="Mobile QR access">
