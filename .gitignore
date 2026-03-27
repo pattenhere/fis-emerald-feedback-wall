@@ -10,3 +10,8 @@ coverage
 .env.config.local
 # TypeScript incremental build metadata
 *.tsbuildinfo
+.vercel
+.env*.local
+.env.vercel.production
+.env.vercel.production
+.env.vercel.production

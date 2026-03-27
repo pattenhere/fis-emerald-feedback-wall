@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ProfileSwitcher } from "../components/ProfileSwitcher";
 import { synthesisModuleApi } from "../services/synthesisModuleApi";
 import { dataApi, type AdminBootstrapResponse } from "../services/dataApi";
 import { clearSynthesisAuthSession, readSynthesisAuthFlag, writeSynthesisAuthFlag } from "../services/synthesisAuth";
@@ -739,6 +740,7 @@ export const SynthesisModuleApp = (): JSX.Element => {
                 <strong>{countdownLabel}</strong>
               </div>
             </div>
+            <ProfileSwitcher currentRole="facilitator" display="initial" />
           </div>
         </header>
 

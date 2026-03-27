@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gantt Editor</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css">
+  <link rel="stylesheet" href="styles/editor.css">
+  <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+  <div id="editor-app"></div>
+
+  <div class="ov" id="settings-ov">
+    <div class="modal settings-modal" onclick="event.stopPropagation()">
+      <div class="mhdr">
+        <div class="mtit">Settings</div>
+        <button class="mx" id="settings-close">✕</button>
+      </div>
+      <div class="settings-tabs">
+        <button class="settings-tab active" data-settings-tab="ai">AI Configuration</button>
+        <button class="settings-tab" data-settings-tab="theme">Theme</button>
+        <button class="settings-tab" data-settings-tab="team" id="team-tab-btn" style="display:none">Team</button>
+      </div>
+      <div class="mbody settings-body">
+        <div class="settings-pane active" data-settings-pane="ai" id="ai-settings-pane"></div>
+        <div class="settings-pane" data-settings-pane="theme" id="theme-settings-pane"></div>
+        <div class="settings-pane" data-settings-pane="team" id="team-settings-pane"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/editor.js"></script>
+</body>
+</html>

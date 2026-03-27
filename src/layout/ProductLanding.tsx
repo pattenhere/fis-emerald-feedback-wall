@@ -5,10 +5,9 @@ interface ProductLandingProps {
   products: ProductDefinition[];
   featureCountByProductId: Record<number, number>;
   onSelectProduct: (productId: number) => void;
-  onOpenSystemAdmin: () => void;
 }
 
-export const ProductLanding = memo(({ products, featureCountByProductId, onSelectProduct, onOpenSystemAdmin }: ProductLandingProps): JSX.Element => {
+export const ProductLanding = memo(({ products, featureCountByProductId, onSelectProduct }: ProductLandingProps): JSX.Element => {
   const enabledProductId = useMemo(
     () => Number(products.find((product) => product.legacyProductCode === "PRD-005")?.id ?? products[0]?.id ?? 0),
     [products],
@@ -16,11 +15,6 @@ export const ProductLanding = memo(({ products, featureCountByProductId, onSelec
 
   return (
     <section className="product-landing" aria-label="Product selection">
-      <div className="product-landing-actions">
-        <button type="button" className="universe-launch" onClick={onOpenSystemAdmin}>
-          Facilitator
-        </button>
-      </div>
       <p className="product-landing-eyebrow">Screen Feedback</p>
       <h2>Which product would you like to react to?</h2>
       <p className="product-landing-subtitle">Select a product area to see its screens.</p>

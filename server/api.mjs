@@ -193,6 +193,181 @@ const synthesisAuthSecretKey = synthesisAuthSecret
   ? crypto.createHash("sha256").update(synthesisAuthSecret).digest()
   : null;
 const aiCompleteRouteTimeoutMs = toPositiveInt(process.env.AI_COMPLETE_ROUTE_TIMEOUT_MS, 300_000);
+const DEFAULT_GREETER_EVENT_SLUG = "emerald-2026";
+const resolveGreeterEventSlug = (value) => {
+  const trimmed = String(value ?? "").trim().toLowerCase();
+  const sanitized = trimmed.replace(/[^a-z0-9-]/gu, "").slice(0, 60);
+  if (sanitized) return sanitized;
+  const fromSession = String(synthesisSessionState.eventSlug ?? "").trim().toLowerCase().replace(/[^a-z0-9-]/gu, "").slice(0, 60);
+  return fromSession || DEFAULT_GREETER_EVENT_SLUG;
+};
+const resolveGreeterEventName = () => {
+  const fromSession = String(synthesisSessionState.eventName ?? "").trim();
+  if (fromSession) return fromSession;
+  const slug = resolveGreeterEventSlug();
+  return slug.replace(/-/gu, " ").toUpperCase();
+};
+const toNullableTrimmedString = (value, maxLength = 280) => {
+  if (value == null) return null;
+  const next = String(value).trim();
+  if (!next) return null;
+  return next.slice(0, maxLength);
+};
+const GREETER_SEED_QUESTIONS = Object.freeze([
+  {
+    position: 1,
+    text: "How do you think about lending at your institution?",
+    answers: [
+      { position: 1, label: "Product or Strategy", description: "I own lending direction & roadmap", icon: "🎯" },
+      { position: 2, label: "Operations or Servicing", description: "I run day-to-day lending ops", icon: "⚙️" },
+      { position: 3, label: "Technology or Architecture", description: "I lead tech decisions & platforms", icon: "💻" },
+      { position: 4, label: "Risk or Compliance", description: "I focus on credit risk & regulation", icon: "🛡️" },
+      { position: 5, label: "Here to Explore", description: "I want to see what's possible", icon: "🔭" },
+    ],
+  },
+  {
+    position: 2,
+    text: "Where does most of your lending volume live?",
+    answers: [
+      { position: 1, label: "Consumer & Retail", description: "Personal loans, mortgages, auto", icon: "🏠" },
+      { position: 2, label: "Small Business", description: "SMB / Working capital, SBA, lines of credit", icon: "🏢" },
+      { position: 3, label: "Commercial & Corporate", description: "C&I, CRE, syndicated facilities", icon: "🏦" },
+      { position: 4, label: "Specialty Finance", description: "Auto, asset-based, supply chain", icon: "🔄" },
+      { position: 5, label: "Multiple Segments", description: "We operate across several areas", icon: "🌐" },
+    ],
+  },
+  {
+    position: 3,
+    text: "What's the biggest opportunity you're trying to unlock in the next 12–18 months?",
+    answers: [
+      { position: 1, label: "Faster, smarter origination", description: "Speed & decisioning accuracy", icon: "⚡" },
+      { position: 2, label: "Better borrower experience", description: "End-to-end digital journeys", icon: "⭐" },
+      { position: 3, label: "Unified servicing & portfolio view", description: "Single source of truth", icon: "📊" },
+      { position: 4, label: "Expanding into new loan types", description: "New products or markets", icon: "🚀" },
+      { position: 5, label: "AI in decisioning & workflow", description: "Intelligent automation at scale", icon: "✦" },
+      { position: 6, label: "Modernizing core architecture", description: "API-first, cloud-native foundation", icon: "🏗️" },
+    ],
+  },
+  {
+    position: 4,
+    text: "What's slowing you down the most right now?",
+    answers: [
+      { position: 1, label: "Disconnected systems & siloed data", description: null, icon: "✂️" },
+      { position: 2, label: "Slow origination & approval cycles", description: null, icon: "⏱️" },
+      { position: 3, label: "Difficulty scaling across loan types", description: null, icon: "📉" },
+      { position: 4, label: "Compliance & regulatory overhead", description: null, icon: "📋" },
+      { position: 5, label: "Lack of real-time portfolio visibility", description: null, icon: "👁️" },
+      { position: 6, label: "Talent & operational cost pressure", description: null, icon: "💰" },
+    ],
+  },
+]);
+const GREETER_SEED_ROUTES = Object.freeze([
+  {
+    priority: 10,
+    condition_q1: null,
+    condition_q2: "Consumer & Retail",
+    condition_q3: "Faster, smarter origination",
+    condition_q4: null,
+    primary_category: "ORIGINATION",
+    primary_title: "Consumer & SMB Origination",
+    primary_products: "Amount Platform · IBS Lending",
+    primary_description: "See how FIS powers fast, intelligent origination for consumer and small business loans — from application to funded.",
+    secondary_category: "PLATFORM",
+    secondary_title: "Unified Lending Experience",
+    secondary_products: "Customer 360 · Banker Portal · Configuration",
+    secondary_description: "Experience a single platform view — one customer record, unified collateral, and seamless cross-product navigation.",
+  },
+  {
+    priority: 20,
+    condition_q1: null,
+    condition_q2: "Commercial & Corporate",
+    condition_q3: null,
+    condition_q4: null,
+    primary_category: "COMMERCIAL",
+    primary_title: "Commercial Lending Suite",
+    primary_products: "Commercial Origination · Syndication · Complex Lending",
+    primary_description: "Explore enterprise lending flows for complex facilities, agent workflows, and credit operations.",
+    secondary_category: "RISK",
+    secondary_title: "Credit & Risk Management",
+    secondary_products: "Covenant Monitoring · Risk Analytics · Early Warning",
+    secondary_description: "See how teams track exposure, automate covenants, and improve portfolio risk visibility.",
+  },
+  {
+    priority: 30,
+    condition_q1: "Technology or Architecture",
+    condition_q2: null,
+    condition_q3: null,
+    condition_q4: null,
+    primary_category: "PLATFORM",
+    primary_title: "Core Architecture & APIs",
+    primary_products: "API Fabric · Eventing · Configuration",
+    primary_description: "Review how modular architecture and APIs accelerate integration across lending systems.",
+    secondary_category: "ORIGINATION",
+    secondary_title: "Digital Origination Platform",
+    secondary_products: "Digital Intake · Decisioning · Workflow",
+    secondary_description: "Connect architecture priorities directly to origination speed and conversion outcomes.",
+  },
+  {
+    priority: 40,
+    condition_q1: "Risk or Compliance",
+    condition_q2: null,
+    condition_q3: null,
+    condition_q4: null,
+    primary_category: "RISK",
+    primary_title: "Credit Risk & Compliance",
+    primary_products: "Risk Workbench · Policy Controls · Audit Trails",
+    primary_description: "Walk through controls for credit policy execution, monitoring, and regulatory readiness.",
+    secondary_category: "SERVICING",
+    secondary_title: "Covenant & Portfolio Monitoring",
+    secondary_products: "Portfolio Insights · Covenant Tracking",
+    secondary_description: "See how servicing teams stay ahead of exceptions with proactive risk signals.",
+  },
+  {
+    priority: 50,
+    condition_q1: "Operations or Servicing",
+    condition_q2: null,
+    condition_q3: null,
+    condition_q4: null,
+    primary_category: "SERVICING",
+    primary_title: "Loan Servicing & Portfolio Management",
+    primary_products: "Servicing Hub · Workflow · Portfolio Reporting",
+    primary_description: "Experience daily servicing execution with better visibility and fewer handoff gaps.",
+    secondary_category: "PLATFORM",
+    secondary_title: "Unified Lending Experience",
+    secondary_products: "Customer 360 · Banker Portal · Configuration",
+    secondary_description: "Unify product lines and servicing views in one connected lending platform.",
+  },
+  {
+    priority: 60,
+    condition_q1: null,
+    condition_q2: "Small Business",
+    condition_q3: "AI in decisioning & workflow",
+    condition_q4: null,
+    primary_category: "ORIGINATION",
+    primary_title: "SMB Intelligent Decisioning",
+    primary_products: "Decision Engine · Workflow AI · IBS Lending",
+    primary_description: "See how intelligent workflows improve approval speed and consistency for SMB lending.",
+    secondary_category: "RISK",
+    secondary_title: "Portfolio Risk Intelligence",
+    secondary_products: "Credit Signals · Alerts · Portfolio Analytics",
+    secondary_description: "Pair faster approvals with stronger downstream risk controls and monitoring.",
+  },
+  {
+    priority: 999,
+    condition_q1: null,
+    condition_q2: null,
+    condition_q3: null,
+    condition_q4: null,
+    primary_category: "PLATFORM",
+    primary_title: "FIS Lending Platform Overview",
+    primary_products: "Origination · Servicing · Risk · Analytics",
+    primary_description: "A complete tour of the FIS lending ecosystem — origination, servicing, risk, and analytics in one connected platform.",
+    secondary_category: "ORIGINATION",
+    secondary_title: "Consumer & SMB Origination",
+    secondary_products: "Amount Platform · IBS Lending",
+    secondary_description: "Start with a high-impact origination walkthrough tailored for immediate value.",
+  },
+]);
 
 const toBase64Url = (value) => Buffer.from(value).toString("base64url");
 const fromBase64Url = (value) => Buffer.from(value, "base64url").toString("utf8");
@@ -223,10 +398,11 @@ const parseBearerToken = (request) => {
 
 const isSynthesisAuthRequest = (pathname) => pathname === "/api/synthesis/auth";
 
-const isProtectedAdminRoute = (pathname) => {
+const isProtectedAdminRoute = (method, pathname) => {
   if (pathname.startsWith("/api/admin/")) return true;
   if (pathname.startsWith("/api/inputs/")) return true;
   if (pathname === "/api/session/config") return true;
+  if (method === "GET" && pathname === "/api/greeter/sessions") return true;
   if (pathname.startsWith("/api/synthesis/")) return !isSynthesisAuthRequest(pathname);
   return false;
 };
@@ -466,6 +642,182 @@ const validateCardSortPayload = (body) => {
     role: toOptionalString(body.role, 40) ?? "unspecified",
   };
 };
+
+const validateGreeterRoutePayload = (body) => {
+  const answers = body?.answers && typeof body.answers === "object" ? body.answers : {};
+  return {
+    eventSlug: resolveGreeterEventSlug(body?.event_slug),
+    answers: {
+      q1: toNullableTrimmedString(answers.q1, 160),
+      q2: toNullableTrimmedString(answers.q2, 160),
+      q3: toNullableTrimmedString(answers.q3, 160),
+      q4: toNullableTrimmedString(answers.q4, 160),
+    },
+  };
+};
+
+const validateGreeterSessionPayload = (body) => ({
+  eventSlug: resolveGreeterEventSlug(body?.event_slug),
+  answerQ1: toNullableTrimmedString(body?.answer_q1, 160),
+  answerQ2: toNullableTrimmedString(body?.answer_q2, 160),
+  answerQ3: toNullableTrimmedString(body?.answer_q3, 160),
+  answerQ4: toNullableTrimmedString(body?.answer_q4, 160),
+  routeId: toOptionalInt(body?.route_id, { field: "route_id", min: 1, max: 9_999_999_999 }),
+  feedbackQ1: toNullableTrimmedString(body?.feedback_q1, 500),
+  feedbackQ2: toNullableTrimmedString(body?.feedback_q2, 500),
+  feedbackQ3: toNullableTrimmedString(body?.feedback_q3, 500),
+});
+
+const sqliteEnsureGreeterSeedData = (eventSlug) => {
+  const questionCount = Number(
+    db.prepare("SELECT COUNT(*) AS count FROM greeter_questions WHERE event_slug = ?").get(eventSlug)?.count ?? 0,
+  );
+  const routeCount = Number(
+    db.prepare("SELECT COUNT(*) AS count FROM greeter_routes WHERE event_slug = ?").get(eventSlug)?.count ?? 0,
+  );
+  if (questionCount > 0 && routeCount > 0) return;
+
+  const insertQuestion = db.prepare(`
+    INSERT INTO greeter_questions (event_slug, position, question_text)
+    VALUES (?, ?, ?)
+  `);
+  const insertAnswer = db.prepare(`
+    INSERT INTO greeter_answers (question_id, position, label, description, icon)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  const insertRoute = db.prepare(`
+    INSERT INTO greeter_routes
+      (event_slug, priority, condition_q1, condition_q2, condition_q3, condition_q4, primary_category, primary_title,
+      primary_products, primary_description, secondary_category, secondary_title, secondary_products, secondary_description)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const tx = db.transaction(() => {
+    if (questionCount === 0) {
+      for (const question of GREETER_SEED_QUESTIONS) {
+        const questionInsert = insertQuestion.run(eventSlug, question.position, question.text);
+        const questionId = Number(questionInsert.lastInsertRowid);
+        for (const answer of question.answers) {
+          insertAnswer.run(questionId, answer.position, answer.label, answer.description, answer.icon);
+        }
+      }
+    }
+    if (routeCount === 0) {
+      for (const route of GREETER_SEED_ROUTES) {
+        insertRoute.run(
+          eventSlug,
+          route.priority,
+          route.condition_q1,
+          route.condition_q2,
+          route.condition_q3,
+          route.condition_q4,
+          route.primary_category,
+          route.primary_title,
+          route.primary_products,
+          route.primary_description,
+          route.secondary_category,
+          route.secondary_title,
+          route.secondary_products,
+          route.secondary_description,
+        );
+      }
+    }
+  });
+  tx();
+};
+
+const postgresSeedGreeterDataForEvent = async (client, eventSlug, { forceReset = false } = {}) => {
+  const targetSlug = resolveGreeterEventSlug(eventSlug);
+  if (forceReset) {
+    await client.query("DELETE FROM greeter_sessions WHERE event_slug = $1", [targetSlug]);
+    await client.query("DELETE FROM greeter_answers WHERE question_id IN (SELECT question_id FROM greeter_questions WHERE event_slug = $1)", [targetSlug]);
+    await client.query("DELETE FROM greeter_questions WHERE event_slug = $1", [targetSlug]);
+    await client.query("DELETE FROM greeter_routes WHERE event_slug = $1", [targetSlug]);
+  }
+
+  const questionCount = Number((await client.query("SELECT COUNT(*)::int AS count FROM greeter_questions WHERE event_slug = $1", [targetSlug])).rows[0]?.count ?? 0);
+  const routeCount = Number((await client.query("SELECT COUNT(*)::int AS count FROM greeter_routes WHERE event_slug = $1", [targetSlug])).rows[0]?.count ?? 0);
+  if (questionCount > 0 && routeCount > 0) return;
+
+  if (questionCount === 0) {
+    for (const question of GREETER_SEED_QUESTIONS) {
+      const questionInsert = await client.query(
+        `INSERT INTO greeter_questions (event_slug, position, question_text)
+         VALUES ($1, $2, $3)
+         RETURNING question_id`,
+        [targetSlug, question.position, question.text],
+      );
+      const questionId = Number(questionInsert.rows[0]?.question_id);
+      for (const answer of question.answers) {
+        await client.query(
+          `INSERT INTO greeter_answers (question_id, position, label, description, icon)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [questionId, answer.position, answer.label, answer.description, answer.icon],
+        );
+      }
+    }
+  }
+
+  if (routeCount === 0) {
+    for (const route of GREETER_SEED_ROUTES) {
+      await client.query(
+        `INSERT INTO greeter_routes
+          (event_slug, priority, condition_q1, condition_q2, condition_q3, condition_q4, primary_category, primary_title,
+           primary_products, primary_description, secondary_category, secondary_title, secondary_products, secondary_description)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        [
+          targetSlug,
+          route.priority,
+          route.condition_q1,
+          route.condition_q2,
+          route.condition_q3,
+          route.condition_q4,
+          route.primary_category,
+          route.primary_title,
+          route.primary_products,
+          route.primary_description,
+          route.secondary_category,
+          route.secondary_title,
+          route.secondary_products,
+          route.secondary_description,
+        ],
+      );
+    }
+  }
+};
+
+const routeMatchesGreeterAnswers = (route, answers) => {
+  const checks = [
+    ["condition_q1", "q1"],
+    ["condition_q2", "q2"],
+    ["condition_q3", "q3"],
+    ["condition_q4", "q4"],
+  ];
+  for (const [conditionKey, answerKey] of checks) {
+    const condition = toNullableTrimmedString(route?.[conditionKey], 160);
+    if (!condition) continue;
+    const submitted = toNullableTrimmedString(answers?.[answerKey], 160);
+    if (submitted !== condition) return false;
+  }
+  return true;
+};
+
+const toGreeterRouteResponse = (row) => ({
+  route_id: Number(row?.route_id ?? 0),
+  route: {
+    primary: {
+      category: String(row?.primary_category ?? ""),
+      title: String(row?.primary_title ?? ""),
+      products: toNullableTrimmedString(row?.primary_products, 300),
+      description: toNullableTrimmedString(row?.primary_description, 600),
+    },
+    secondary: {
+      category: toNullableTrimmedString(row?.secondary_category, 120),
+      title: toNullableTrimmedString(row?.secondary_title, 220),
+      products: toNullableTrimmedString(row?.secondary_products, 300),
+      description: toNullableTrimmedString(row?.secondary_description, 600),
+    },
+  },
+});
 
 const validateSessionConfigPatchPayload = (body) => {
   const allowedKeys = new Set([
@@ -858,6 +1210,10 @@ const ERD_TABLES = [
   "feature_request_votes",
   "feedback",
   "kudos",
+  "greeter_questions",
+  "greeter_answers",
+  "greeter_routes",
+  "greeter_sessions",
 ];
 
 const findExistingTableName = (logicalName) => {
@@ -975,6 +1331,10 @@ const renameColumnIfExists = (tableName, from, to) => {
   ["feature_request_votes", ["VOTE_ID", "FEATURE_REQUEST_ID", "SESSION_ID", "VOTE_VALUE", "CREATED_AT"]],
   ["feedback", ["FEEDBACK_ID", "PRODUCT_ID", "FEATURE_ID", "SCREEN_ID", "FEEDBACK_TYPE", "FEEDBACK_TEXT", "ROLE", "CREATED_AT"]],
   ["kudos", ["KUDOS_ID", "PRODUCT_ID", "FEATURE_ID", "SCREEN_ID", "QUOTE_TEXT", "ROLE", "CONSENT_PUBLIC", "CREATED_AT"]],
+  ["greeter_questions", ["QUESTION_ID", "EVENT_SLUG", "POSITION", "QUESTION_TEXT", "CREATED_AT"]],
+  ["greeter_answers", ["ANSWER_ID", "QUESTION_ID", "POSITION", "LABEL", "DESCRIPTION", "ICON", "CREATED_AT"]],
+  ["greeter_routes", ["ROUTE_ID", "EVENT_SLUG", "PRIORITY", "CONDITION_Q1", "CONDITION_Q2", "CONDITION_Q3", "CONDITION_Q4", "PRIMARY_CATEGORY", "PRIMARY_TITLE", "PRIMARY_PRODUCTS", "PRIMARY_DESCRIPTION", "SECONDARY_CATEGORY", "SECONDARY_TITLE", "SECONDARY_PRODUCTS", "SECONDARY_DESCRIPTION", "CREATED_AT"]],
+  ["greeter_sessions", ["SESSION_ID", "EVENT_SLUG", "ANSWER_Q1", "ANSWER_Q2", "ANSWER_Q3", "ANSWER_Q4", "ROUTE_ID", "FEEDBACK_Q1", "FEEDBACK_Q2", "FEEDBACK_Q3", "COMPLETED_AT"]],
 ].forEach(([tableName, expectedColumns]) => ensureExpectedTableShape(tableName, expectedColumns));
 
 db.transaction(() => {
@@ -1122,6 +1482,65 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_feature_request_votes_request ON feature_request_votes(FEATURE_REQUEST_ID);
   CREATE INDEX IF NOT EXISTS idx_feedback_product_feature_screen_created ON feedback(PRODUCT_ID, FEATURE_ID, SCREEN_ID, CREATED_AT);
   CREATE INDEX IF NOT EXISTS idx_kudos_product_feature_screen_created ON kudos(PRODUCT_ID, FEATURE_ID, SCREEN_ID, CREATED_AT);
+
+  CREATE TABLE IF NOT EXISTS greeter_questions (
+    QUESTION_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    EVENT_SLUG TEXT NOT NULL,
+    POSITION INTEGER NOT NULL,
+    QUESTION_TEXT TEXT NOT NULL,
+    CREATED_AT TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (EVENT_SLUG, POSITION)
+  );
+
+  CREATE TABLE IF NOT EXISTS greeter_answers (
+    ANSWER_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    QUESTION_ID INTEGER NOT NULL,
+    POSITION INTEGER NOT NULL,
+    LABEL TEXT NOT NULL,
+    DESCRIPTION TEXT,
+    ICON TEXT,
+    CREATED_AT TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (QUESTION_ID, POSITION),
+    FOREIGN KEY (QUESTION_ID) REFERENCES greeter_questions(QUESTION_ID) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS greeter_routes (
+    ROUTE_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    EVENT_SLUG TEXT NOT NULL,
+    PRIORITY INTEGER NOT NULL DEFAULT 0,
+    CONDITION_Q1 TEXT,
+    CONDITION_Q2 TEXT,
+    CONDITION_Q3 TEXT,
+    CONDITION_Q4 TEXT,
+    PRIMARY_CATEGORY TEXT NOT NULL,
+    PRIMARY_TITLE TEXT NOT NULL,
+    PRIMARY_PRODUCTS TEXT,
+    PRIMARY_DESCRIPTION TEXT,
+    SECONDARY_CATEGORY TEXT,
+    SECONDARY_TITLE TEXT,
+    SECONDARY_PRODUCTS TEXT,
+    SECONDARY_DESCRIPTION TEXT,
+    CREATED_AT TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS greeter_sessions (
+    SESSION_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    EVENT_SLUG TEXT NOT NULL,
+    ANSWER_Q1 TEXT,
+    ANSWER_Q2 TEXT,
+    ANSWER_Q3 TEXT,
+    ANSWER_Q4 TEXT,
+    ROUTE_ID INTEGER,
+    FEEDBACK_Q1 TEXT,
+    FEEDBACK_Q2 TEXT,
+    FEEDBACK_Q3 TEXT,
+    COMPLETED_AT TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (ROUTE_ID) REFERENCES greeter_routes(ROUTE_ID)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_greeter_answers_question_position ON greeter_answers(QUESTION_ID, POSITION);
+  CREATE INDEX IF NOT EXISTS idx_greeter_routes_event_priority ON greeter_routes(EVENT_SLUG, PRIORITY, ROUTE_ID);
+  CREATE INDEX IF NOT EXISTS idx_greeter_sessions_event_completed ON greeter_sessions(EVENT_SLUG, COMPLETED_AT DESC);
 `);
 
 const configuredMaxBodyBytes = Number(process.env.API_MAX_BODY_BYTES ?? 256 * 1024);
@@ -1530,6 +1949,249 @@ const bootstrapPayload = async () => {
   return bootstrapPayloadDb();
 };
 
+const getGreeterQuestionsPayload = async (requestedEventSlug) => {
+  const eventSlug = resolveGreeterEventSlug(requestedEventSlug);
+  const eventName = resolveGreeterEventName();
+  if (usePostgresDb) {
+    return withPostgresClient(async (client) => {
+      await postgresSeedGreeterDataForEvent(client, eventSlug);
+      const rows = (
+        await client.query(
+          `SELECT q.question_id AS id, q.position, q.question_text AS text,
+                  a.answer_id, a.position AS answer_position, a.label, a.description, a.icon
+           FROM greeter_questions q
+           LEFT JOIN greeter_answers a ON a.question_id = q.question_id
+           WHERE q.event_slug = $1
+           ORDER BY q.position ASC, a.position ASC`,
+          [eventSlug],
+        )
+      ).rows;
+      const byQuestion = new Map();
+      for (const row of rows) {
+        const id = Number(row.id);
+        if (!byQuestion.has(id)) {
+          byQuestion.set(id, {
+            id,
+            position: Number(row.position),
+            text: String(row.text ?? ""),
+            answers: [],
+          });
+        }
+        if (row.answer_id != null) {
+          byQuestion.get(id).answers.push({
+            id: Number(row.answer_id),
+            position: Number(row.answer_position),
+            label: String(row.label ?? ""),
+            description: toNullableTrimmedString(row.description, 280),
+            icon: toNullableTrimmedString(row.icon, 20),
+          });
+        }
+      }
+      return { event_slug: eventSlug, event_name: eventName, questions: [...byQuestion.values()] };
+    });
+  }
+
+  sqliteEnsureGreeterSeedData(eventSlug);
+  const rows = db.prepare(`
+    SELECT q.QUESTION_ID AS id, q.POSITION AS position, q.QUESTION_TEXT AS text,
+      a.ANSWER_ID AS answer_id, a.POSITION AS answer_position, a.LABEL AS label, a.DESCRIPTION AS description, a.ICON AS icon
+    FROM greeter_questions q
+    LEFT JOIN greeter_answers a ON a.QUESTION_ID = q.QUESTION_ID
+    WHERE q.EVENT_SLUG = ?
+    ORDER BY q.POSITION ASC, a.POSITION ASC
+  `).all(eventSlug);
+  const byQuestion = new Map();
+  for (const row of rows) {
+    const id = Number(row.id);
+    if (!byQuestion.has(id)) {
+      byQuestion.set(id, {
+        id,
+        position: Number(row.position),
+        text: String(row.text ?? ""),
+        answers: [],
+      });
+    }
+    if (row.answer_id != null) {
+      byQuestion.get(id).answers.push({
+        id: Number(row.answer_id),
+        position: Number(row.answer_position),
+        label: String(row.label ?? ""),
+        description: toNullableTrimmedString(row.description, 280),
+        icon: toNullableTrimmedString(row.icon, 20),
+      });
+    }
+  }
+  return { event_slug: eventSlug, event_name: eventName, questions: [...byQuestion.values()] };
+};
+
+const evaluateGreeterRoute = (routes, answers) => {
+  const matched = routes.find((row) => routeMatchesGreeterAnswers(row, answers));
+  if (matched) return matched;
+  const fallback = routes.find((row) =>
+    !toNullableTrimmedString(row.condition_q1) &&
+    !toNullableTrimmedString(row.condition_q2) &&
+    !toNullableTrimmedString(row.condition_q3) &&
+    !toNullableTrimmedString(row.condition_q4),
+  );
+  return fallback ?? routes[0] ?? null;
+};
+
+const resolveGreeterRoutePayload = async ({ eventSlug, answers }) => {
+  const resolvedEventSlug = resolveGreeterEventSlug(eventSlug);
+  if (usePostgresDb) {
+    return withPostgresClient(async (client) => {
+      await postgresSeedGreeterDataForEvent(client, resolvedEventSlug);
+      const routes = (
+        await client.query(
+          `SELECT route_id, priority, condition_q1, condition_q2, condition_q3, condition_q4,
+                  primary_category, primary_title, primary_products, primary_description,
+                  secondary_category, secondary_title, secondary_products, secondary_description
+           FROM greeter_routes
+           WHERE event_slug = $1
+           ORDER BY priority ASC, route_id ASC`,
+          [resolvedEventSlug],
+        )
+      ).rows;
+      const selected = evaluateGreeterRoute(routes, answers);
+      if (!selected) {
+        throw createHttpError(404, "No greeter route configured for this event.");
+      }
+      return toGreeterRouteResponse(selected);
+    });
+  }
+
+  sqliteEnsureGreeterSeedData(resolvedEventSlug);
+  const routes = db.prepare(`
+    SELECT ROUTE_ID AS route_id, PRIORITY AS priority, CONDITION_Q1 AS condition_q1, CONDITION_Q2 AS condition_q2,
+      CONDITION_Q3 AS condition_q3, CONDITION_Q4 AS condition_q4, PRIMARY_CATEGORY AS primary_category,
+      PRIMARY_TITLE AS primary_title, PRIMARY_PRODUCTS AS primary_products, PRIMARY_DESCRIPTION AS primary_description,
+      SECONDARY_CATEGORY AS secondary_category, SECONDARY_TITLE AS secondary_title, SECONDARY_PRODUCTS AS secondary_products,
+      SECONDARY_DESCRIPTION AS secondary_description
+    FROM greeter_routes
+    WHERE EVENT_SLUG = ?
+    ORDER BY PRIORITY ASC, ROUTE_ID ASC
+  `).all(resolvedEventSlug);
+  const selected = evaluateGreeterRoute(routes, answers);
+  if (!selected) {
+    throw createHttpError(404, "No greeter route configured for this event.");
+  }
+  return toGreeterRouteResponse(selected);
+};
+
+const saveGreeterSession = async (payload) => {
+  if (usePostgresDb) {
+    return withPostgresClient(async (client) => {
+      const result = await client.query(
+        `INSERT INTO greeter_sessions
+          (event_slug, answer_q1, answer_q2, answer_q3, answer_q4, route_id, feedback_q1, feedback_q2, feedback_q3)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING session_id`,
+        [
+          payload.eventSlug,
+          payload.answerQ1,
+          payload.answerQ2,
+          payload.answerQ3,
+          payload.answerQ4,
+          payload.routeId,
+          payload.feedbackQ1,
+          payload.feedbackQ2,
+          payload.feedbackQ3,
+        ],
+      );
+      return Number(result.rows[0]?.session_id);
+    });
+  }
+
+  const insert = db.prepare(`
+    INSERT INTO greeter_sessions (EVENT_SLUG, ANSWER_Q1, ANSWER_Q2, ANSWER_Q3, ANSWER_Q4, ROUTE_ID, FEEDBACK_Q1, FEEDBACK_Q2, FEEDBACK_Q3)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const result = insert.run(
+    payload.eventSlug,
+    payload.answerQ1,
+    payload.answerQ2,
+    payload.answerQ3,
+    payload.answerQ4,
+    payload.routeId,
+    payload.feedbackQ1,
+    payload.feedbackQ2,
+    payload.feedbackQ3,
+  );
+  return Number(result.lastInsertRowid ?? 0);
+};
+
+const getGreeterSessions = async (eventSlug) => {
+  const resolvedEventSlug = resolveGreeterEventSlug(eventSlug);
+  if (usePostgresDb) {
+    return withPostgresClient(async (client) => {
+      await postgresSeedGreeterDataForEvent(client, resolvedEventSlug);
+      const sessions = (
+        await client.query(
+          `SELECT s.session_id, s.event_slug, s.answer_q1, s.answer_q2, s.answer_q3, s.answer_q4,
+                  s.route_id, s.feedback_q1, s.feedback_q2, s.feedback_q3, s.completed_at,
+                  r.primary_category, r.primary_title, r.secondary_category, r.secondary_title
+           FROM greeter_sessions s
+           LEFT JOIN greeter_routes r ON r.route_id = s.route_id
+           WHERE s.event_slug = $1
+           ORDER BY s.completed_at DESC`,
+          [resolvedEventSlug],
+        )
+      ).rows;
+      return {
+        sessions: sessions.map((row) => ({
+          session_id: Number(row.session_id),
+          event_slug: String(row.event_slug ?? resolvedEventSlug),
+          answer_q1: toNullableTrimmedString(row.answer_q1, 200),
+          answer_q2: toNullableTrimmedString(row.answer_q2, 200),
+          answer_q3: toNullableTrimmedString(row.answer_q3, 200),
+          answer_q4: toNullableTrimmedString(row.answer_q4, 200),
+          route_id: row.route_id == null ? null : Number(row.route_id),
+          primary_category: toNullableTrimmedString(row.primary_category, 80),
+          primary_title: toNullableTrimmedString(row.primary_title, 220),
+          secondary_category: toNullableTrimmedString(row.secondary_category, 80),
+          secondary_title: toNullableTrimmedString(row.secondary_title, 220),
+          feedback_q1: toNullableTrimmedString(row.feedback_q1, 500),
+          feedback_q2: toNullableTrimmedString(row.feedback_q2, 500),
+          feedback_q3: toNullableTrimmedString(row.feedback_q3, 500),
+          completed_at: String(row.completed_at ?? ""),
+        })),
+      };
+    });
+  }
+
+  sqliteEnsureGreeterSeedData(resolvedEventSlug);
+  const rows = db.prepare(`
+    SELECT s.SESSION_ID AS session_id, s.EVENT_SLUG AS event_slug, s.ANSWER_Q1 AS answer_q1, s.ANSWER_Q2 AS answer_q2,
+      s.ANSWER_Q3 AS answer_q3, s.ANSWER_Q4 AS answer_q4, s.ROUTE_ID AS route_id, s.FEEDBACK_Q1 AS feedback_q1,
+      s.FEEDBACK_Q2 AS feedback_q2, s.FEEDBACK_Q3 AS feedback_q3, s.COMPLETED_AT AS completed_at,
+      r.PRIMARY_CATEGORY AS primary_category, r.PRIMARY_TITLE AS primary_title,
+      r.SECONDARY_CATEGORY AS secondary_category, r.SECONDARY_TITLE AS secondary_title
+    FROM greeter_sessions s
+    LEFT JOIN greeter_routes r ON r.ROUTE_ID = s.ROUTE_ID
+    WHERE s.EVENT_SLUG = ?
+    ORDER BY s.COMPLETED_AT DESC
+  `).all(resolvedEventSlug);
+  return {
+    sessions: rows.map((row) => ({
+      session_id: Number(row.session_id),
+      event_slug: String(row.event_slug ?? resolvedEventSlug),
+      answer_q1: toNullableTrimmedString(row.answer_q1, 200),
+      answer_q2: toNullableTrimmedString(row.answer_q2, 200),
+      answer_q3: toNullableTrimmedString(row.answer_q3, 200),
+      answer_q4: toNullableTrimmedString(row.answer_q4, 200),
+      route_id: row.route_id == null ? null : Number(row.route_id),
+      primary_category: toNullableTrimmedString(row.primary_category, 80),
+      primary_title: toNullableTrimmedString(row.primary_title, 220),
+      secondary_category: toNullableTrimmedString(row.secondary_category, 80),
+      secondary_title: toNullableTrimmedString(row.secondary_title, 220),
+      feedback_q1: toNullableTrimmedString(row.feedback_q1, 500),
+      feedback_q2: toNullableTrimmedString(row.feedback_q2, 500),
+      feedback_q3: toNullableTrimmedString(row.feedback_q3, 500),
+      completed_at: String(row.completed_at ?? ""),
+    })),
+  };
+};
+
 const reseed = (payload) => {
   const tables = Array.isArray(payload.tables) ? payload.tables : [];
   const screenLibrary = Array.isArray(payload.screenLibrary) ? payload.screenLibrary : [];
@@ -1557,6 +2219,10 @@ const reseed = (payload) => {
       DELETE FROM feature_areas;
       DELETE FROM feedback;
       DELETE FROM kudos;
+      DELETE FROM greeter_sessions;
+      DELETE FROM greeter_answers;
+      DELETE FROM greeter_questions;
+      DELETE FROM greeter_routes;
       DELETE FROM screens;
       DELETE FROM features;
       DELETE FROM products;
@@ -1716,6 +2382,47 @@ const reseed = (payload) => {
         null,
       );
     }
+
+    const eventSlug = resolveGreeterEventSlug();
+    const insertGreeterQuestion = db.prepare(`
+      INSERT INTO greeter_questions (EVENT_SLUG, POSITION, QUESTION_TEXT)
+      VALUES (?, ?, ?)
+    `);
+    const insertGreeterAnswer = db.prepare(`
+      INSERT INTO greeter_answers (QUESTION_ID, POSITION, LABEL, DESCRIPTION, ICON)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    const insertGreeterRoute = db.prepare(`
+      INSERT INTO greeter_routes
+        (EVENT_SLUG, PRIORITY, CONDITION_Q1, CONDITION_Q2, CONDITION_Q3, CONDITION_Q4, PRIMARY_CATEGORY, PRIMARY_TITLE,
+         PRIMARY_PRODUCTS, PRIMARY_DESCRIPTION, SECONDARY_CATEGORY, SECONDARY_TITLE, SECONDARY_PRODUCTS, SECONDARY_DESCRIPTION)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    for (const question of GREETER_SEED_QUESTIONS) {
+      const questionInsert = insertGreeterQuestion.run(eventSlug, question.position, question.text);
+      const questionId = Number(questionInsert.lastInsertRowid);
+      for (const answer of question.answers) {
+        insertGreeterAnswer.run(questionId, answer.position, answer.label, answer.description, answer.icon);
+      }
+    }
+    for (const route of GREETER_SEED_ROUTES) {
+      insertGreeterRoute.run(
+        eventSlug,
+        route.priority,
+        route.condition_q1,
+        route.condition_q2,
+        route.condition_q3,
+        route.condition_q4,
+        route.primary_category,
+        route.primary_title,
+        route.primary_products,
+        route.primary_description,
+        route.secondary_category,
+        route.secondary_title,
+        route.secondary_products,
+        route.secondary_description,
+      );
+    }
   });
 
   tx();
@@ -1733,6 +2440,10 @@ export const reseedPostgres = async () => {
           feature_areas,
           feedback,
           kudos,
+          greeter_sessions,
+          greeter_answers,
+          greeter_questions,
+          greeter_routes,
           screens,
           features,
           products,
@@ -1896,6 +2607,49 @@ export const reseedPostgres = async () => {
             String(row.createdAt ?? nowIso()),
             null,
             null,
+          ],
+        );
+      }
+
+      const greeterEventSlug = resolveGreeterEventSlug();
+      for (const question of GREETER_SEED_QUESTIONS) {
+        const questionInsert = await client.query(
+          `INSERT INTO greeter_questions (event_slug, position, question_text)
+           VALUES ($1, $2, $3)
+           RETURNING question_id`,
+          [greeterEventSlug, question.position, question.text],
+        );
+        const questionId = Number(questionInsert.rows[0]?.question_id);
+        for (const answer of question.answers) {
+          await client.query(
+            `INSERT INTO greeter_answers (question_id, position, label, description, icon)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [questionId, answer.position, answer.label, answer.description, answer.icon],
+          );
+        }
+      }
+
+      for (const route of GREETER_SEED_ROUTES) {
+        await client.query(
+          `INSERT INTO greeter_routes
+            (event_slug, priority, condition_q1, condition_q2, condition_q3, condition_q4, primary_category, primary_title,
+             primary_products, primary_description, secondary_category, secondary_title, secondary_products, secondary_description)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+          [
+            greeterEventSlug,
+            route.priority,
+            route.condition_q1,
+            route.condition_q2,
+            route.condition_q3,
+            route.condition_q4,
+            route.primary_category,
+            route.primary_title,
+            route.primary_products,
+            route.primary_description,
+            route.secondary_category,
+            route.secondary_title,
+            route.secondary_products,
+            route.secondary_description,
           ],
         );
       }
@@ -3089,7 +3843,7 @@ export const handleApiRequest = async (request, response) => {
       return;
     }
 
-    if (isProtectedAdminRoute(pathname) && !hasValidSynthesisAuthToken(request)) {
+    if (isProtectedAdminRoute(method, pathname) && !hasValidSynthesisAuthToken(request)) {
       sendJson(response, 401, {
         ok: false,
         error: "Unauthorized. Authenticate with the synthesis PIN first.",
@@ -3138,6 +3892,34 @@ export const handleApiRequest = async (request, response) => {
 
     if (method === "GET" && pathname === "/api/bootstrap-admin") {
       sendJson(response, 200, await buildAdminBootstrapPayload());
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/greeter/questions") {
+      const eventSlug = parsed.searchParams.get("event_slug");
+      sendJson(response, 200, await getGreeterQuestionsPayload(eventSlug));
+      return;
+    }
+
+    if (method === "POST" && pathname === "/api/greeter/route") {
+      const body = await readBody(request);
+      const payload = validateGreeterRoutePayload(body);
+      sendJson(response, 200, await resolveGreeterRoutePayload(payload));
+      return;
+    }
+
+    if (method === "POST" && pathname === "/api/greeter/sessions") {
+      const body = await readBody(request);
+      const payload = validateGreeterSessionPayload(body);
+      const sessionId = await saveGreeterSession(payload);
+      sendJson(response, 200, { ok: true, session_id: sessionId });
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/greeter/sessions") {
+      const eventSlug = parsed.searchParams.get("event_slug");
+      const payload = await getGreeterSessions(eventSlug);
+      sendJson(response, 200, { ...payload, total: payload.sessions.length });
       return;
     }
 
